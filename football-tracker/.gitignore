@@ -1,0 +1,14 @@
+# Football Tracker
+
+*.iml
+.gradle
+/local.properties
+/.idea
+.DS_Store
+/build
+/captures
+.externalNativeBuild
+.cxx
+*.xcuserdata
+*.xcworkspace/xcuserdata
+DerivedData/

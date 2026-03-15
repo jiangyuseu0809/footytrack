@@ -1,0 +1,33 @@
+package com.footballtracker.server.plugins
+
+import com.footballtracker.server.auth.JwtService
+import com.footballtracker.server.auth.SmsCodeStore
+import com.footballtracker.server.routes.*
+import com.footballtracker.server.service.*
+import io.ktor.server.application.*
+import io.ktor.server.auth.*
+import io.ktor.server.routing.*
+
+fun Application.configureRouting(
+    jwtService: JwtService,
+    smsCodeStore: SmsCodeStore,
+    tencentSmsService: TencentSmsService,
+    weChatService: WeChatService,
+    userService: UserService,
+    sessionService: SessionService,
+    teamService: TeamService,
+    badgeService: BadgeService
+) {
+    routing {
+        route("/api") {
+            authRoutes(jwtService, smsCodeStore, tencentSmsService, weChatService, userService)
+
+            authenticate("auth-jwt") {
+                userRoutes(userService)
+                sessionRoutes(sessionService, badgeService)
+                teamRoutes(teamService)
+                badgeRoutes(badgeService)
+            }
+        }
+    }
+}

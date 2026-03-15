@@ -1,0 +1,86 @@
+name: FootballTracker
+options:
+  bundleIdPrefix: com.footballtracker
+  deploymentTarget:
+    iOS: "17.0"
+    watchOS: "10.0"
+  xcodeVersion: "16.0"
+  createIntermediateGroups: true
+targets:
+  FootballTracker:
+    type: application
+    platform: iOS
+    sources:
+      - path: FootballTracker
+        excludes:
+          - "**/*.plist"
+    info:
+      path: FootballTracker/Info.plist
+      properties:
+        CFBundleDevelopmentRegion: zh_CN
+        CFBundleDisplayName: 野球记
+        UILaunchScreen: {}
+        NSAppTransportSecurity:
+          NSAllowsArbitraryLoads: true
+        UIRequiredDeviceCapabilities:
+          - armv7
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+    dependencies:
+      - target: FootballTrackerWatch
+        embed: true
+        codeSign: true
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.footballtracker.ios
+        SWIFT_VERSION: "5.9"
+        TARGETED_DEVICE_FAMILY: "1"
+        CODE_SIGN_STYLE: Automatic
+        CODE_SIGN_IDENTITY: "Apple Development"
+        DEVELOPMENT_TEAM: 25N63T38LP
+
+  FootballTrackerWatch:
+    type: application
+    platform: watchOS
+    sources:
+      - path: FootballTrackerWatch
+        excludes:
+          - "**/*.plist"
+    info:
+      path: FootballTrackerWatch/Info.plist
+      properties:
+        CFBundleDevelopmentRegion: zh_CN
+        CFBundleDisplayName: 野球记
+        UILaunchScreen: {}
+        WKApplication: true
+        WKCompanionAppBundleIdentifier: com.footballtracker.ios
+        NSLocationWhenInUseUsageDescription: 需要GPS定位来记录您在球场上的运动轨迹
+        NSLocationAlwaysAndWhenInUseUsageDescription: 需要GPS定位来记录您在球场上的运动轨迹
+        NSHealthShareUsageDescription: 需要读取心率数据来分析运动强度
+        NSHealthUpdateUsageDescription: 需要记录运动数据到健康App
+        UIBackgroundModes:
+          - location
+          - workout-processing
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.footballtracker.ios.watchkitapp
+        SWIFT_VERSION: "5.9"
+        TARGETED_DEVICE_FAMILY: "4"
+        CODE_SIGN_STYLE: Automatic
+        CODE_SIGN_IDENTITY: "Apple Development"
+        DEVELOPMENT_TEAM: 25N63T38LP
+        SUPPORTS_MACCATALYST: false
+
+schemes:
+  FootballTracker:
+    build:
+      targets:
+        FootballTracker: all
+    run:
+      config: Debug
+  FootballTrackerWatch:
+    build:
+      targets:
+        FootballTrackerWatch: all
+    run:
+      config: Debug

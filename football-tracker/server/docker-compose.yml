@@ -1,0 +1,34 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: football_tracker
+      POSTGRES_USER: football
+      POSTGRES_PASSWORD: football_secret
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U football -d football_tracker"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build: .
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      # Override database URL to use Docker service name
+      APP_DATABASE_URL: jdbc:postgresql://postgres:5432/football_tracker
+      APP_DATABASE_USER: football
+      APP_DATABASE_PASSWORD: football_secret
+    env_file:
+      - .env
+
+volumes:
+  pgdata:

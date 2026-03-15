@@ -1,0 +1,276 @@
+import Foundation
+import CoreLocation
+import HealthKit
+import WatchConnectivity
+import Combine
+
+/// Manages GPS tracking, heart rate monitoring, and data sync for watchOS.
+@MainActor
+class TrackingManager: NSObject, ObservableObject {
+
+    // MARK: - Published State
+
+    @Published var isTracking = false
+    @Published var showSummary = false
+    @Published var elapsedSeconds: Int = 0
+    @Published var totalDistanceMeters: Double = 0.0
+    @Published var currentSpeedMs: Double = 0.0
+    @Published var currentHeartRate: Int = 0
+
+    // Summary data
+    @Published var summaryDistanceMeters: Double = 0.0
+    @Published var summaryDurationSeconds: Int = 0
+    @Published var summaryCalories: Double = 0.0
+    @Published var summarySlackIndex: Int = 0
+
+    // MARK: - Private
+
+    private var locationManager: CLLocationManager?
+    private let healthStore = HKHealthStore()
+    private var workoutSession: HKWorkoutSession?
+    private var workoutBuilder: HKLiveWorkoutBuilder?
+    private var timer: Timer?
+
+    private var trackPoints: [(timestamp: Date, lat: Double, lon: Double, speed: Double, accuracy: Double)] = []
+    private var heartRateData: [(timestamp: Date, bpm: Int)] = []
+    private var sessionStartTime: Date?
+    private var lastLocation: CLLocation?
+
+    // MARK: - Init
+
+    override init() {
+        locationManager = nil
+        super.init()
+    }
+
+    // MARK: - Start / Stop
+
+    func startTracking() {
+        guard !isTracking else { return }
+        isTracking = true
+        showSummary = false
+        elapsedSeconds = 0
+        totalDistanceMeters = 0.0
+        currentSpeedMs = 0.0
+        currentHeartRate = 0
+        trackPoints = []
+        heartRateData = []
+        lastLocation = nil
+        sessionStartTime = Date()
+
+        // Start GPS
+        setupLocationManager()
+
+        // Start heart rate via HealthKit workout
+        startWorkout()
+
+        // Start timer
+        timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
+            Task { @MainActor in
+                self?.elapsedSeconds += 1
+            }
+        }
+    }
+
+    func stopTracking() {
+        guard isTracking else { return }
+        isTracking = false
+        timer?.invalidate()
+        timer = nil
+
+        locationManager?.stopUpdatingLocation()
+        locationManager = nil
+
+        workoutSession?.end()
+
+        // Compute summary
+        summaryDurationSeconds = elapsedSeconds
+        summaryDistanceMeters = totalDistanceMeters
+        summaryCalories = estimateCalories()
+        summarySlackIndex = computeSlackIndex()
+
+        // Sync to phone
+        syncToPhone()
+
+        showSummary = true
+    }
+
+    func dismissSummary() {
+        showSummary = false
+    }
+
+    // MARK: - Location
+
+    private func setupLocationManager() {
+        let manager = CLLocationManager()
+        manager.delegate = self
+        manager.desiredAccuracy = kCLLocationAccuracyBest
+        manager.activityType = .fitness
+        locationManager = manager
+
+        let status = manager.authorizationStatus
+        if status == .authorizedWhenInUse || status == .authorizedAlways {
+            manager.allowsBackgroundLocationUpdates = true
+            manager.startUpdatingLocation()
+        } else {
+            manager.requestWhenInUseAuthorization()
+        }
+    }
+
+    // MARK: - HealthKit Workout
+
+    private func startWorkout() {
+        let config = HKWorkoutConfiguration()
+        config.activityType = .soccer
+        config.locationType = .outdoor
+
+        do {
+            workoutSession = try HKWorkoutSession(healthStore: healthStore, configuration: config)
+            workoutBuilder = workoutSession?.associatedWorkoutBuilder()
+            workoutBuilder?.dataSource = HKLiveWorkoutDataSource(healthStore: healthStore, workoutConfiguration: config)
+            workoutBuilder?.delegate = self
+            workoutSession?.delegate = self
+
+            workoutSession?.startActivity(with: Date())
+            workoutBuilder?.beginCollection(withStart: Date()) { _, _ in }
+        } catch {
+            print("Failed to start workout: \(error)")
+        }
+    }
+
+    // MARK: - Analysis (simplified — shared KMP via Swift bridge)
+
+    private func estimateCalories() -> Double {
+        // Simplified MET-based estimation (mirrors KMP CalorieEstimator)
+        let weightKg = 70.0
+        var total = 0.0
+        for i in 1..<trackPoints.count {
+            let dt = trackPoints[i].timestamp.timeIntervalSince(trackPoints[i-1].timestamp) / 60.0
+            guard dt > 0, dt < 5 else { continue }
+            let speedKmh = trackPoints[i].speed * 3.6
+            let met: Double
+            switch speedKmh {
+            case ..<0.5: met = 1.5
+            case ..<6.0: met = 3.5
+            case ..<12.0: met = 7.0
+            case ..<18.0: met = 10.0
+            case ..<24.0: met = 13.0
+            default: met = 15.0
+            }
+            total += met * weightKg * 3.5 / 200.0 * dt
+        }
+        return total
+    }
+
+    private func computeSlackIndex() -> Int {
+        guard trackPoints.count > 1 else { return 100 }
+        let totalTime = trackPoints.last!.timestamp.timeIntervalSince(trackPoints.first!.timestamp)
+        guard totalTime > 0 else { return 100 }
+
+        var standingTime = 0.0
+        for i in 1..<trackPoints.count {
+            let dt = trackPoints[i].timestamp.timeIntervalSince(trackPoints[i-1].timestamp)
+            if trackPoints[i].speed * 3.6 < 0.5 {
+                standingTime += dt
+            }
+        }
+        let standingRatio = standingTime / totalTime
+        return min(100, max(0, Int(standingRatio * 100)))
+    }
+
+    // MARK: - Sync
+
+    private func syncToPhone() {
+        guard WCSession.default.activationState == .activated else {
+            print("WCSession not activated, cannot sync")
+            return
+        }
+
+        let data: [String: Any] = [
+            "session_id": UUID().uuidString,
+            "start_time": sessionStartTime?.timeIntervalSince1970 ?? 0,
+            "end_time": Date().timeIntervalSince1970,
+            "latitudes": trackPoints.map { $0.lat },
+            "longitudes": trackPoints.map { $0.lon },
+            "timestamps": trackPoints.map { $0.timestamp.timeIntervalSince1970 },
+            "speeds": trackPoints.map { $0.speed },
+            "heart_rates": heartRateData.map { ["ts": $0.timestamp.timeIntervalSince1970, "bpm": $0.bpm] }
+        ]
+
+        WCSession.default.transferUserInfo(data)
+    }
+}
+
+// MARK: - CLLocationManagerDelegate
+
+extension TrackingManager: CLLocationManagerDelegate {
+    nonisolated func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
+        Task { @MainActor in
+            let status = manager.authorizationStatus
+            if status == .authorizedWhenInUse || status == .authorizedAlways {
+                manager.allowsBackgroundLocationUpdates = true
+                manager.startUpdatingLocation()
+            }
+        }
+    }
+
+    nonisolated func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
+        Task { @MainActor in
+            for location in locations {
+                guard location.horizontalAccuracy < 15 else { continue }
+
+                let point = (
+                    timestamp: location.timestamp,
+                    lat: location.coordinate.latitude,
+                    lon: location.coordinate.longitude,
+                    speed: max(0, location.speed),
+                    accuracy: location.horizontalAccuracy
+                )
+
+                if let last = lastLocation {
+                    totalDistanceMeters += location.distance(from: last)
+                }
+
+                currentSpeedMs = max(0, location.speed)
+                trackPoints.append(point)
+                lastLocation = location
+            }
+        }
+    }
+}
+
+// MARK: - HKWorkoutSessionDelegate
+
+extension TrackingManager: HKWorkoutSessionDelegate {
+    nonisolated func workoutSession(_ workoutSession: HKWorkoutSession,
+                                    didChangeTo toState: HKWorkoutSessionState,
+                                    from fromState: HKWorkoutSessionState,
+                                    date: Date) {}
+
+    nonisolated func workoutSession(_ workoutSession: HKWorkoutSession,
+                                    didFailWithError error: Error) {
+        print("Workout error: \(error)")
+    }
+}
+
+// MARK: - HKLiveWorkoutBuilderDelegate
+
+extension TrackingManager: HKLiveWorkoutBuilderDelegate {
+    nonisolated func workoutBuilder(_ workoutBuilder: HKLiveWorkoutBuilder,
+                                    didCollectDataOf collectedTypes: Set<HKSampleType>) {
+        for type in collectedTypes {
+            guard let quantityType = type as? HKQuantityType,
+                  quantityType == HKQuantityType.quantityType(forIdentifier: .heartRate) else { continue }
+
+            if let stats = workoutBuilder.statistics(for: quantityType) {
+                let bpm = Int(stats.mostRecentQuantity()?.doubleValue(for: .count().unitDivided(by: .minute())) ?? 0)
+                Task { @MainActor in
+                    currentHeartRate = bpm
+                    heartRateData.append((timestamp: Date(), bpm: bpm))
+                }
+            }
+        }
+    }
+
+    nonisolated func workoutBuilderDidCollectEvent(_ workoutBuilder: HKLiveWorkoutBuilder) {}
+}

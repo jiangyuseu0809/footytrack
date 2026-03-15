@@ -1,0 +1,26 @@
+ktor:
+  deployment:
+    port: 8080
+  application:
+    modules:
+      - com.footballtracker.server.ApplicationKt.module
+
+app:
+  database:
+    url: "jdbc:postgresql://localhost:5432/football_tracker"
+    user: "football"
+    password: "football_secret"
+  jwt:
+    secret: "CHANGE_ME_TO_A_RANDOM_SECRET_AT_LEAST_32_CHARS"
+    issuer: "football-tracker"
+    audience: "football-tracker-app"
+    expirationDays: 7
+  tencent:
+    secretId: "YOUR_TENCENT_SECRET_ID"
+    secretKey: "YOUR_TENCENT_SECRET_KEY"
+    sdkAppId: "YOUR_SMS_SDK_APP_ID"
+    signName: "YOUR_SIGN_NAME"
+    templateId: "YOUR_TEMPLATE_ID"
+  wechat:
+    appId: "YOUR_WECHAT_APP_ID"
+    appSecret: "YOUR_WECHAT_APP_SECRET"

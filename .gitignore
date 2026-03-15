@@ -1,0 +1,21 @@
+# Build outputs
+**/build/
+DerivedData/
+
+# Large/binary files
+*.hprof
+*.apk
+*.ipa
+*.dSYM.zip
+
+# IDE
+.idea/
+*.iml
+*.xcuserdata
+*.xcworkspace/xcuserdata
+
+# OS
+.DS_Store
+
+# Secrets
+local.properties
