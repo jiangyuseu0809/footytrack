@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>野球记 - 足球运动追踪与数据分析平台</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+            color: #333;
+            background: #fff;
+            line-height: 1.6;
+        }
+
+        /* Hero */
+        .hero {
+            background: linear-gradient(135deg, #1a5e1f 0%, #2d8a34 50%, #43a047 100%);
+            color: #fff;
+            text-align: center;
+            padding: 80px 20px 60px;
+        }
+        .hero-logo {
+            width: 100px;
+            height: 100px;
+            margin-bottom: 24px;
+        }
+        .hero h1 {
+            font-size: 42px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+        .hero .subtitle {
+            font-size: 18px;
+            opacity: 0.9;
+            margin-bottom: 30px;
+        }
+        .hero .desc {
+            max-width: 680px;
+            margin: 0 auto;
+            font-size: 16px;
+            opacity: 0.85;
+            line-height: 1.8;
+        }
+        .platforms {
+            display: flex;
+            justify-content: center;
+            gap: 16px;
+            margin-top: 30px;
+            flex-wrap: wrap;
+        }
+        .platform-badge {
+            background: rgba(255,255,255,0.2);
+            border: 1px solid rgba(255,255,255,0.3);
+            border-radius: 20px;
+            padding: 6px 18px;
+            font-size: 14px;
+        }
+
+        /* Section */
+        section {
+            max-width: 960px;
+            margin: 0 auto;
+            padding: 60px 20px;
+        }
+        section h2 {
+            font-size: 28px;
+            text-align: center;
+            margin-bottom: 40px;
+            color: #1a5e1f;
+        }
+
+        /* Features */
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 30px;
+        }
+        .feature-card {
+            background: #f8faf8;
+            border-radius: 12px;
+            padding: 28px;
+            border: 1px solid #e8f0e8;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .feature-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+        }
+        .feature-icon {
+            font-size: 36px;
+            margin-bottom: 14px;
+        }
+        .feature-card h3 {
+            font-size: 18px;
+            margin-bottom: 10px;
+            color: #2d8a34;
+        }
+        .feature-card p {
+            font-size: 14px;
+            color: #666;
+            line-height: 1.7;
+        }
+
+        /* Architecture */
+        .arch-section {
+            background: #f5f7f5;
+        }
+        .arch-section section {
+            max-width: 960px;
+        }
+        .arch-flow {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-bottom: 30px;
+        }
+        .arch-node {
+            background: #fff;
+            border: 2px solid #2d8a34;
+            border-radius: 10px;
+            padding: 16px 24px;
+            text-align: center;
+            min-width: 140px;
+        }
+        .arch-node .node-title {
+            font-weight: 600;
+            font-size: 15px;
+            color: #1a5e1f;
+        }
+        .arch-node .node-desc {
+            font-size: 12px;
+            color: #888;
+            margin-top: 4px;
+        }
+        .arch-arrow {
+            font-size: 24px;
+            color: #2d8a34;
+        }
+
+        /* Tech Stack */
+        .tech-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+        }
+        .tech-item {
+            background: #fff;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 16px;
+        }
+        .tech-item .tech-label {
+            font-size: 12px;
+            color: #999;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .tech-item .tech-value {
+            font-size: 15px;
+            font-weight: 500;
+            margin-top: 4px;
+            color: #333;
+        }
+
+        /* Privacy */
+        .privacy-section {
+            background: #fafafa;
+        }
+        .privacy-list {
+            max-width: 700px;
+            margin: 0 auto;
+        }
+        .privacy-list li {
+            list-style: none;
+            padding: 12px 0;
+            border-bottom: 1px solid #eee;
+            font-size: 15px;
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+        }
+        .privacy-list li::before {
+            content: "✓";
+            color: #2d8a34;
+            font-weight: 700;
+            font-size: 16px;
+            flex-shrink: 0;
+        }
+
+        /* Footer */
+        footer {
+            background: #1a1a1a;
+            color: #aaa;
+            text-align: center;
+            padding: 40px 20px;
+            font-size: 14px;
+        }
+        footer .footer-title {
+            color: #fff;
+            font-size: 18px;
+            margin-bottom: 12px;
+        }
+        footer p {
+            margin: 4px 0;
+        }
+        footer a {
+            color: #aaa;
+            text-decoration: none;
+        }
+
+        @media (max-width: 600px) {
+            .hero h1 { font-size: 30px; }
+            .hero .subtitle { font-size: 16px; }
+            .arch-flow { flex-direction: column; }
+            .arch-arrow { transform: rotate(90deg); }
+        }
+    </style>
+</head>
+<body>
+
+<div class="hero">
+    <img class="hero-logo" src="logo.png" alt="野球记 Logo">
+    <h1>野球记</h1>
+    <p class="subtitle">Football Tracker — 专业足球运动追踪与数据分析平台</p>
+    <p class="desc">
+        野球记是一款面向业余足球爱好者的运动数据追踪应用，通过智能手表和手机协同采集 GPS 轨迹与心率数据，
+        结合多维度算法分析，为每一场训练和比赛提供专业级的运动表现报告。
+    </p>
+    <div class="platforms">
+        <span class="platform-badge">iOS</span>
+        <span class="platform-badge">Android</span>
+        <span class="platform-badge">Apple Watch</span>
+        <span class="platform-badge">WearOS</span>
+    </div>
+</div>
+
+<section>
+    <h2>核心功能</h2>
+    <div class="features">
+        <div class="feature-card">
+            <div class="feature-icon">📍</div>
+            <h3>高精度 GPS 轨迹记录</h3>
+            <p>通过智能手表以 1Hz 频率采集 GPS 数据，精确记录跑动轨迹、距离和速度，支持实时查看运动状态。</p>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">❤️</div>
+            <h3>心率监测与卡路里估算</h3>
+            <p>实时采集心率数据，采用 Keytel 公式精确估算卡路里消耗，根据年龄、体重提供个性化分析。</p>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">⚡</div>
+            <h3>速度分析与冲刺检测</h3>
+            <p>自动识别冲刺次数与高强度跑动距离，划分速度区间，量化比赛中的高强度表现。</p>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">🗺️</div>
+            <h3>热力图与覆盖率分析</h3>
+            <p>基于 50×30 网格生成热力图，直观展示场地覆盖范围，帮助球员优化跑位策略。</p>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">📊</div>
+            <h3>摸鱼指数与疲劳分析</h3>
+            <p>独创「摸鱼指数」（0-100）量化比赛投入度，结合 5 分钟分段强度分析评估体能分配。</p>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">🏆</div>
+            <h3>成就系统与团队管理</h3>
+            <p>自动解锁运动成就徽章，支持创建和加入球队，查看队友数据与团队排名。</p>
+        </div>
+    </div>
+</section>
+
+<div class="arch-section">
+    <section>
+        <h2>系统架构</h2>
+        <div class="arch-flow">
+            <div class="arch-node">
+                <div class="node-title">智能手表</div>
+                <div class="node-desc">GPS + 心率采集</div>
+            </div>
+            <span class="arch-arrow">→</span>
+            <div class="arch-node">
+                <div class="node-title">手机 App</div>
+                <div class="node-desc">数据分析与展示</div>
+            </div>
+            <span class="arch-arrow">→</span>
+            <div class="arch-node">
+                <div class="node-title">云端服务器</div>
+                <div class="node-desc">数据同步与存储</div>
+            </div>
+        </div>
+        <h2 style="margin-top: 40px;">技术栈</h2>
+        <div class="tech-grid">
+            <div class="tech-item">
+                <div class="tech-label">移动端 (Android)</div>
+                <div class="tech-value">Kotlin · Jetpack Compose</div>
+            </div>
+            <div class="tech-item">
+                <div class="tech-label">移动端 (iOS)</div>
+                <div class="tech-value">Swift · SwiftUI</div>
+            </div>
+            <div class="tech-item">
+                <div class="tech-label">跨平台共享逻辑</div>
+                <div class="tech-value">Kotlin Multiplatform</div>
+            </div>
+            <div class="tech-item">
+                <div class="tech-label">后端服务</div>
+                <div class="tech-value">Kotlin · Ktor</div>
+            </div>
+            <div class="tech-item">
+                <div class="tech-label">数据库</div>
+                <div class="tech-value">PostgreSQL 16</div>
+            </div>
+            <div class="tech-item">
+                <div class="tech-label">基础设施</div>
+                <div class="tech-value">Azure VM · Docker · Nginx</div>
+            </div>
+            <div class="tech-item">
+                <div class="tech-label">认证方式</div>
+                <div class="tech-value">JWT · 短信验证 · 微信登录</div>
+            </div>
+            <div class="tech-item">
+                <div class="tech-label">穿戴设备</div>
+                <div class="tech-value">WearOS · watchOS</div>
+            </div>
+        </div>
+    </section>
+</div>
+
+<div class="privacy-section">
+    <section>
+        <h2>用户隐私与数据安全</h2>
+        <ul class="privacy-list">
+            <li>所有用户密码采用 BCrypt 加密存储，不以明文形式保存</li>
+            <li>API 通信使用 JWT Token 认证机制，确保用户身份安全</li>
+            <li>运动数据仅对用户本人及其所在团队可见</li>
+            <li>用户可随时在应用内管理和删除个人数据</li>
+            <li>GPS 位置数据仅在运动记录期间采集，不进行后台追踪</li>
+            <li>微信登录仅获取用户授权的基本信息（openid），不获取额外隐私数据</li>
+            <li>遵守《中华人民共和国个人信息保护法》及相关法律法规</li>
+        </ul>
+    </section>
+</div>
+
+<section>
+    <h2>微信登录功能说明</h2>
+    <div class="features" style="grid-template-columns: 1fr 1fr;">
+        <div class="feature-card">
+            <h3>使用场景</h3>
+            <p>用户可选择使用微信账号快速登录野球记 App，免去注册繁琐流程，一键授权即可开始使用全部功能。</p>
+        </div>
+        <div class="feature-card">
+            <h3>数据获取范围</h3>
+            <p>仅通过微信 OAuth 2.0 协议获取用户的 openid 用于身份标识，不获取微信好友列表、朋友圈等隐私信息。</p>
+        </div>
+    </div>
+</section>
+
+<footer>
+    <div class="footer-title">野球记 Football Tracker</div>
+    <p>专业足球运动追踪与数据分析平台</p>
+    <p style="margin-top: 12px;">联系邮箱：yujiangseu@gmail.com</p>
+    <p style="margin-top: 20px; font-size: 12px; color: #666;">&copy; 2024-2026 野球记 All Rights Reserved</p>
+</footer>
+
+</body>
+</html>
