@@ -31,6 +31,7 @@
 		AC255495176844D056814B6C /* SpeedChart.swift in Sources */ = {isa = PBXBuildFile; fileRef = 22A0F1C7E56CE7F698E02541 /* SpeedChart.swift */; };
 		BE8487577C6EC8D651FDFC92 /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D25D605E8EF09E6663AD799E /* LoginView.swift */; };
 		BF4CDBC2F0531E306EC2D0FF /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F265F7DD0BE6099A998F644 /* HomeView.swift */; };
+		CA60D4570D15FDFDCC75AA1C /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 9ACD73F03A1F387CB2D398BE /* Assets.xcassets */; };
 		CE774E22735FC3A1D7455257 /* ProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 754C6ACB7B9D970C8F07EE85 /* ProfileView.swift */; };
 		D80555D855E9816377F1558D /* SessionDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C33629BCDCE91E205E4B5BA0 /* SessionDetailView.swift */; };
 		DE3F876A06775F463F7EA6C4 /* FootballTrackerApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B9B26AA77BCEEE349400CD5 /* FootballTrackerApp.swift */; };
@@ -79,6 +80,7 @@
 		81D2A5230ED4A84374356B09 /* ApiClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApiClient.swift; sourceTree = "<group>"; };
 		92AD7C951EE82977F1DCB23F /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		9529D4B9E90C67269C94CA8F /* FootballTracker.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = FootballTracker.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		9ACD73F03A1F387CB2D398BE /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		A21787C3A32BF8532A0BA98F /* TeamDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TeamDetailView.swift; sourceTree = "<group>"; };
 		AA6F44E157B2DA43DA6A12FC /* HeatmapOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HeatmapOverlay.swift; sourceTree = "<group>"; };
 		B8C1B75F43C086C7B2B783ED /* ApiModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApiModels.swift; sourceTree = "<group>"; };
@@ -142,6 +144,7 @@
 		860377CA8192C147A7A882F3 /* FootballTracker */ = {
 			isa = PBXGroup;
 			children = (
+				9ACD73F03A1F387CB2D398BE /* Assets.xcassets */,
 				4B9B26AA77BCEEE349400CD5 /* FootballTrackerApp.swift */,
 				A85E27AB2E78365287038D7D /* Auth */,
 				09A647A6270F954A7C3D79E7 /* Components */,
@@ -233,6 +236,7 @@
 			buildConfigurationList = BEDAB44F1889D91B24844F04 /* Build configuration list for PBXNativeTarget "FootballTracker" */;
 			buildPhases = (
 				849A99C4EDC282C43A3D9EA2 /* Sources */,
+				883C7996BF7290318A689792 /* Resources */,
 				0C125127877BF0051AD53377 /* Embed Watch Content */,
 			);
 			buildRules = (
@@ -302,6 +306,17 @@
 			);
 		};
 /* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		883C7996BF7290318A689792 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				CA60D4570D15FDFDCC75AA1C /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		849A99C4EDC282C43A3D9EA2 /* Sources */ = {
