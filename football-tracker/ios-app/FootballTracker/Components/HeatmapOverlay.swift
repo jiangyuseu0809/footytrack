@@ -10,22 +10,91 @@ struct HeatmapOverlayView: View {
     let maxLon: Double
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 12) {
             Text("球场热力图")
                 .font(.subheadline.weight(.medium))
                 .foregroundColor(AppColors.textPrimary)
 
             PitchHeatmapCanvas(grid: grid)
-                .aspectRatio(0.65, contentMode: .fit)
+                .aspectRatio(1.55, contentMode: .fit)
                 .clipShape(RoundedRectangle(cornerRadius: 12))
+
+            // Zone percentages
+            zoneBar
         }
         .padding()
         .background(AppColors.cardBg)
-        .cornerRadius(16)
+        .cornerRadius(12)
+    }
+
+    // MARK: - Zone Percentages
+
+    private var zonePercentages: (attack: Double, midfield: Double, defense: Double) {
+        guard !grid.isEmpty else { return (0, 0, 0) }
+        let rows = grid.count
+        let cols = grid.first?.count ?? 0
+        guard cols > 0 else { return (0, 0, 0) }
+
+        // Grid columns map to pitch left→right (defense→attack in horizontal layout)
+        // Split into 3 zones by columns
+        let thirdCols = cols / 3
+        let remainder = cols % 3
+
+        var defenseSum = 0.0
+        var midfieldSum = 0.0
+        var attackSum = 0.0
+
+        for r in 0..<rows {
+            for c in 0..<cols {
+                let val = grid[r][c]
+                if c < thirdCols {
+                    defenseSum += val
+                } else if c < thirdCols * 2 + remainder {
+                    midfieldSum += val
+                } else {
+                    attackSum += val
+                }
+            }
+        }
+
+        let total = defenseSum + midfieldSum + attackSum
+        guard total > 0 else { return (33, 34, 33) }
+
+        return (
+            attack: (attackSum / total) * 100,
+            midfield: (midfieldSum / total) * 100,
+            defense: (defenseSum / total) * 100
+        )
+    }
+
+    private var zoneBar: some View {
+        let zones = zonePercentages
+        return HStack(spacing: 0) {
+            zoneItem(label: "后场", percent: zones.defense, color: Color(red: 0.2, green: 0.7, blue: 0.4))
+            Spacer()
+            zoneItem(label: "中场", percent: zones.midfield, color: Color(red: 1.0, green: 0.75, blue: 0.2))
+            Spacer()
+            zoneItem(label: "前场", percent: zones.attack, color: Color(red: 1.0, green: 0.35, blue: 0.25))
+        }
+        .padding(.horizontal, 4)
+    }
+
+    private func zoneItem(label: String, percent: Double, color: Color) -> some View {
+        HStack(spacing: 6) {
+            Circle()
+                .fill(color)
+                .frame(width: 8, height: 8)
+            Text(label)
+                .font(.caption)
+                .foregroundColor(AppColors.textSecondary)
+            Text(String(format: "%.0f%%", percent))
+                .font(.caption.weight(.semibold))
+                .foregroundColor(AppColors.textPrimary)
+        }
     }
 }
 
-/// Canvas that draws a football pitch with heat overlay.
+/// Canvas that draws a horizontal football pitch with heat overlay.
 struct PitchHeatmapCanvas: View {
     let grid: [[Double]]
 
@@ -40,7 +109,7 @@ struct PitchHeatmapCanvas: View {
         }
     }
 
-    // MARK: - Pitch Drawing
+    // MARK: - Pitch Drawing (horizontal layout)
 
     private func drawPitch(context: GraphicsContext, size: CGSize) {
         let w = size.width
@@ -59,18 +128,18 @@ struct PitchHeatmapCanvas: View {
         let outlineRect = CGRect(x: pitchX, y: pitchY, width: pitchW, height: pitchH)
         context.stroke(Path(outlineRect), with: .color(.white.opacity(0.6)), lineWidth: 1.5)
 
-        // Center line
-        let centerY = pitchY + pitchH / 2
+        // Center line (vertical for horizontal pitch)
+        let centerX = pitchX + pitchW / 2
         var centerLine = Path()
-        centerLine.move(to: CGPoint(x: pitchX, y: centerY))
-        centerLine.addLine(to: CGPoint(x: pitchX + pitchW, y: centerY))
+        centerLine.move(to: CGPoint(x: centerX, y: pitchY))
+        centerLine.addLine(to: CGPoint(x: centerX, y: pitchY + pitchH))
         context.stroke(centerLine, with: .color(.white.opacity(0.5)), lineWidth: 1)
 
         // Center circle
-        let circleR = pitchW * 0.16
+        let circleR = pitchH * 0.18
         let circlePath = Path(ellipseIn: CGRect(
-            x: pitchX + pitchW / 2 - circleR,
-            y: centerY - circleR,
+            x: centerX - circleR,
+            y: pitchY + pitchH / 2 - circleR,
             width: circleR * 2,
             height: circleR * 2
         ))
@@ -79,60 +148,60 @@ struct PitchHeatmapCanvas: View {
         // Center dot
         let dotR: CGFloat = 3
         let dotPath = Path(ellipseIn: CGRect(
-            x: pitchX + pitchW / 2 - dotR,
-            y: centerY - dotR,
+            x: centerX - dotR,
+            y: pitchY + pitchH / 2 - dotR,
             width: dotR * 2,
             height: dotR * 2
         ))
         context.fill(dotPath, with: .color(.white.opacity(0.6)))
 
-        // Penalty areas (top & bottom)
-        let penaltyW = pitchW * 0.6
-        let penaltyH = pitchH * 0.14
-        let penaltyX = pitchX + (pitchW - penaltyW) / 2
+        // Penalty areas (left & right)
+        let penaltyH = pitchH * 0.6
+        let penaltyW = pitchW * 0.14
+        let penaltyY = pitchY + (pitchH - penaltyH) / 2
 
-        // Top penalty area
-        let topPenalty = CGRect(x: penaltyX, y: pitchY, width: penaltyW, height: penaltyH)
-        context.stroke(Path(topPenalty), with: .color(.white.opacity(0.5)), lineWidth: 1)
+        // Left penalty area
+        let leftPenalty = CGRect(x: pitchX, y: penaltyY, width: penaltyW, height: penaltyH)
+        context.stroke(Path(leftPenalty), with: .color(.white.opacity(0.5)), lineWidth: 1)
 
-        // Bottom penalty area
-        let botPenalty = CGRect(x: penaltyX, y: pitchY + pitchH - penaltyH, width: penaltyW, height: penaltyH)
-        context.stroke(Path(botPenalty), with: .color(.white.opacity(0.5)), lineWidth: 1)
+        // Right penalty area
+        let rightPenalty = CGRect(x: pitchX + pitchW - penaltyW, y: penaltyY, width: penaltyW, height: penaltyH)
+        context.stroke(Path(rightPenalty), with: .color(.white.opacity(0.5)), lineWidth: 1)
 
-        // Goal areas (top & bottom)
-        let goalW = pitchW * 0.3
-        let goalH = pitchH * 0.055
-        let goalX = pitchX + (pitchW - goalW) / 2
+        // Goal areas (left & right)
+        let goalH = pitchH * 0.3
+        let goalW = pitchW * 0.055
+        let goalY = pitchY + (pitchH - goalH) / 2
 
-        let topGoal = CGRect(x: goalX, y: pitchY, width: goalW, height: goalH)
-        context.stroke(Path(topGoal), with: .color(.white.opacity(0.5)), lineWidth: 1)
+        let leftGoal = CGRect(x: pitchX, y: goalY, width: goalW, height: goalH)
+        context.stroke(Path(leftGoal), with: .color(.white.opacity(0.5)), lineWidth: 1)
 
-        let botGoal = CGRect(x: goalX, y: pitchY + pitchH - goalH, width: goalW, height: goalH)
-        context.stroke(Path(botGoal), with: .color(.white.opacity(0.5)), lineWidth: 1)
+        let rightGoal = CGRect(x: pitchX + pitchW - goalW, y: goalY, width: goalW, height: goalH)
+        context.stroke(Path(rightGoal), with: .color(.white.opacity(0.5)), lineWidth: 1)
 
-        // Penalty arcs (top & bottom)
-        let arcR = pitchW * 0.10
-        let penaltyDotTopY = pitchY + penaltyH * 0.85
-        var topArc = Path()
-        topArc.addArc(
-            center: CGPoint(x: pitchX + pitchW / 2, y: penaltyDotTopY),
+        // Penalty arcs (left & right)
+        let arcR = pitchH * 0.10
+        let penaltyDotLeftX = pitchX + penaltyW * 0.85
+        var leftArc = Path()
+        leftArc.addArc(
+            center: CGPoint(x: penaltyDotLeftX, y: pitchY + pitchH / 2),
             radius: arcR,
-            startAngle: .degrees(0),
-            endAngle: .degrees(180),
+            startAngle: .degrees(-90),
+            endAngle: .degrees(90),
             clockwise: false
         )
-        context.stroke(topArc, with: .color(.white.opacity(0.4)), lineWidth: 1)
+        context.stroke(leftArc, with: .color(.white.opacity(0.4)), lineWidth: 1)
 
-        let penaltyDotBotY = pitchY + pitchH - penaltyH * 0.85
-        var botArc = Path()
-        botArc.addArc(
-            center: CGPoint(x: pitchX + pitchW / 2, y: penaltyDotBotY),
+        let penaltyDotRightX = pitchX + pitchW - penaltyW * 0.85
+        var rightArc = Path()
+        rightArc.addArc(
+            center: CGPoint(x: penaltyDotRightX, y: pitchY + pitchH / 2),
             radius: arcR,
-            startAngle: .degrees(180),
-            endAngle: .degrees(360),
+            startAngle: .degrees(90),
+            endAngle: .degrees(270),
             clockwise: false
         )
-        context.stroke(botArc, with: .color(.white.opacity(0.4)), lineWidth: 1)
+        context.stroke(rightArc, with: .color(.white.opacity(0.4)), lineWidth: 1)
 
         // Corner arcs
         let cornerR: CGFloat = 8
@@ -178,19 +247,29 @@ struct PitchHeatmapCanvas: View {
 
         let cellW = pitchW / CGFloat(cols)
         let cellH = pitchH / CGFloat(rows)
+        // Use square blocks — pick the smaller dimension, then scale up 4×
+        let cellSize = min(cellW, cellH) * 4
+
+        // Clip heat blocks to pitch boundary so they don't overflow the white lines
+        var clippedContext = context
+        let pitchRect = CGRect(x: pitchX, y: pitchY, width: pitchW, height: pitchH)
+        clippedContext.clip(to: Path(pitchRect))
 
         for r in 0..<rows {
             for c in 0..<cols {
                 let intensity = grid[r][c]
                 guard intensity > 0.02 else { continue }
                 let color = heatColor(intensity)
+                // Center the square within each grid cell
+                let cx = pitchX + CGFloat(c) * cellW + cellW / 2
+                let cy = pitchY + CGFloat(rows - 1 - r) * cellH + cellH / 2
                 let rect = CGRect(
-                    x: pitchX + CGFloat(c) * cellW,
-                    y: pitchY + CGFloat(rows - 1 - r) * cellH,
-                    width: cellW,
-                    height: cellH
+                    x: cx - cellSize / 2,
+                    y: cy - cellSize / 2,
+                    width: cellSize,
+                    height: cellSize
                 )
-                context.fill(Path(rect), with: .color(color))
+                clippedContext.fill(Path(rect), with: .color(color))
             }
         }
     }

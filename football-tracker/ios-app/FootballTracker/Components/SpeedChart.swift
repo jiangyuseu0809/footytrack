@@ -9,6 +9,7 @@ struct SpeedChartView: View {
         VStack(alignment: .leading, spacing: 8) {
             Text(showHeartRate ? "心率曲线 (bpm)" : "速度曲线 (km/h)")
                 .font(.subheadline.weight(.medium))
+                .foregroundColor(AppColors.textPrimary)
 
             let startTime = points.first?.timestamp ?? 0
             let values: [(Double, Double)] = points.map { p in
@@ -61,19 +62,21 @@ struct SpeedChartView: View {
                 context.stroke(path, with: .color(lineColor), lineWidth: 1.5)
             }
             .frame(height: 160)
-            .background(Color(.systemGray6))
             .cornerRadius(8)
 
             HStack {
                 Text("0 min")
                     .font(.caption2)
-                    .foregroundColor(.gray)
+                    .foregroundColor(AppColors.textSecondary)
                 Spacer()
                 Text("\(Int(maxTime / 60)) min")
                     .font(.caption2)
-                    .foregroundColor(.gray)
+                    .foregroundColor(AppColors.textSecondary)
             }
         }
+        .padding()
+        .background(AppColors.cardBg)
+        .cornerRadius(12)
     }
 }
 
@@ -85,6 +88,7 @@ struct FatigueChartView: View {
         VStack(alignment: .leading, spacing: 8) {
             Text("疲劳分析 (每5分钟跑动距离)")
                 .font(.subheadline.weight(.medium))
+                .foregroundColor(AppColors.textPrimary)
 
             let maxDist = max(1, segments.map(\.distanceMeters).max() ?? 1)
 
@@ -104,12 +108,15 @@ struct FatigueChartView: View {
             HStack {
                 Text("0'")
                     .font(.caption2)
-                    .foregroundColor(.gray)
+                    .foregroundColor(AppColors.textSecondary)
                 Spacer()
                 Text("\(segments.last?.endMinute ?? 0)'")
                     .font(.caption2)
-                    .foregroundColor(.gray)
+                    .foregroundColor(AppColors.textSecondary)
             }
         }
+        .padding()
+        .background(AppColors.cardBg)
+        .cornerRadius(12)
     }
 }
