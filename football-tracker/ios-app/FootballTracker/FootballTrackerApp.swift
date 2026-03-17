@@ -56,7 +56,7 @@ struct MainTabView: View {
             }
 
             NavigationStack {
-                ProfileView(store: store)
+                ProfileView(store: store, authManager: authManager)
             }
             .tabItem {
                 Image(systemName: "person.fill")
