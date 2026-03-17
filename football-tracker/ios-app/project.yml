@@ -30,6 +30,8 @@ targets:
       - target: FootballTrackerWatch
         embed: true
         codeSign: true
+    entitlements:
+      path: FootballTracker/FootballTracker.entitlements
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.footballtracker.ios

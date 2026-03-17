@@ -1,0 +1,11 @@
+{
+  "applinks": {
+    "apps": [],
+    "details": [
+      {
+        "appID": "25N63T38LP.com.footballtracker.ios",
+        "paths": ["/app/*"]
+      }
+    ]
+  }
+}
