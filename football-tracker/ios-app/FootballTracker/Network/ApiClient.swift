@@ -24,7 +24,7 @@ enum ApiError: LocalizedError {
 final class ApiClient {
     static let shared = ApiClient()
 
-    private let baseURL = "http://20.214.144.155"
+    private let baseURL = "http://footytrack.cn"
     private let session: URLSession
     var token: String?
 
