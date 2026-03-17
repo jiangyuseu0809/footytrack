@@ -86,10 +86,7 @@ struct ProfileView: View {
                 statItem(value: formatDistance(avgDistance), label: "场均跑动")
             }
         }
-        .padding(16)
-        .background(AppColors.cardBg)
-        .cornerRadius(16)
-        .padding(.horizontal, 16)
+        .modifier(ElevatedCard())
     }
 
     // MARK: - Radar Chart
@@ -103,10 +100,7 @@ struct ProfileView: View {
             RadarChartView(axes: radarAxes, size: 240)
                 .frame(maxWidth: .infinity, alignment: .center)
         }
-        .padding(16)
-        .background(AppColors.cardBg)
-        .cornerRadius(16)
-        .padding(.horizontal, 16)
+        .modifier(ElevatedCard())
     }
 
     // MARK: - Recent Sessions
@@ -137,10 +131,7 @@ struct ProfileView: View {
                 }
             }
         }
-        .padding(16)
-        .background(AppColors.cardBg)
-        .cornerRadius(16)
-        .padding(.horizontal, 16)
+        .modifier(ElevatedCard())
     }
 
     // MARK: - Teams
@@ -189,10 +180,7 @@ struct ProfileView: View {
                 }
             }
         }
-        .padding(16)
-        .background(AppColors.cardBg)
-        .cornerRadius(16)
-        .padding(.horizontal, 16)
+        .modifier(ElevatedCard())
     }
 
     // MARK: - Badges
@@ -218,10 +206,7 @@ struct ProfileView: View {
                 )
             }
         }
-        .padding(16)
-        .background(AppColors.cardBg)
-        .cornerRadius(16)
-        .padding(.horizontal, 16)
+        .modifier(ElevatedCard())
     }
 
     // MARK: - Stat Item Helper
@@ -344,5 +329,32 @@ struct ProfileView: View {
             // Silently handle errors — data will show empty state
         }
         isLoading = false
+    }
+}
+
+// MARK: - Elevated Card Modifier
+
+private struct ElevatedCard: ViewModifier {
+    func body(content: Content) -> some View {
+        content
+            .padding(16)
+            .background(
+                ZStack {
+                    RoundedRectangle(cornerRadius: 16)
+                        .fill(AppColors.cardBg)
+                    RoundedRectangle(cornerRadius: 16)
+                        .fill(
+                            LinearGradient(
+                                colors: [Color.white.opacity(0.06), Color.clear],
+                                startPoint: .top,
+                                endPoint: .center
+                            )
+                        )
+                    RoundedRectangle(cornerRadius: 16)
+                        .stroke(Color.white.opacity(0.08), lineWidth: 0.5)
+                }
+            )
+            .shadow(color: .black.opacity(0.4), radius: 8, x: 0, y: 4)
+            .padding(.horizontal, 16)
     }
 }

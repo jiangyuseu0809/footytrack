@@ -4,8 +4,8 @@ import SwiftUI
 
 enum AppColors {
     static let darkBg       = Color(hex: 0x0D1117)
-    static let cardBg       = Color(hex: 0x161B22)
-    static let cardBgLight  = Color(hex: 0x1C2333)
+    static let cardBg       = Color(hex: 0x1C2333)
+    static let cardBgLight  = Color(hex: 0x242D3D)
     static let dividerColor = Color(hex: 0x30363D)
 
     static let neonBlue     = Color(hex: 0x00E676)  // Primary green
