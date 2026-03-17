@@ -32,6 +32,7 @@
 		BE8487577C6EC8D651FDFC92 /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D25D605E8EF09E6663AD799E /* LoginView.swift */; };
 		BF4CDBC2F0531E306EC2D0FF /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F265F7DD0BE6099A998F644 /* HomeView.swift */; };
 		CA60D4570D15FDFDCC75AA1C /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 9ACD73F03A1F387CB2D398BE /* Assets.xcassets */; };
+		W1A2B3C4D5E6F7081920A1B2 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = W2B3C4D5E6F70819A1B2C3D4 /* Assets.xcassets */; };
 		C1A2B3D4E5F60718293A4B5C /* RadarChartView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4E5F6071829A3B4C5D6E7F8 /* RadarChartView.swift */; };
 		CE774E22735FC3A1D7455257 /* ProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 754C6ACB7B9D970C8F07EE85 /* ProfileView.swift */; };
 		D80555D855E9816377F1558D /* SessionDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C33629BCDCE91E205E4B5BA0 /* SessionDetailView.swift */; };
@@ -95,6 +96,7 @@
 		F058CF3ECEDBF005C5223459 /* StatsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatsView.swift; sourceTree = "<group>"; };
 		F5F5B7186163F807377A07D1 /* WatchSummaryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchSummaryView.swift; sourceTree = "<group>"; };
 		FCDCFF943267F00D39A478EA /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
+		W2B3C4D5E6F70819A1B2C3D4 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -128,6 +130,7 @@
 		52D0B217DFEFFA934A74BAC9 /* FootballTrackerWatch */ = {
 			isa = PBXGroup;
 			children = (
+				W2B3C4D5E6F70819A1B2C3D4 /* Assets.xcassets */,
 				65A416238FFA973BB961135C /* FootballTrackerWatchApp.swift */,
 				DD8DB8BCDA2179FCD4B5AAAF /* Sync */,
 				CC0E03DF13339C62F81195A7 /* Tracking */,
@@ -259,6 +262,7 @@
 			buildConfigurationList = B2C1E14CF168BC6B922E4B1D /* Build configuration list for PBXNativeTarget "FootballTrackerWatch" */;
 			buildPhases = (
 				D01ACDF8AAF1E941DECAFFA1 /* Sources */,
+				W3C4D5E6F70819A1B2C3D4E5 /* Resources */,
 			);
 			buildRules = (
 			);
@@ -316,6 +320,14 @@
 			buildActionMask = 2147483647;
 			files = (
 				CA60D4570D15FDFDCC75AA1C /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		W3C4D5E6F70819A1B2C3D4E5 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				W1A2B3C4D5E6F7081920A1B2 /* Assets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
