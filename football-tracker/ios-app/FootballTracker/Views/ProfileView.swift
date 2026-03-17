@@ -3,8 +3,6 @@ import SwiftUI
 struct ProfileView: View {
     @ObservedObject var store: SessionStore
     @ObservedObject var authManager: AuthManager
-    @State private var earnedBadgesResponse: EarnedBadgesResponse?
-    @State private var teams: [TeamResponse] = []
     @State private var isLoading = true
 
     var body: some View {
@@ -142,7 +140,7 @@ struct ProfileView: View {
                     .font(.headline)
                     .foregroundColor(AppColors.textPrimary)
                 Spacer()
-                NavigationLink(destination: TeamListView()) {
+                NavigationLink(destination: TeamListView(authManager: authManager)) {
                     HStack(spacing: 4) {
                         Text("管理")
                             .font(.subheadline)
@@ -153,14 +151,14 @@ struct ProfileView: View {
                 }
             }
 
-            if teams.isEmpty {
+            if authManager.teams.isEmpty {
                 Text("还没有加入球队")
                     .font(.subheadline)
                     .foregroundColor(AppColors.textSecondary)
                     .frame(maxWidth: .infinity, alignment: .center)
                     .padding(.vertical, 20)
             } else {
-                ForEach(teams, id: \.id) { team in
+                ForEach(authManager.teams, id: \.id) { team in
                     NavigationLink(destination: TeamDetailView(teamId: team.id)) {
                         HStack {
                             Image(systemName: "person.3.fill")
@@ -191,14 +189,14 @@ struct ProfileView: View {
                     .font(.headline)
                     .foregroundColor(AppColors.textPrimary)
                 Spacer()
-                if let resp = earnedBadgesResponse {
+                if let resp = authManager.earnedBadges {
                     Text("\(resp.earnedBadges.count)/\(resp.allBadges.count)")
                         .font(.subheadline)
                         .foregroundColor(AppColors.neonBlue)
                 }
             }
 
-            if let resp = earnedBadgesResponse {
+            if let resp = authManager.earnedBadges {
                 BadgeWallView(
                     allBadges: resp.allBadges,
                     earnedBadges: resp.earnedBadges
@@ -315,18 +313,10 @@ struct ProfileView: View {
     // MARK: - Data Loading
 
     private func loadData() async {
-        async let profileLoad: () = authManager.loadProfile()
-        do {
-            async let teamsTask = ApiClient.shared.getTeams()
-            async let badgesTask = ApiClient.shared.getEarnedBadges()
-
-            let (teamsResp, badgesResp) = try await (teamsTask, badgesTask)
-            teams = teamsResp.teams
-            earnedBadgesResponse = badgesResp
-        } catch {
-            // Silently handle errors — data will show empty state
-        }
-        await profileLoad
+        async let profileLoad: () = authManager.loadProfileIfNeeded()
+        async let teamsLoad: () = authManager.loadTeamsIfNeeded()
+        async let badgesLoad: () = authManager.loadBadgesIfNeeded()
+        _ = await (profileLoad, teamsLoad, badgesLoad)
         isLoading = false
     }
 }

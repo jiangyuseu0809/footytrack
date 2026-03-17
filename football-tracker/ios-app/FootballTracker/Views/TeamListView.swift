@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct TeamListView: View {
-    @State private var teams: [TeamResponse] = []
+    @ObservedObject var authManager: AuthManager
     @State private var showCreateSheet = false
     @State private var showJoinSheet = false
     @State private var newTeamName = ""
@@ -15,7 +15,7 @@ struct TeamListView: View {
 
             ScrollView {
                 VStack(spacing: 12) {
-                    if teams.isEmpty && !isLoading {
+                    if authManager.teams.isEmpty && !isLoading {
                         VStack(spacing: 12) {
                             Image(systemName: "person.3")
                                 .font(.system(size: 48))
@@ -26,7 +26,7 @@ struct TeamListView: View {
                         }
                         .padding(.top, 60)
                     } else {
-                        ForEach(teams, id: \.id) { team in
+                        ForEach(authManager.teams, id: \.id) { team in
                             NavigationLink(destination: TeamDetailView(teamId: team.id)) {
                                 teamCard(team)
                             }
@@ -85,10 +85,7 @@ struct TeamListView: View {
     }
 
     private func loadTeams() async {
-        do {
-            let resp = try await ApiClient.shared.getTeams()
-            teams = resp.teams
-        } catch {}
+        await authManager.loadTeamsIfNeeded()
         isLoading = false
     }
 
@@ -96,7 +93,8 @@ struct TeamListView: View {
         guard !newTeamName.isEmpty else { return }
         do {
             let team = try await ApiClient.shared.createTeam(name: newTeamName)
-            teams.append(team)
+            authManager.teams.append(team)
+            authManager.invalidateTeams()
             newTeamName = ""
         } catch {}
     }
@@ -105,7 +103,8 @@ struct TeamListView: View {
         guard !inviteCode.isEmpty else { return }
         do {
             let team = try await ApiClient.shared.joinTeam(inviteCode: inviteCode)
-            teams.append(team)
+            authManager.teams.append(team)
+            authManager.invalidateTeams()
             inviteCode = ""
         } catch {}
     }

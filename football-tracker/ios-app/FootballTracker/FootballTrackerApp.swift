@@ -72,6 +72,9 @@ struct MainTabView: View {
             }
         }
         .tint(AppColors.neonBlue)
+        .task {
+            await authManager.preloadData()
+        }
     }
 }
 

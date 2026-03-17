@@ -42,10 +42,11 @@ struct SettingsView: View {
         }
         .navigationTitle("设置")
         .navigationBarTitleDisplayMode(.inline)
-        .task { await authManager.loadProfile() }
+        .task { await authManager.loadProfileIfNeeded() }
         .sheet(isPresented: $showEditSheet) {
             EditProfileSheet(profile: authManager.userProfile) { updated in
                 authManager.userProfile = updated
+                authManager.refreshProfileTimestamp()
             }
         }
     }
