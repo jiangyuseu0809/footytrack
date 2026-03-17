@@ -9,6 +9,7 @@ class AuthManager: ObservableObject {
     @Published var currentUid: String?
     @Published var isLoading: Bool = false
     @Published var errorMessage: String?
+    @Published var userProfile: UserProfileResponse?
 
     init() {
         let token = UserDefaults.standard.string(forKey: kTokenKey)
@@ -52,7 +53,16 @@ class AuthManager: ObservableObject {
         UserDefaults.standard.removeObject(forKey: kUidKey)
         ApiClient.shared.token = nil
         currentUid = nil
+        userProfile = nil
         isLoggedIn = false
+    }
+
+    func loadProfile() async {
+        do {
+            userProfile = try await ApiClient.shared.getProfile()
+        } catch {
+            // Silently handle — views show placeholder
+        }
     }
 
     private func saveAuth(token: String, uid: String) {

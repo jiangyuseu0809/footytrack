@@ -3,8 +3,6 @@ import SwiftUI
 struct SettingsView: View {
     @ObservedObject var store: SessionStore
     @ObservedObject var authManager: AuthManager
-    @State private var profile: UserProfileResponse?
-    @State private var isLoadingProfile = false
     @State private var showEditSheet = false
     @State private var syncStatus: String?
     @State private var isSyncing = false
@@ -44,10 +42,10 @@ struct SettingsView: View {
         }
         .navigationTitle("设置")
         .navigationBarTitleDisplayMode(.inline)
-        .task { await loadProfile() }
+        .task { await authManager.loadProfile() }
         .sheet(isPresented: $showEditSheet) {
-            EditProfileSheet(profile: profile) { updated in
-                profile = updated
+            EditProfileSheet(profile: authManager.userProfile) { updated in
+                authManager.userProfile = updated
             }
         }
     }
@@ -58,7 +56,7 @@ struct SettingsView: View {
         VStack(spacing: 16) {
             HStack(spacing: 16) {
                 // Avatar (first letter)
-                let initial = String((profile?.nickname ?? "U").prefix(1)).uppercased()
+                let initial = String((authManager.userProfile?.nickname ?? "U").prefix(1)).uppercased()
                 ZStack {
                     Circle()
                         .fill(AppColors.neonGradient)
@@ -69,11 +67,11 @@ struct SettingsView: View {
                 }
 
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(profile?.nickname ?? "加载中...")
+                    Text(authManager.userProfile?.nickname ?? "加载中...")
                         .font(.headline)
                         .foregroundColor(AppColors.textPrimary)
 
-                    if let p = profile {
+                    if let p = authManager.userProfile {
                         Text("\(String(format: "%.0f", p.weightKg))kg · \(p.age)岁")
                             .font(.subheadline)
                             .foregroundColor(AppColors.textSecondary)
@@ -166,16 +164,6 @@ struct SettingsView: View {
     }
 
     // MARK: - Helpers
-
-    private func loadProfile() async {
-        isLoadingProfile = true
-        do {
-            profile = try await ApiClient.shared.getProfile()
-        } catch {
-            // Silently handle — profile card shows "加载中..."
-        }
-        isLoadingProfile = false
-    }
 
     private func uploadData() {
         isSyncing = true

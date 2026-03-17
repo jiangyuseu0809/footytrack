@@ -5,7 +5,6 @@ struct ProfileView: View {
     @ObservedObject var authManager: AuthManager
     @State private var earnedBadgesResponse: EarnedBadgesResponse?
     @State private var teams: [TeamResponse] = []
-    @State private var userProfile: UserProfileResponse?
     @State private var isLoading = true
 
     var body: some View {
@@ -36,7 +35,7 @@ struct ProfileView: View {
 
     private var profileHeaderSection: some View {
         VStack(spacing: 12) {
-            if let profile = userProfile {
+            if let profile = authManager.userProfile {
                 let initial = profile.nickname.prefix(1).uppercased()
                 ZStack {
                     Circle()
@@ -316,18 +315,18 @@ struct ProfileView: View {
     // MARK: - Data Loading
 
     private func loadData() async {
+        async let profileLoad: () = authManager.loadProfile()
         do {
-            async let profileTask = ApiClient.shared.getProfile()
             async let teamsTask = ApiClient.shared.getTeams()
             async let badgesTask = ApiClient.shared.getEarnedBadges()
 
-            let (profileResp, teamsResp, badgesResp) = try await (profileTask, teamsTask, badgesTask)
-            userProfile = profileResp
+            let (teamsResp, badgesResp) = try await (teamsTask, badgesTask)
             teams = teamsResp.teams
             earnedBadgesResponse = badgesResp
         } catch {
             // Silently handle errors — data will show empty state
         }
+        await profileLoad
         isLoading = false
     }
 }
