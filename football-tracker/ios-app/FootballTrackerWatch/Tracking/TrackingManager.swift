@@ -58,16 +58,17 @@ class TrackingManager: NSObject, ObservableObject {
         lastLocation = nil
         sessionStartTime = Date()
 
-        // Start GPS
-        setupLocationManager()
-
-        // Start heart rate via HealthKit workout
-        startWorkout()
-
-        // Start timer
-        timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
+        // Request HealthKit authorization then start
+        requestHealthKitAuth { [weak self] in
             Task { @MainActor in
-                self?.elapsedSeconds += 1
+                self?.setupLocationManager()
+                self?.startWorkout()
+
+                self?.timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
+                    Task { @MainActor in
+                        self?.elapsedSeconds += 1
+                    }
+                }
             }
         }
     }
@@ -81,12 +82,24 @@ class TrackingManager: NSObject, ObservableObject {
         locationManager?.stopUpdatingLocation()
         locationManager = nil
 
+        // End workout and collect HealthKit calories
+        if let builder = workoutBuilder {
+            let calorieType = HKQuantityType.quantityType(forIdentifier: .activeEnergyBurned)!
+            if let stats = builder.statistics(for: calorieType),
+               let sum = stats.sumQuantity() {
+                summaryCalories = sum.doubleValue(for: .kilocalorie())
+            } else {
+                summaryCalories = estimateCalories()
+            }
+        } else {
+            summaryCalories = estimateCalories()
+        }
+
         workoutSession?.end()
 
         // Compute summary
         summaryDurationSeconds = elapsedSeconds
         summaryDistanceMeters = totalDistanceMeters
-        summaryCalories = estimateCalories()
         summarySlackIndex = computeSlackIndex()
 
         // Sync to phone
@@ -97,6 +110,24 @@ class TrackingManager: NSObject, ObservableObject {
 
     func dismissSummary() {
         showSummary = false
+    }
+
+    // MARK: - HealthKit Authorization
+
+    private func requestHealthKitAuth(completion: @escaping () -> Void) {
+        let typesToRead: Set<HKObjectType> = [
+            HKQuantityType.quantityType(forIdentifier: .heartRate)!,
+            HKQuantityType.quantityType(forIdentifier: .activeEnergyBurned)!,
+        ]
+        let typesToWrite: Set<HKSampleType> = [
+            HKQuantityType.workoutType(),
+        ]
+        healthStore.requestAuthorization(toShare: typesToWrite, read: typesToRead) { success, error in
+            if let error = error {
+                print("HealthKit auth error: \(error)")
+            }
+            completion()
+        }
     }
 
     // MARK: - Location

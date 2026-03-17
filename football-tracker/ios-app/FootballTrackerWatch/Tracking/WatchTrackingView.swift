@@ -5,57 +5,74 @@ struct WatchTrackingView: View {
     @ObservedObject var manager: TrackingManager
 
     var body: some View {
+        if manager.isTracking {
+            trackingView
+        } else {
+            startView
+        }
+    }
+
+    // MARK: - Start View (big circular button)
+
+    private var startView: some View {
+        VStack {
+            Spacer()
+            Button(action: { manager.startTracking() }) {
+                Text("开始踢球")
+                    .font(.system(size: 16, weight: .bold))
+                    .foregroundColor(.white)
+                    .frame(width: 120, height: 120)
+                    .background(
+                        Circle().fill(.green)
+                    )
+            }
+            .buttonStyle(.plain)
+            Spacer()
+        }
+    }
+
+    // MARK: - Tracking View (live stats + stop button)
+
+    private var trackingView: some View {
         VStack(spacing: 6) {
-            Text(manager.isTracking ? "⚽ 踢球中" : "⚽ 准备开始")
+            Text("⚽ 踢球中")
                 .font(.system(size: 14, weight: .bold))
                 .foregroundColor(.white)
 
-            if manager.isTracking {
-                // Timer
-                Text("⏱ \(formatTime(manager.elapsedSeconds))")
-                    .font(.system(size: 22, weight: .bold, design: .monospaced))
-                    .foregroundColor(.cyan)
+            Text(formatTime(manager.elapsedSeconds))
+                .font(.system(size: 22, weight: .bold, design: .monospaced))
+                .foregroundColor(.cyan)
 
-                // Distance
-                HStack {
-                    Text("🏃")
-                    Text(String(format: "%.1f km", manager.totalDistanceMeters / 1000.0))
-                        .foregroundColor(.green)
-                }
-                .font(.system(size: 14))
-
-                // Heart Rate
-                HStack {
-                    Text("❤️")
-                    Text("\(manager.currentHeartRate) bpm")
-                        .foregroundColor(.red)
-                }
-                .font(.system(size: 14))
-
-                // Speed
-                HStack {
-                    Text("⚡")
-                    Text(String(format: "%.1f km/h", manager.currentSpeedMs * 3.6))
-                        .foregroundColor(.orange)
-                }
-                .font(.system(size: 14))
+            HStack {
+                Text("🏃")
+                Text(String(format: "%.1f km", manager.totalDistanceMeters / 1000.0))
+                    .foregroundColor(.green)
             }
+            .font(.system(size: 14))
+
+            HStack {
+                Text("❤️")
+                Text("\(manager.currentHeartRate) bpm")
+                    .foregroundColor(.red)
+            }
+            .font(.system(size: 14))
+
+            HStack {
+                Text("⚡")
+                Text(String(format: "%.1f km/h", manager.currentSpeedMs * 3.6))
+                    .foregroundColor(.orange)
+            }
+            .font(.system(size: 14))
 
             Spacer()
 
-            Button(action: {
-                if manager.isTracking {
-                    manager.stopTracking()
-                } else {
-                    manager.startTracking()
-                }
-            }) {
-                Text(manager.isTracking ? "结束记录" : "开始记录")
+            Button(action: { manager.stopTracking() }) {
+                Text("结束记录")
                     .font(.system(size: 14, weight: .semibold))
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(.borderedProminent)
-            .tint(manager.isTracking ? .red : .green)
+            .tint(.red)
         }
         .padding(8)
     }
