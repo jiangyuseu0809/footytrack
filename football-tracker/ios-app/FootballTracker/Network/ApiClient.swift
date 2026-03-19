@@ -147,44 +147,57 @@ final class ApiClient {
             throw ApiError.decodingError(NSError(domain: "avatar", code: -1))
         }
 
-        guard let url = URL(string: baseURL + "/api/user/avatar") else {
-            throw ApiError.invalidURL
+        let endpoints = ["/api/user/avatar", "/user/avatar"]
+        var lastError: Error?
+
+        for endpoint in endpoints {
+            guard let url = URL(string: baseURL + endpoint) else {
+                throw ApiError.invalidURL
+            }
+
+            var req = URLRequest(url: url)
+            req.httpMethod = "PUT"
+            req.setValue("image/jpeg", forHTTPHeaderField: "Content-Type")
+            if let token = token {
+                req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+            }
+            req.httpBody = compressed
+
+            let (data, response): (Data, URLResponse)
+            do {
+                (data, response) = try await session.data(for: req)
+            } catch {
+                throw ApiError.networkError(error)
+            }
+
+            guard let httpResponse = response as? HTTPURLResponse else {
+                throw ApiError.networkError(URLError(.badServerResponse))
+            }
+
+            guard 200..<300 ~= httpResponse.statusCode else {
+                let msg = (try? JSONDecoder().decode(MessageResponse.self, from: data))?.error
+                    ?? String(data: data, encoding: .utf8)
+                    ?? "Unknown error"
+
+                if httpResponse.statusCode == 404 {
+                    lastError = ApiError.httpError(httpResponse.statusCode, msg)
+                    continue
+                }
+                throw ApiError.httpError(httpResponse.statusCode, msg)
+            }
+
+            do {
+                return try JSONDecoder().decode(AvatarUploadResponse.self, from: data)
+            } catch {
+                throw ApiError.decodingError(error)
+            }
         }
 
-        var req = URLRequest(url: url)
-        req.httpMethod = "PUT"
-        req.setValue("image/jpeg", forHTTPHeaderField: "Content-Type")
-        if let token = token {
-            req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        }
-        req.httpBody = compressed
-
-        let (data, response): (Data, URLResponse)
-        do {
-            (data, response) = try await session.data(for: req)
-        } catch {
-            throw ApiError.networkError(error)
-        }
-
-        guard let httpResponse = response as? HTTPURLResponse else {
-            throw ApiError.networkError(URLError(.badServerResponse))
-        }
-
-        guard 200..<300 ~= httpResponse.statusCode else {
-            let msg = (try? JSONDecoder().decode(MessageResponse.self, from: data))?.error
-                ?? String(data: data, encoding: .utf8)
-                ?? "Unknown error"
-            throw ApiError.httpError(httpResponse.statusCode, msg)
-        }
-
-        do {
-            return try JSONDecoder().decode(AvatarUploadResponse.self, from: data)
-        } catch {
-            throw ApiError.decodingError(error)
-        }
+        throw (lastError ?? ApiError.httpError(404, "接口不存在"))
     }
 
     private func compressAvatar(_ image: UIImage) -> Data? {
+        let maxBytes = 500 * 1024
         let targetSize: CGFloat = 512
         let longSide = max(image.size.width, image.size.height)
         let scaleRatio = min(1.0, targetSize / max(1, longSide))
@@ -195,10 +208,15 @@ final class ApiClient {
             image.draw(in: CGRect(origin: .zero, size: drawSize))
         }
 
-        if let data = scaled.jpegData(compressionQuality: 0.85), data.count <= 500 * 1024 {
-            return data
+        var quality: CGFloat = 0.86
+        while quality >= 0.4 {
+            if let data = scaled.jpegData(compressionQuality: quality), data.count <= maxBytes {
+                return data
+            }
+            quality -= 0.08
         }
-        return scaled.jpegData(compressionQuality: 0.72)
+
+        return scaled.jpegData(compressionQuality: 0.35)
     }
     #endif
 

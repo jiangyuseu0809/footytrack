@@ -529,8 +529,18 @@ struct ProfileView: View {
                 )
                 authManager.userProfile = profile
                 authManager.refreshProfileTimestamp()
+                NotificationCenter.default.post(
+                    name: Notification.Name("GlobalToast"),
+                    object: nil,
+                    userInfo: ["message": "头像更新成功"]
+                )
             }
         } catch {
+            NotificationCenter.default.post(
+                name: Notification.Name("GlobalToast"),
+                object: nil,
+                userInfo: ["message": "头像上传失败，请重试"]
+            )
             return
         }
     }
