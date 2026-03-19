@@ -4,21 +4,102 @@ struct ProfileView: View {
     @ObservedObject var store: SessionStore
     @ObservedObject var authManager: AuthManager
     @State private var isLoading = true
+    @State private var showEditSheet = false
+
+    private var totalMatches: Int {
+        store.sessions.count
+    }
+
+    private var totalSprints: Int {
+        store.sessions.reduce(0) { $0 + $1.sprintCount }
+    }
+
+    private var totalDistanceKm: Double {
+        store.sessions.reduce(0) { $0 + $1.totalDistanceMeters } / 1000
+    }
+
+    private var avgSlack: Double {
+        guard !store.sessions.isEmpty else { return 0 }
+        return Double(store.sessions.reduce(0) { $0 + $1.slackIndex }) / Double(store.sessions.count)
+    }
+
+    private var playerLevel: Int {
+        min(30, max(1, totalMatches / 2 + 1))
+    }
+
+    private var playStyle: String {
+        if avgSlack <= 35 { return "进攻组织" }
+        if avgSlack <= 55 { return "全能中场" }
+        return "稳健控场"
+    }
+
+    private var seasonRating: Double {
+        guard !store.sessions.isEmpty else { return 0 }
+        let maxSpeed = store.sessions.map(\.maxSpeedKmh).max() ?? 0
+        let speedScore = min(1, maxSpeed / 30)
+        let sprintScore = min(1, Double(totalSprints) / Double(max(1, totalMatches * 40)))
+        let distanceScore = min(1, totalDistanceKm / Double(max(1, totalMatches)) / 10)
+        let disciplineScore = max(0, 1 - avgSlack / 100)
+        return (speedScore * 0.3 + sprintScore * 0.25 + distanceScore * 0.25 + disciplineScore * 0.2) * 10
+    }
+
+    private var achievementItems: [ProfileAchievementItem] {
+        let palette: [(Color, Color)] = [
+            (Color(hex: 0xF59E0B), Color(hex: 0xF97316)),
+            (Color(hex: 0x3B82F6), Color(hex: 0x06B6D4)),
+            (Color(hex: 0xA855F7), Color(hex: 0xEC4899)),
+            (Color(hex: 0xEF4444), Color(hex: 0xF43F5E)),
+            (Color(hex: 0x22C55E), Color(hex: 0x10B981)),
+            (Color(hex: 0x6366F1), Color(hex: 0x3B82F6))
+        ]
+
+        let all = authManager.earnedBadges?.allBadges ?? []
+        let earnedIds = Set(authManager.earnedBadges?.earnedBadges.map { $0.badge.id } ?? [])
+
+        let mapped = all.prefix(6).enumerated().map { idx, badge in
+            let colors = palette[idx % palette.count]
+            return ProfileAchievementItem(
+                icon: badgeIcon(badge.iconName),
+                title: badge.name,
+                unlocked: earnedIds.contains(badge.id),
+                start: colors.0,
+                end: colors.1
+            )
+        }
+
+        if mapped.count >= 6 { return Array(mapped) }
+
+        let placeholders = [
+            ProfileAchievementItem(icon: "heart.fill", title: "铁肺", unlocked: false, start: Color(hex: 0xEF4444), end: Color(hex: 0xF43F5E)),
+            ProfileAchievementItem(icon: "medal.fill", title: "MVP", unlocked: false, start: Color(hex: 0x22C55E), end: Color(hex: 0x10B981)),
+            ProfileAchievementItem(icon: "trophy.fill", title: "冠军", unlocked: false, start: Color(hex: 0x6366F1), end: Color(hex: 0x3B82F6))
+        ]
+
+        return Array(mapped) + Array(placeholders.prefix(max(0, 6 - mapped.count)))
+    }
+
+    private var unlockedCount: Int {
+        achievementItems.filter(\.unlocked).count
+    }
 
     var body: some View {
         ZStack {
             AppColors.darkBg.ignoresSafeArea()
 
             ScrollView {
-                VStack(spacing: 20) {
-                    profileHeaderSection
-                    careerStatsCard
-                    radarChartCard
-                    recentSessionsSection
-                    teamsSection
-                    badgeSection
+                VStack(alignment: .leading, spacing: 18) {
+                    profileCard
+                    achievementsSection
+                    summarySection
+                    menuSection(title: "外观", items: appearanceItems)
+                    menuSection(title: "账号", items: accountItems)
+                    menuSection(title: "设备", items: deviceItems)
+                    signOutButton
+                    versionText
                 }
-                .padding(.vertical, 12)
+                .padding(.horizontal, 16)
+                .padding(.top, 12)
+                .padding(.bottom, 20)
             }
         }
         .navigationTitle("我的")
@@ -27,290 +108,357 @@ struct ProfileView: View {
         .task {
             await loadData()
         }
+        .sheet(isPresented: $showEditSheet) {
+            EditProfileSheet(profile: authManager.userProfile) { updated in
+                authManager.userProfile = updated
+                authManager.refreshProfileTimestamp()
+            }
+        }
     }
 
-    // MARK: - Profile Header
+    private var profileCard: some View {
+        let nickname = authManager.userProfile?.nickname ?? "球员"
 
-    private var profileHeaderSection: some View {
-        VStack(spacing: 12) {
-            if let profile = authManager.userProfile {
-                let initial = profile.nickname.prefix(1).uppercased()
+        return VStack(spacing: 14) {
+            HStack(alignment: .top, spacing: 12) {
                 ZStack {
                     Circle()
-                        .fill(AppColors.neonGradient)
-                        .frame(width: 72, height: 72)
-                    Text(initial)
-                        .font(.title.bold())
+                        .fill(Color.white)
+                        .frame(width: 76, height: 76)
+                    Text("⚽️")
+                        .font(.system(size: 34))
+                }
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(nickname)
+                        .font(.title3.weight(.bold))
                         .foregroundColor(.white)
-                }
 
-                Text(profile.nickname)
-                    .font(.title3.bold())
-                    .foregroundColor(AppColors.textPrimary)
-            } else {
-                ZStack {
-                    Circle()
-                        .fill(AppColors.cardBgLight)
-                        .frame(width: 72, height: 72)
-                    Image(systemName: "person.fill")
-                        .font(.title)
-                        .foregroundColor(AppColors.textSecondary)
-                }
-
-                Text("加载中...")
-                    .font(.title3.bold())
-                    .foregroundColor(AppColors.textSecondary)
-            }
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.top, 8)
-    }
-
-    // MARK: - Career Stats
-
-    private var careerStatsCard: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("生涯数据")
-                .font(.headline)
-                .foregroundColor(AppColors.textPrimary)
-
-            LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 3), spacing: 16) {
-                statItem(value: "\(store.sessions.count)", label: "总场次")
-                statItem(value: formatDistance(totalDistance), label: "总跑动")
-                statItem(value: formatCalories(totalCalories), label: "总卡路里")
-                statItem(value: String(format: "%.1f", maxSpeed), label: "最高速度", unit: "km/h")
-                statItem(value: "\(totalSprints)", label: "冲刺次数")
-                statItem(value: formatDistance(avgDistance), label: "场均跑动")
-            }
-        }
-        .modifier(ElevatedCard())
-    }
-
-    // MARK: - Radar Chart
-
-    private var radarChartCard: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("能力雷达")
-                .font(.headline)
-                .foregroundColor(AppColors.textPrimary)
-
-            RadarChartView(axes: radarAxes, size: 240)
-                .frame(maxWidth: .infinity, alignment: .center)
-        }
-        .modifier(ElevatedCard())
-    }
-
-    // MARK: - Recent Sessions
-
-    private var recentSessionsSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Text("最近比赛")
-                    .font(.headline)
-                    .foregroundColor(AppColors.textPrimary)
-                Spacer()
-                Text("\(store.sessions.count) 场")
-                    .font(.subheadline)
-                    .foregroundColor(AppColors.neonBlue)
-            }
-
-            if store.sessions.isEmpty {
-                Text("暂无比赛记录")
-                    .font(.subheadline)
-                    .foregroundColor(AppColors.textSecondary)
-                    .frame(maxWidth: .infinity, alignment: .center)
-                    .padding(.vertical, 20)
-            } else {
-                ForEach(store.sessions.prefix(3), id: \.id) { session in
-                    NavigationLink(destination: SessionDetailView(session: session, store: store)) {
-                        SessionRow(session: session)
-                    }
-                }
-            }
-        }
-        .modifier(ElevatedCard())
-    }
-
-    // MARK: - Teams
-
-    private var teamsSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Text("我的球队")
-                    .font(.headline)
-                    .foregroundColor(AppColors.textPrimary)
-                Spacer()
-                NavigationLink(destination: TeamListView(authManager: authManager)) {
-                    HStack(spacing: 4) {
-                        Text("管理")
-                            .font(.subheadline)
-                        Image(systemName: "chevron.right")
-                            .font(.caption)
-                    }
-                    .foregroundColor(AppColors.neonBlue)
-                }
-            }
-
-            if authManager.teams.isEmpty {
-                Text("还没有加入球队")
-                    .font(.subheadline)
-                    .foregroundColor(AppColors.textSecondary)
-                    .frame(maxWidth: .infinity, alignment: .center)
-                    .padding(.vertical, 20)
-            } else {
-                ForEach(authManager.teams, id: \.id) { team in
-                    NavigationLink(destination: TeamDetailView(teamId: team.id)) {
-                        HStack {
-                            Image(systemName: "person.3.fill")
-                                .foregroundColor(AppColors.neonBlue)
-                            Text(team.name)
-                                .foregroundColor(AppColors.textPrimary)
-                            Spacer()
-                            Image(systemName: "chevron.right")
-                                .font(.caption)
-                                .foregroundColor(AppColors.textSecondary)
-                        }
-                        .padding(12)
-                        .background(AppColors.cardBgLight)
-                        .cornerRadius(10)
-                    }
-                }
-            }
-        }
-        .modifier(ElevatedCard())
-    }
-
-    // MARK: - Badges
-
-    private var badgeSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Text("勋章墙")
-                    .font(.headline)
-                    .foregroundColor(AppColors.textPrimary)
-                Spacer()
-                if let resp = authManager.earnedBadges {
-                    Text("\(resp.earnedBadges.count)/\(resp.allBadges.count)")
+                    Text("\(playStyle) • Level \(playerLevel)")
                         .font(.subheadline)
-                        .foregroundColor(AppColors.neonBlue)
+                        .foregroundColor(Color.white.opacity(0.85))
+
+                    Text("Pro Member")
+                        .font(.caption.weight(.semibold))
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 5)
+                        .background(Color.white.opacity(0.2))
+                        .cornerRadius(999)
                 }
+
+                Spacer()
             }
 
-            if let resp = authManager.earnedBadges {
-                BadgeWallView(
-                    allBadges: resp.allBadges,
-                    earnedBadges: resp.earnedBadges
-                )
+            HStack(spacing: 0) {
+                profileStat(value: "\(totalMatches)", label: "Matches")
+                profileStat(value: playStyle, label: "Play Style")
+                profileStat(value: "\(totalSprints)", label: "Sprints")
+            }
+            .padding(.top, 12)
+            .overlay(alignment: .top) {
+                Rectangle()
+                    .fill(Color.white.opacity(0.2))
+                    .frame(height: 1)
             }
         }
-        .modifier(ElevatedCard())
+        .padding(16)
+        .background(
+            LinearGradient(
+                colors: [Color(hex: 0x3B82F6), Color(hex: 0x4F46E5)],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+        )
+        .cornerRadius(18)
     }
 
-    // MARK: - Stat Item Helper
-
-    private func statItem(value: String, label: String, unit: String? = nil) -> some View {
-        VStack(spacing: 4) {
-            HStack(alignment: .firstTextBaseline, spacing: 2) {
-                Text(value)
-                    .font(.title3.bold())
+    private var achievementsSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Text("Achievements")
+                    .font(.title3.weight(.semibold))
                     .foregroundColor(AppColors.textPrimary)
-                if let unit = unit {
-                    Text(unit)
-                        .font(.caption2)
-                        .foregroundColor(AppColors.textSecondary)
+                Spacer()
+                Text("\(unlockedCount)/\(achievementItems.count)")
+                    .font(.subheadline)
+                    .foregroundColor(AppColors.textSecondary)
+            }
+
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 3), spacing: 10) {
+                ForEach(achievementItems) { item in
+                    VStack(alignment: .leading, spacing: 8) {
+                        RoundedRectangle(cornerRadius: 8)
+                            .fill(item.unlocked ? LinearGradient(colors: [item.start, item.end], startPoint: .topLeading, endPoint: .bottomTrailing) : LinearGradient(colors: [AppColors.cardBgLight, AppColors.cardBgLight], startPoint: .top, endPoint: .bottom))
+                            .frame(height: 44)
+                            .overlay(
+                                Image(systemName: item.icon)
+                                    .font(.title3.weight(.semibold))
+                                    .foregroundColor(item.unlocked ? .white : AppColors.textSecondary.opacity(0.55))
+                            )
+
+                        Text(item.title)
+                            .font(.system(size: 10, weight: .medium))
+                            .foregroundColor(item.unlocked ? AppColors.textPrimary : AppColors.textSecondary.opacity(0.7))
+                            .lineLimit(1)
+                    }
+                    .padding(10)
+                    .background(item.unlocked ? AppColors.cardBgLight.opacity(0.6) : AppColors.cardBg)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(Color.white.opacity(0.08), lineWidth: 0.5)
+                    )
+                    .cornerRadius(12)
                 }
             }
-            Text(label)
-                .font(.caption)
-                .foregroundColor(AppColors.textSecondary)
         }
     }
 
-    // MARK: - Computed Stats
+    private var summarySection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Season Summary")
+                .font(.headline)
+                .foregroundColor(AppColors.textPrimary)
 
-    private var totalDistance: Double {
-        store.sessions.reduce(0) { $0 + $1.totalDistanceMeters }
-    }
-
-    private var totalCalories: Double {
-        store.sessions.reduce(0) { $0 + $1.caloriesBurned }
-    }
-
-    private var maxSpeed: Double {
-        store.sessions.map(\.maxSpeedKmh).max() ?? 0
-    }
-
-    private var totalSprints: Int {
-        store.sessions.reduce(0) { $0 + $1.sprintCount }
-    }
-
-    private var avgDistance: Double {
-        guard !store.sessions.isEmpty else { return 0 }
-        return totalDistance / Double(store.sessions.count)
-    }
-
-    // MARK: - Radar Axes
-
-    private var radarAxes: [(label: String, value: Double)] {
-        guard !store.sessions.isEmpty else {
-            return [
-                (label: "速度", value: 0),
-                (label: "耐力", value: 0),
-                (label: "强度", value: 0),
-                (label: "覆盖", value: 0),
-                (label: "冲刺", value: 0)
-            ]
+            summaryBar(title: "Overall Rating", valueText: String(format: "%.1f", seasonRating), progress: seasonRating / 10, start: Color(hex: 0x60A5FA), end: Color(hex: 0x2563EB))
+            summaryBar(title: "Distance Covered", valueText: String(format: "%.1f km", totalDistanceKm), progress: min(1, totalDistanceKm / 200), start: Color(hex: 0x4ADE80), end: Color(hex: 0x16A34A))
+            summaryBar(title: "Goal Contributions", valueText: "\(Int(Double(totalSprints) * 0.35))", progress: min(1, Double(totalSprints) / 120), start: Color(hex: 0xC084FC), end: Color(hex: 0x9333EA))
         }
+        .padding(14)
+        .background(AppColors.cardBg)
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(Color.white.opacity(0.08), lineWidth: 0.5)
+        )
+        .cornerRadius(16)
+    }
 
-        let count = Double(store.sessions.count)
-
-        let avgMaxSpeed = store.sessions.map(\.maxSpeedKmh).reduce(0, +) / count
-        let speedVal = min(avgMaxSpeed / 30.0, 1.0)
-
-        let avgDist = totalDistance / count
-        let enduranceVal = min(avgDist / 10000.0, 1.0)
-
-        let avgHighIntensityRatio: Double = {
-            let ratios = store.sessions.map { s -> Double in
-                guard s.totalDistanceMeters > 0 else { return 0 }
-                return s.highIntensityDistanceMeters / s.totalDistanceMeters
-            }
-            return ratios.reduce(0, +) / count
-        }()
-        let intensityVal = min(avgHighIntensityRatio / 0.3, 1.0)
-
-        let avgCoverage = store.sessions.map(\.coveragePercent).reduce(0, +) / count
-        let coverageVal = min(avgCoverage / 100.0, 1.0)
-
-        let avgSprints = Double(totalSprints) / count
-        let sprintVal = min(avgSprints / 10.0, 1.0)
-
-        return [
-            (label: "速度", value: speedVal),
-            (label: "耐力", value: enduranceVal),
-            (label: "强度", value: intensityVal),
-            (label: "覆盖", value: coverageVal),
-            (label: "冲刺", value: sprintVal)
+    private var appearanceItems: [ProfileMenuItem] {
+        [
+            ProfileMenuItem(icon: "moon.fill", title: "Theme", action: .theme, trailingValue: "Dark", isToggle: true)
         ]
     }
 
-    // MARK: - Formatting Helpers
-
-    private func formatDistance(_ meters: Double) -> String {
-        if meters >= 1000 {
-            return String(format: "%.1fkm", meters / 1000.0)
-        }
-        return String(format: "%.0fm", meters)
+    private var accountItems: [ProfileMenuItem] {
+        [
+            ProfileMenuItem(icon: "person.fill", title: "Edit Profile", action: .editProfile),
+            ProfileMenuItem(icon: "bell.fill", title: "Notifications", action: .notifications, badge: "3"),
+            ProfileMenuItem(icon: "square.and.arrow.up", title: "Share Profile", action: .share)
+        ]
     }
 
-    private func formatCalories(_ cal: Double) -> String {
-        if cal >= 1000 {
-            return String(format: "%.1fk", cal / 1000.0)
-        }
-        return String(format: "%.0f", cal)
+    private var deviceItems: [ProfileMenuItem] {
+        [
+            ProfileMenuItem(icon: "applewatch", title: "Apple Watch", action: .watch, status: "Connected")
+        ]
     }
 
-    // MARK: - Data Loading
+    private var supportItems: [ProfileMenuItem] {
+        [
+            ProfileMenuItem(icon: "gearshape.fill", title: "Settings", action: .settings),
+            ProfileMenuItem(icon: "shield.fill", title: "Privacy & Security", action: .privacy),
+            ProfileMenuItem(icon: "questionmark.circle.fill", title: "Help & Support", action: .help)
+        ]
+    }
+
+    private func menuSection(title: String, items: [ProfileMenuItem]) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text(title)
+                .font(.title3.weight(.semibold))
+                .foregroundColor(AppColors.textPrimary)
+
+            VStack(spacing: 0) {
+                ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
+                    menuRow(item: item)
+
+                    if index < items.count - 1 {
+                        Divider().overlay(AppColors.dividerColor.opacity(0.6))
+                    }
+                }
+            }
+            .background(AppColors.cardBg)
+            .overlay(
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(Color.white.opacity(0.08), lineWidth: 0.5)
+            )
+            .cornerRadius(16)
+        }
+    }
+
+    @ViewBuilder
+    private func menuRow(item: ProfileMenuItem) -> some View {
+        if item.action == .settings {
+            NavigationLink(destination: SettingsView(store: store, authManager: authManager)) {
+                menuRowContent(item: item)
+            }
+            .buttonStyle(.plain)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 12)
+        } else {
+            Button {
+                handleMenuAction(item.action)
+            } label: {
+                menuRowContent(item: item)
+            }
+            .buttonStyle(.plain)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 12)
+        }
+    }
+
+    private func menuRowContent(item: ProfileMenuItem) -> some View {
+        HStack(spacing: 10) {
+            RoundedRectangle(cornerRadius: 9)
+                .fill(AppColors.cardBgLight)
+                .frame(width: 34, height: 34)
+                .overlay(
+                    Image(systemName: item.icon)
+                        .font(.subheadline)
+                        .foregroundColor(AppColors.textSecondary)
+                )
+
+            Text(item.title)
+                .font(.subheadline.weight(.medium))
+                .foregroundColor(AppColors.textPrimary)
+
+            Spacer()
+
+            if let badge = item.badge {
+                Text(badge)
+                    .font(.caption2.weight(.bold))
+                    .foregroundColor(.white)
+                    .frame(width: 18, height: 18)
+                    .background(AppColors.heartRed)
+                    .clipShape(Circle())
+            }
+
+            if let status = item.status {
+                Text(status)
+                    .font(.caption.weight(.medium))
+                    .foregroundColor(AppColors.speedGreen)
+            }
+
+            if let trailingValue = item.trailingValue {
+                Text(trailingValue)
+                    .font(.caption)
+                    .foregroundColor(AppColors.textSecondary)
+            }
+
+            if item.isToggle {
+                Capsule()
+                    .fill(Color(hex: 0x2563EB))
+                    .frame(width: 42, height: 24)
+                    .overlay(alignment: .trailing) {
+                        Circle()
+                            .fill(Color.white)
+                            .frame(width: 18, height: 18)
+                            .padding(.trailing, 3)
+                    }
+            } else {
+                Image(systemName: "chevron.right")
+                    .font(.caption.weight(.semibold))
+                    .foregroundColor(AppColors.textSecondary.opacity(0.7))
+            }
+        }
+    }
+
+    private var signOutButton: some View {
+        Button {
+            authManager.logout()
+        } label: {
+            Text("Sign Out")
+                .font(.subheadline.weight(.semibold))
+                .foregroundColor(AppColors.heartRed)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 14)
+        }
+    }
+
+    private var versionText: some View {
+        Text("Version \(appVersion)")
+            .font(.caption)
+            .foregroundColor(AppColors.textSecondary.opacity(0.7))
+            .frame(maxWidth: .infinity)
+    }
+
+    private var appVersion: String {
+        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "2.1.0"
+    }
+
+    private func profileStat(value: String, label: String) -> some View {
+        VStack(spacing: 2) {
+            Text(value)
+                .font(.headline.weight(.bold))
+                .foregroundColor(.white)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+            Text(label)
+                .font(.system(size: 11, weight: .medium))
+                .foregroundColor(Color.white.opacity(0.8))
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    private func summaryBar(title: String, valueText: String, progress: Double, start: Color, end: Color) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack {
+                Text(title)
+                    .font(.subheadline)
+                    .foregroundColor(AppColors.textSecondary)
+                Spacer()
+                Text(valueText)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundColor(AppColors.textPrimary)
+            }
+
+            GeometryReader { proxy in
+                let width = max(0, min(1, progress)) * proxy.size.width
+                ZStack(alignment: .leading) {
+                    Capsule()
+                        .fill(AppColors.cardBgLight)
+                    Capsule()
+                        .fill(LinearGradient(colors: [start, end], startPoint: .leading, endPoint: .trailing))
+                        .frame(width: width)
+                }
+            }
+            .frame(height: 8)
+        }
+    }
+
+    private func badgeIcon(_ iconName: String) -> String {
+        switch iconName {
+        case "first_match": return "sportscourt.fill"
+        case "iron_man": return "figure.strengthtraining.traditional"
+        case "century_legend": return "star.fill"
+        case "speed_star": return "bolt.fill"
+        case "marathon_runner": return "figure.run"
+        case "calorie_burner": return "flame.fill"
+        case "perfect_month": return "calendar.badge.checkmark"
+        case "sprint_king": return "hare.fill"
+        default: return "medal.fill"
+        }
+    }
+
+    private func handleMenuAction(_ action: ProfileMenuAction) {
+        switch action {
+        case .theme:
+            return
+        case .editProfile:
+            showEditSheet = true
+        case .notifications:
+            return
+        case .share:
+            return
+        case .watch:
+            return
+        case .privacy:
+            return
+        case .help:
+            return
+        case .settings:
+            return
+        }
+    }
 
     private func loadData() async {
         async let profileLoad: () = authManager.loadProfileIfNeeded()
@@ -321,29 +469,34 @@ struct ProfileView: View {
     }
 }
 
-// MARK: - Elevated Card Modifier
-
-private struct ElevatedCard: ViewModifier {
-    func body(content: Content) -> some View {
-        content
-            .padding(16)
-            .background(
-                ZStack {
-                    RoundedRectangle(cornerRadius: 16)
-                        .fill(AppColors.cardBg)
-                    RoundedRectangle(cornerRadius: 16)
-                        .fill(
-                            LinearGradient(
-                                colors: [Color.white.opacity(0.06), Color.clear],
-                                startPoint: .top,
-                                endPoint: .center
-                            )
-                        )
-                    RoundedRectangle(cornerRadius: 16)
-                        .stroke(Color.white.opacity(0.08), lineWidth: 0.5)
-                }
-            )
-            .shadow(color: .black.opacity(0.4), radius: 8, x: 0, y: 4)
-            .padding(.horizontal, 16)
-    }
+private struct ProfileAchievementItem: Identifiable {
+    let id = UUID()
+    let icon: String
+    let title: String
+    let unlocked: Bool
+    let start: Color
+    let end: Color
 }
+
+private struct ProfileMenuItem: Identifiable {
+    let id = UUID()
+    let icon: String
+    let title: String
+    let action: ProfileMenuAction
+    var trailingValue: String? = nil
+    var badge: String? = nil
+    var status: String? = nil
+    var isToggle: Bool = false
+}
+
+private enum ProfileMenuAction {
+    case theme
+    case editProfile
+    case notifications
+    case share
+    case watch
+    case settings
+    case privacy
+    case help
+}
+
