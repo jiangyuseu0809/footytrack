@@ -93,12 +93,60 @@ struct TeamHubView: View {
         teamDetail?.members ?? []
     }
 
-    private var attendanceRanking: [TeamMemberResponse] {
-        teamMembers.sorted { $0.sessionCount > $1.sessionCount }
+    private var hasTeam: Bool {
+        team != nil
     }
 
-    private var runningRanking: [TeamMemberResponse] {
-        teamMembers.sorted { $0.totalDistanceMeters > $1.totalDistanceMeters }
+    private var totalSessions: Int64 {
+        teamMembers.reduce(0) { $0 + $1.sessionCount }
+    }
+
+    private var averageDistanceKm: Double {
+        guard !teamMembers.isEmpty else { return 0 }
+        return teamMembers.reduce(0) { $0 + $1.totalDistanceMeters } / Double(teamMembers.count) / 1000
+    }
+
+    private var attendanceBoard: [TeamLeaderItem] {
+        teamMembers
+            .sorted { $0.sessionCount > $1.sessionCount }
+            .prefix(3)
+            .enumerated()
+            .map { idx, m in
+                TeamLeaderItem(name: displayName(m), value: "\(m.sessionCount) 场", avatar: avatarText(m), rank: idx + 1)
+            }
+    }
+
+    private var distanceBoard: [TeamLeaderItem] {
+        teamMembers
+            .sorted { $0.totalDistanceMeters > $1.totalDistanceMeters }
+            .prefix(3)
+            .enumerated()
+            .map { idx, m in
+                TeamLeaderItem(name: displayName(m), value: String(format: "%.1f km", m.totalDistanceMeters / 1000), avatar: avatarText(m), rank: idx + 1)
+            }
+    }
+
+    private var activityBoard: [TeamLeaderItem] {
+        teamMembers
+            .map { ($0, Double($0.sessionCount) * 3 + ($0.totalDistanceMeters / 1000)) }
+            .sorted { $0.1 > $1.1 }
+            .prefix(3)
+            .enumerated()
+            .map { idx, tuple in
+                TeamLeaderItem(name: displayName(tuple.0), value: String(format: "%.1f 分", tuple.1), avatar: avatarText(tuple.0), rank: idx + 1)
+            }
+    }
+
+    private var attendanceRateBoard: [TeamLeaderItem] {
+        let maxSessions = max(1, teamMembers.map { Int($0.sessionCount) }.max() ?? 1)
+        return teamMembers
+            .sorted { $0.sessionCount > $1.sessionCount }
+            .prefix(3)
+            .enumerated()
+            .map { idx, m in
+                let rate = Int((Double(m.sessionCount) / Double(maxSessions)) * 100)
+                return TeamLeaderItem(name: displayName(m), value: "\(rate)%", avatar: avatarText(m), rank: idx + 1)
+            }
     }
 
     var body: some View {
@@ -108,19 +156,19 @@ struct TeamHubView: View {
             if isLoading {
                 ProgressView()
                     .tint(AppColors.neonBlue)
-            } else {
+            } else if hasTeam {
                 ScrollView {
-                    VStack(spacing: 16) {
-                        teamIntroCard
-                        memberSection
-                        rankingSection(title: "出勤排行", members: attendanceRanking, valueText: { "\($0.sessionCount) 场" })
-                        rankingSection(title: "跑动排行", members: runningRanking, valueText: {
-                            String(format: "%.1f km", $0.totalDistanceMeters / 1000.0)
-                        })
+                    VStack(alignment: .leading, spacing: 16) {
+                        teamInfoCard
+                        squadSection
+                        leaderboardsSection
                     }
-                    .padding(.vertical, 12)
                     .padding(.horizontal, 16)
+                    .padding(.top, 12)
+                    .padding(.bottom, 20)
                 }
+            } else {
+                noTeamState
             }
         }
         .navigationTitle("球队")
@@ -131,260 +179,297 @@ struct TeamHubView: View {
         }
     }
 
-    private var teamIntroCard: some View {
+    private var teamInfoCard: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .top) {
-                VStack(alignment: .leading, spacing: 6) {
+                VStack(alignment: .leading, spacing: 4) {
                     Text(team?.name ?? "我的球队")
-                        .font(.title3.bold())
-                        .foregroundColor(AppColors.textPrimary)
-
-                    Text("球队简介")
+                        .font(.title3.weight(.bold))
+                        .foregroundColor(.white)
+                    Text("Since 2024")
                         .font(.caption)
-                        .foregroundColor(AppColors.neonBlue)
+                        .foregroundColor(Color.white.opacity(0.85))
                 }
 
                 Spacer()
 
-                Image(systemName: "sportscourt.fill")
-                    .font(.system(size: 20, weight: .semibold))
-                    .foregroundColor(AppColors.neonBlue)
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(Color.white.opacity(0.2))
+                    .frame(width: 44, height: 44)
+                    .overlay(Text("⚡").font(.title3))
             }
 
-            Text("固定比赛日：每周二/周五晚场。坚持出勤，保持跑动强度，和队友一起稳步提升。")
-                .font(.subheadline)
-                .foregroundColor(AppColors.textSecondary)
-                .fixedSize(horizontal: false, vertical: true)
-
-            if let inviteCode = team?.inviteCode {
-                HStack(spacing: 8) {
-                    Text("邀请码")
-                        .font(.caption)
-                        .foregroundColor(AppColors.textSecondary)
-                    Text(inviteCode)
-                        .font(.caption.weight(.semibold))
-                        .foregroundColor(AppColors.neonBlue)
-                    Spacer()
-                }
-                .padding(.horizontal, 10)
-                .padding(.vertical, 8)
-                .background(AppColors.cardBgLight)
-                .cornerRadius(10)
+            HStack(spacing: 0) {
+                teamStatItem(value: "\(teamMembers.count)", label: "Members")
+                teamStatItem(value: "\(totalSessions)", label: "Sessions")
+                teamStatItem(value: String(format: "%.1f", averageDistanceKm), label: "Avg km")
+            }
+            .padding(.top, 8)
+            .overlay(alignment: .top) {
+                Rectangle()
+                    .fill(Color.white.opacity(0.2))
+                    .frame(height: 1)
             }
         }
         .padding(16)
         .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(
-                    LinearGradient(
-                        colors: [AppColors.cardBgLight, AppColors.cardBg],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
+            LinearGradient(
+                colors: [Color(hex: 0x3B82F6), Color(hex: 0x4F46E5)],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
         )
-        .overlay(
-            RoundedRectangle(cornerRadius: 16)
-                .stroke(Color.white.opacity(0.08), lineWidth: 0.5)
-        )
+        .cornerRadius(18)
     }
 
-    private var memberSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(spacing: 9) {
-                RoundedRectangle(cornerRadius: 8)
-                    .fill(AppColors.neonBlue.opacity(0.16))
-                    .frame(width: 26, height: 26)
-                    .overlay(
-                        Image(systemName: "person.2.fill")
-                            .font(.caption.weight(.semibold))
-                            .foregroundColor(AppColors.neonBlue)
-                    )
-
-                Text("成员列表")
-                    .font(.headline.weight(.semibold))
+    private var squadSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Text("Squad")
+                    .font(.title3.weight(.semibold))
                     .foregroundColor(AppColors.textPrimary)
+                Spacer()
+                NavigationLink(destination: TeamListView(authManager: authManager)) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "plus")
+                        Text("Add")
+                    }
+                    .font(.subheadline.weight(.medium))
+                    .foregroundColor(AppColors.neonBlue)
+                }
             }
 
-            if teamMembers.isEmpty {
-                Text("暂无成员数据")
-                    .font(.subheadline)
-                    .foregroundColor(AppColors.textSecondary)
-                    .frame(maxWidth: .infinity, alignment: .center)
-                    .padding(.vertical, 16)
-            } else {
-                ForEach(teamMembers, id: \.userUid) { member in
+            VStack(spacing: 0) {
+                ForEach(Array(teamMembers.enumerated()), id: \.element.userUid) { index, member in
                     HStack(spacing: 10) {
                         Circle()
                             .fill(AppColors.cardBgLight)
-                            .frame(width: 32, height: 32)
+                            .frame(width: 44, height: 44)
                             .overlay(
-                                Text(String(member.nickname.prefix(1)))
-                                    .font(.caption.bold())
-                                    .foregroundColor(AppColors.textPrimary)
+                                Text(avatarText(member))
+                                    .font(.title3)
                             )
 
                         VStack(alignment: .leading, spacing: 2) {
-                            Text(member.nickname.isEmpty ? "球员" : member.nickname)
+                            Text(displayName(member))
                                 .font(.subheadline.weight(.medium))
                                 .foregroundColor(AppColors.textPrimary)
-
-                            Text(member.role == "owner" ? "队长" : "成员")
-                                .font(.caption2)
+                            Text(member.role == "owner" ? "Captain" : "Member")
+                                .font(.caption)
                                 .foregroundColor(AppColors.textSecondary)
                         }
 
                         Spacer()
 
-                        Text("\(member.sessionCount) 场")
-                            .font(.caption.weight(.semibold))
-                            .foregroundColor(AppColors.neonBlue)
+                        HStack(spacing: 3) {
+                            Text("★")
+                                .foregroundColor(Color(hex: 0xFBBF24))
+                            Text(String(format: "%.1f", memberRating(member)))
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundColor(AppColors.textPrimary)
+                        }
                     }
-                    .padding(10)
-                    .background(AppColors.cardBgLight)
-                    .cornerRadius(10)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 12)
+
+                    if index < teamMembers.count - 1 {
+                        Divider().overlay(AppColors.dividerColor.opacity(0.6))
+                    }
                 }
             }
+            .background(AppColors.cardBg)
+            .cornerRadius(16)
+            .overlay(
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(Color.white.opacity(0.08), lineWidth: 0.5)
+            )
         }
-        .padding(16)
-        .background(AppColors.cardBg)
-        .cornerRadius(16)
     }
 
-    private func rankingSection(
-        title: String,
-        members: [TeamMemberResponse],
-        valueText: @escaping (TeamMemberResponse) -> String
-    ) -> some View {
-        VStack(alignment: .leading, spacing: 14) {
-            HStack(spacing: 9) {
-                RoundedRectangle(cornerRadius: 8)
-                    .fill(AppColors.neonBlue.opacity(0.16))
-                    .frame(width: 26, height: 26)
-                    .overlay(
-                        Image(systemName: title == "出勤排行" ? "calendar.badge.clock" : "figure.run")
-                            .font(.caption.weight(.semibold))
-                            .foregroundColor(AppColors.neonBlue)
-                    )
+    private var leaderboardsSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Leaderboards")
+                .font(.title3.weight(.semibold))
+                .foregroundColor(AppColors.textPrimary)
 
-                Text(title)
-                    .font(.headline.weight(.semibold))
-                    .foregroundColor(AppColors.textPrimary)
+            VStack(spacing: 12) {
+                leaderboardCard(title: "Top Attendance", icon: "calendar", colors: [Color(hex: 0xF59E0B), Color(hex: 0xF97316)], items: attendanceBoard)
+                leaderboardCard(title: "Distance Kings", icon: "bolt.fill", colors: [Color(hex: 0xA855F7), Color(hex: 0xEC4899)], items: distanceBoard)
+                leaderboardCard(title: "Activity Leaders", icon: "chart.line.uptrend.xyaxis", colors: [Color(hex: 0x60A5FA), Color(hex: 0x22D3EE)], items: activityBoard)
+                leaderboardCard(title: "Attendance Rate", icon: "person.3.fill", colors: [Color(hex: 0x4ADE80), Color(hex: 0x10B981)], items: attendanceRateBoard)
             }
+        }
+    }
 
-            if members.isEmpty {
-                Text("暂无排行数据")
-                    .font(.subheadline)
-                    .foregroundColor(AppColors.textSecondary)
-                    .frame(maxWidth: .infinity, alignment: .center)
-                    .padding(.vertical, 16)
-            } else {
-                VStack(spacing: 10) {
-                    ForEach(Array(members.enumerated()), id: \.element.userUid) { index, member in
-                        HStack(spacing: 12) {
-                            ZStack {
-                                Circle()
-                                    .fill(rankBadgeBackground(index + 1))
-                                    .frame(width: 30, height: 30)
+    private func leaderboardCard(title: String, icon: String, colors: [Color], items: [TeamLeaderItem]) -> some View {
+        VStack(spacing: 0) {
+            HStack(spacing: 8) {
+                Image(systemName: icon)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundColor(.white)
+                Text(title)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundColor(.white)
+                Spacer()
+            }
+            .padding(12)
+            .background(LinearGradient(colors: colors, startPoint: .leading, endPoint: .trailing))
 
-                                Text("\(index + 1)")
-                                    .font(.caption.bold())
-                                    .foregroundColor(rankColor(index + 1))
-                            }
-
-                            Text(member.nickname.isEmpty ? "球员" : member.nickname)
+            VStack(spacing: 0) {
+                if items.isEmpty {
+                    Text("暂无数据")
+                        .font(.subheadline)
+                        .foregroundColor(AppColors.textSecondary)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                } else {
+                    ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
+                        HStack(spacing: 10) {
+                            Text(rankEmoji(item.rank))
+                                .frame(width: 28)
+                            Circle()
+                                .fill(AppColors.cardBgLight)
+                                .frame(width: 34, height: 34)
+                                .overlay(Text(item.avatar).font(.body))
+                            Text(item.name)
                                 .font(.subheadline.weight(.medium))
                                 .foregroundColor(AppColors.textPrimary)
-                                .lineLimit(1)
-
                             Spacer()
-
-                            Text(valueText(member))
+                            Text(item.value)
                                 .font(.caption.weight(.semibold))
-                                .foregroundColor(AppColors.textPrimary)
-                                .padding(.horizontal, 12)
-                                .padding(.vertical, 6)
-                                .background(valuePillBackground(index + 1))
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 10)
-                                        .stroke(rankColor(index + 1).opacity(0.22), lineWidth: 0.6)
-                                )
-                                .cornerRadius(10)
+                                .foregroundColor(AppColors.textSecondary)
                         }
                         .padding(.horizontal, 12)
-                        .padding(.vertical, 11)
-                        .background(
-                            RoundedRectangle(cornerRadius: 12)
-                                .fill(rowBackground(index + 1))
-                        )
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 12)
-                                .stroke(rowBorderColor(index + 1), lineWidth: 0.6)
-                        )
+                        .padding(.vertical, 10)
+
+                        if index < items.count - 1 {
+                            Divider().overlay(AppColors.dividerColor.opacity(0.6))
+                        }
                     }
                 }
             }
+            .background(AppColors.cardBg)
         }
-        .padding(14)
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(
-                    LinearGradient(
-                        colors: [AppColors.cardBg, AppColors.cardBgLight.opacity(0.68)],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
-        )
+        .cornerRadius(16)
         .overlay(
             RoundedRectangle(cornerRadius: 16)
                 .stroke(Color.white.opacity(0.08), lineWidth: 0.5)
         )
     }
 
-    private func rankColor(_ rank: Int) -> Color {
-        switch rank {
-        case 1: return Color(hex: 0xF9A825)
-        case 2: return Color(hex: 0xB0BEC5)
-        case 3: return Color(hex: 0xFF8F00)
-        default: return AppColors.textSecondary
+    private var noTeamState: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                VStack(spacing: 12) {
+                    Circle()
+                        .fill(Color.white.opacity(0.2))
+                        .frame(width: 74, height: 74)
+                        .overlay(Text("⚽️").font(.system(size: 36)))
+
+                    Text("暂无球队")
+                        .font(.title3.weight(.bold))
+                        .foregroundColor(.white)
+
+                    Text("创建球队或加入已有球队，开始查看成员表现与排行榜。")
+                        .font(.subheadline)
+                        .foregroundColor(Color.white.opacity(0.9))
+                        .multilineTextAlignment(.center)
+                }
+                .padding(18)
+                .frame(maxWidth: .infinity)
+                .background(
+                    LinearGradient(
+                        colors: [Color(hex: 0x3B82F6), Color(hex: 0x4F46E5)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+                .cornerRadius(18)
+
+                featureRow(icon: "person.3.fill", title: "组建阵容", desc: "邀请队友并管理球队成员")
+                featureRow(icon: "trophy.fill", title: "查看排行", desc: "统计出勤、跑动和活跃度")
+                featureRow(icon: "chart.line.uptrend.xyaxis", title: "一起进步", desc: "通过数据追踪团队表现")
+
+                NavigationLink(destination: TeamListView(authManager: authManager)) {
+                    Text("创建或加入球队")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                        .background(LinearGradient(colors: [Color(hex: 0x3B82F6), Color(hex: 0x4F46E5)], startPoint: .leading, endPoint: .trailing))
+                        .cornerRadius(12)
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.top, 12)
+            .padding(.bottom, 20)
         }
     }
 
-    private func rankBadgeBackground(_ rank: Int) -> Color {
+    private func featureRow(icon: String, title: String, desc: String) -> some View {
+        HStack(spacing: 12) {
+            RoundedRectangle(cornerRadius: 10)
+                .fill(AppColors.neonBlue.opacity(0.18))
+                .frame(width: 42, height: 42)
+                .overlay(
+                    Image(systemName: icon)
+                        .foregroundColor(AppColors.neonBlue)
+                )
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundColor(AppColors.textPrimary)
+                Text(desc)
+                    .font(.caption)
+                    .foregroundColor(AppColors.textSecondary)
+            }
+            Spacer()
+        }
+        .padding(12)
+        .background(AppColors.cardBg)
+        .cornerRadius(12)
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(Color.white.opacity(0.08), lineWidth: 0.5)
+        )
+    }
+
+    private func displayName(_ member: TeamMemberResponse) -> String {
+        member.nickname.isEmpty ? "球员" : member.nickname
+    }
+
+    private func avatarText(_ member: TeamMemberResponse) -> String {
+        member.role == "owner" ? "👑" : "⚽️"
+    }
+
+    private func memberRating(_ member: TeamMemberResponse) -> Double {
+        let distanceScore = min(1.0, (member.totalDistanceMeters / 1000.0) / 80.0)
+        let attendanceScore = min(1.0, Double(member.sessionCount) / 30.0)
+        return 6.8 + (distanceScore * 1.0 + attendanceScore * 0.7)
+    }
+
+    private func rankEmoji(_ rank: Int) -> String {
         switch rank {
-        case 1: return Color(hex: 0xF9A825).opacity(0.18)
-        case 2: return Color(hex: 0xB0BEC5).opacity(0.18)
-        case 3: return Color(hex: 0xFF8F00).opacity(0.18)
-        default: return AppColors.cardBgLight
+        case 1: return "🥇"
+        case 2: return "🥈"
+        case 3: return "🥉"
+        default: return "\(rank)"
         }
     }
 
-    private func rowBackground(_ rank: Int) -> Color {
-        switch rank {
-        case 1: return Color(hex: 0xF9A825).opacity(0.10)
-        case 2: return Color(hex: 0xB0BEC5).opacity(0.10)
-        case 3: return Color(hex: 0xFF8F00).opacity(0.10)
-        default: return AppColors.cardBgLight
+    private func teamStatItem(value: String, label: String) -> some View {
+        VStack(spacing: 2) {
+            Text(value)
+                .font(.headline.weight(.bold))
+                .foregroundColor(.white)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+            Text(label)
+                .font(.system(size: 11, weight: .medium))
+                .foregroundColor(Color.white.opacity(0.8))
         }
-    }
-
-    private func valuePillBackground(_ rank: Int) -> Color {
-        switch rank {
-        case 1: return Color(hex: 0xF9A825).opacity(0.18)
-        case 2: return Color(hex: 0xB0BEC5).opacity(0.18)
-        case 3: return Color(hex: 0xFF8F00).opacity(0.18)
-        default: return AppColors.neonBlue.opacity(0.15)
-        }
-    }
-
-    private func rowBorderColor(_ rank: Int) -> Color {
-        switch rank {
-        case 1: return Color(hex: 0xF9A825).opacity(0.28)
-        case 2: return Color(hex: 0xB0BEC5).opacity(0.26)
-        case 3: return Color(hex: 0xFF8F00).opacity(0.26)
-        default: return Color.white.opacity(0.06)
-        }
+        .frame(maxWidth: .infinity)
     }
 
     private func loadTeamData() async {
@@ -400,6 +485,14 @@ struct TeamHubView: View {
 
         isLoading = false
     }
+}
+
+private struct TeamLeaderItem: Identifiable {
+    let id = UUID()
+    let name: String
+    let value: String
+    let avatar: String
+    let rank: Int
 }
 
 // MARK: - Auth Flow
