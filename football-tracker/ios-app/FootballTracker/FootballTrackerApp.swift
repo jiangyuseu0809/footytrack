@@ -154,6 +154,9 @@ struct TeamHubView: View {
                     .padding(.top, 12)
                     .padding(.bottom, 20)
                 }
+                .refreshable {
+                    await refreshTeamData()
+                }
             } else {
                 noTeamState
             }
@@ -461,14 +464,22 @@ struct TeamHubView: View {
         await authManager.loadTeamsIfNeeded()
 
         if let firstTeam = authManager.teams.first {
-            do {
-                teamDetail = try await ApiClient.shared.getTeamDetail(teamId: firstTeam.id)
-            } catch {
-                teamDetail = nil
-            }
+            teamDetail = await authManager.loadTeamDetailIfNeeded(teamId: firstTeam.id)
+        } else {
+            teamDetail = nil
         }
 
         isLoading = false
+    }
+
+    private func refreshTeamData() async {
+        await authManager.loadTeamsIfNeeded(forceRefresh: true)
+
+        if let firstTeam = authManager.teams.first {
+            teamDetail = await authManager.loadTeamDetailIfNeeded(teamId: firstTeam.id, forceRefresh: true)
+        } else {
+            teamDetail = nil
+        }
     }
 }
 

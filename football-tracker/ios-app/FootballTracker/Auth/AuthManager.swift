@@ -16,6 +16,8 @@ class AuthManager: ObservableObject {
     private var profileLoadedAt: Date?
     private var teamsLoadedAt: Date?
     private var badgesLoadedAt: Date?
+    private var teamDetailsById: [String: TeamDetailResponse] = [:]
+    private var teamDetailsLoadedAt: [String: Date] = [:]
     private let cacheTTL: TimeInterval = 300
 
     init() {
@@ -76,6 +78,8 @@ class AuthManager: ObservableObject {
         profileLoadedAt = nil
         teamsLoadedAt = nil
         badgesLoadedAt = nil
+        teamDetailsById = [:]
+        teamDetailsLoadedAt = [:]
         isLoggedIn = false
     }
 
@@ -95,8 +99,10 @@ class AuthManager: ObservableObject {
         await loadProfile()
     }
 
-    func loadTeamsIfNeeded() async {
-        if let loadedAt = teamsLoadedAt, Date().timeIntervalSince(loadedAt) < cacheTTL {
+    func loadTeamsIfNeeded(forceRefresh: Bool = false) async {
+        if !forceRefresh,
+           let loadedAt = teamsLoadedAt,
+           Date().timeIntervalSince(loadedAt) < cacheTTL {
             return
         }
         do {
@@ -122,10 +128,38 @@ class AuthManager: ObservableObject {
 
     func invalidateTeams() {
         teamsLoadedAt = nil
+        invalidateAllTeamDetails()
     }
 
     func invalidateBadges() {
         badgesLoadedAt = nil
+    }
+
+    func loadTeamDetailIfNeeded(teamId: String, forceRefresh: Bool = false) async -> TeamDetailResponse? {
+        if !forceRefresh,
+           let loadedAt = teamDetailsLoadedAt[teamId],
+           Date().timeIntervalSince(loadedAt) < cacheTTL,
+           let cached = teamDetailsById[teamId] {
+            return cached
+        }
+
+        do {
+            let detail = try await ApiClient.shared.getTeamDetail(teamId: teamId)
+            teamDetailsById[teamId] = detail
+            teamDetailsLoadedAt[teamId] = Date()
+            return detail
+        } catch {
+            return teamDetailsById[teamId]
+        }
+    }
+
+    func invalidateTeamDetail(teamId: String) {
+        teamDetailsLoadedAt[teamId] = nil
+    }
+
+    func invalidateAllTeamDetails() {
+        teamDetailsById = [:]
+        teamDetailsLoadedAt = [:]
     }
 
     func refreshProfileTimestamp() {

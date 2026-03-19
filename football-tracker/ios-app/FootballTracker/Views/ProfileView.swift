@@ -130,19 +130,19 @@ struct ProfileView: View {
 
         return VStack(spacing: 14) {
             HStack(alignment: .top, spacing: 12) {
-                ZStack(alignment: .bottomTrailing) {
-                    Group {
-                        if let avatar = authManager.userProfile?.avatarUrl,
-                           let url = URL(string: avatar) {
-                            AvatarCircleView(url: url)
-                        } else {
-                            Color.white.overlay(Text("⚽️").font(.system(size: 34)))
+                PhotosPicker(selection: $pickerItem, matching: .images) {
+                    ZStack(alignment: .bottomTrailing) {
+                        Group {
+                            if let avatar = authManager.userProfile?.avatarUrl,
+                               let url = URL(string: avatar) {
+                                AvatarCircleView(url: url)
+                            } else {
+                                Color.white.overlay(Text("⚽️").font(.system(size: 34)))
+                            }
                         }
-                    }
-                    .frame(width: 76, height: 76)
-                    .clipShape(Circle())
+                        .frame(width: 76, height: 76)
+                        .clipShape(Circle())
 
-                    PhotosPicker(selection: $pickerItem, matching: .images) {
                         ZStack {
                             Circle().fill(Color.white)
                             Image(systemName: isUploadingAvatar ? "hourglass" : "camera.fill")
@@ -151,8 +151,8 @@ struct ProfileView: View {
                         }
                         .frame(width: 24, height: 24)
                     }
-                    .disabled(isUploadingAvatar)
                 }
+                .disabled(isUploadingAvatar)
 
                 VStack(alignment: .leading, spacing: 4) {
                     Text(nickname)
