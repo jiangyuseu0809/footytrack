@@ -225,7 +225,10 @@ struct ProfileView: View {
                         Text(item.title)
                             .font(.system(size: 10, weight: .medium))
                             .foregroundColor(item.unlocked ? AppColors.textPrimary : AppColors.textSecondary.opacity(0.7))
-                            .lineLimit(1)
+                            .lineLimit(2)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .multilineTextAlignment(.leading)
+                            .frame(maxWidth: .infinity, minHeight: 26, alignment: .topLeading)
                     }
                     .padding(10)
                     .background(item.unlocked ? AppColors.cardBgLight.opacity(0.6) : AppColors.cardBg)

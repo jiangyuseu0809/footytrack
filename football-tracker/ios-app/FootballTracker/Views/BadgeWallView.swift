@@ -45,7 +45,10 @@ struct BadgeWallView: View {
             Text(badge.name)
                 .font(.caption2)
                 .foregroundColor(isEarned ? AppColors.textPrimary : AppColors.textSecondary.opacity(0.5))
-                .lineLimit(1)
+                .lineLimit(2)
+                .fixedSize(horizontal: false, vertical: true)
+                .multilineTextAlignment(.center)
+                .frame(minHeight: 24, alignment: .top)
         }
     }
 
