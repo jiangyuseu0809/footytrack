@@ -8,6 +8,7 @@ struct HomeView: View {
     @ObservedObject private var watchSync = WatchSync.shared
     @State private var showWatchAlert = false
     @State private var isWeeklyCardFlipped = false
+    @State private var isWatchPulseAnimating = false
 
     private struct MonthSection: Identifiable {
         let id: String
@@ -156,6 +157,18 @@ struct HomeView: View {
         } message: {
             Text("在 Apple Watch 上安装野球记，即可记录踢球数据并自动同步到手机。")
         }
+        .onAppear {
+            if watchSync.isWatchAppInstalled {
+                isWatchPulseAnimating = true
+            }
+        }
+        .onChange(of: watchSync.isWatchAppInstalled) { _, installed in
+            if installed {
+                isWatchPulseAnimating = true
+            } else {
+                isWatchPulseAnimating = false
+            }
+        }
     }
 
     private var watchButton: some View {
@@ -164,13 +177,28 @@ struct HomeView: View {
                 showWatchAlert = true
             }
         } label: {
-            Image(systemName: watchSync.isWatchAppInstalled
-                  ? "applewatch.radiowaves.left.and.right"
-                  : "applewatch")
-                .font(.body.weight(.medium))
-                .foregroundColor(watchSync.isWatchAppInstalled
-                                 ? AppColors.neonBlue
-                                 : AppColors.textSecondary)
+            ZStack {
+                if watchSync.isWatchAppInstalled {
+                    Circle()
+                        .fill(AppColors.neonBlue.opacity(0.26))
+                        .frame(width: 28, height: 28)
+                        .scaleEffect(isWatchPulseAnimating ? 1.25 : 0.75)
+                        .opacity(isWatchPulseAnimating ? 0 : 0.9)
+                        .animation(
+                            .easeOut(duration: 1.2).repeatForever(autoreverses: false),
+                            value: isWatchPulseAnimating
+                        )
+                }
+
+                Image(systemName: watchSync.isWatchAppInstalled
+                      ? "applewatch.radiowaves.left.and.right"
+                      : "applewatch")
+                    .font(.body.weight(.medium))
+                    .foregroundColor(watchSync.isWatchAppInstalled
+                                     ? AppColors.neonBlue
+                                     : AppColors.textSecondary)
+            }
+            .frame(width: 30, height: 30)
         }
     }
 
