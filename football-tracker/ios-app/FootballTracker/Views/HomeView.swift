@@ -227,8 +227,8 @@ struct HomeView: View {
             .frame(maxWidth: .infinity, minHeight: 150, maxHeight: 150)
 
             TopActionCard(
-                title: "加入比赛",
-                subtitle: "发现附近比赛",
+                title: "发起比赛",
+                subtitle: "邀请球友参赛",
                 icon: "person.2.fill",
                 iconBg: AppColors.neonBlue.opacity(0.16),
                 iconColor: AppColors.neonBlue
@@ -265,7 +265,7 @@ struct HomeView: View {
         }
         let maxSpeed = sessions.map(\.maxSpeedKmh).max() ?? 0
 
-        return VStack(spacing: 0) {
+        return VStack(spacing: 12) {
             HStack(spacing: 12) {
                 DashboardStatTile(title: "跑动距离", value: String(format: "%.1f km", totalDistanceKm), icon: "figure.run", iconColor: Color(hex: 0xA855F7), changeText: modeTag)
                 DashboardStatTile(title: "冲刺次数", value: "\(totalSprints)", icon: "bolt.fill", iconColor: Color(hex: 0xF97316), changeText: "+\(totalSprints)")
