@@ -48,7 +48,7 @@ struct MainTabView: View {
             }
 
             NavigationStack {
-                TeamHubView(authManager: authManager)
+                TeamHubView(authManager: authManager, store: store)
             }
             .tabItem {
                 Image(systemName: "flag.fill")
@@ -73,6 +73,9 @@ struct MainTabView: View {
         }
         .tint(AppColors.neonBlue)
         .task {
+            if authManager.isLoggedIn {
+                _ = try? await CloudSync.uploadPendingSessions(store: store, authManager: authManager)
+            }
             await authManager.preloadData()
         }
     }
@@ -82,6 +85,7 @@ struct MainTabView: View {
 
 struct TeamHubView: View {
     @ObservedObject var authManager: AuthManager
+    @ObservedObject var store: SessionStore
     @State private var teamDetail: TeamDetailResponse?
     @State private var isLoading = true
 
@@ -106,8 +110,10 @@ struct TeamHubView: View {
         return formatter.string(from: date)
     }
 
-    private var totalSessions: Int64 {
-        teamMembers.reduce(0) { $0 + $1.sessionCount }
+    private var averageSessions: Double {
+        guard !teamMembers.isEmpty else { return 0 }
+        let sum = teamMembers.reduce(0) { $0 + $1.sessionCount }
+        return Double(sum) / Double(teamMembers.count)
     }
 
     private var averageDistanceKm: Double {
@@ -191,7 +197,7 @@ struct TeamHubView: View {
 
             HStack(spacing: 0) {
                 teamStatItem(value: "\(teamMembers.count)", label: "成员")
-                teamStatItem(value: "\(totalSessions)", label: "总场次")
+                teamStatItem(value: String(format: "%.1f", averageSessions), label: "平均场次")
                 teamStatItem(value: String(format: "%.1f", averageDistanceKm), label: "平均距离")
             }
             .padding(.top, 8)
@@ -473,6 +479,7 @@ struct TeamHubView: View {
     }
 
     private func refreshTeamData() async {
+        _ = try? await CloudSync.uploadPendingSessions(store: store, authManager: authManager)
         await authManager.loadTeamsIfNeeded(forceRefresh: true)
 
         if let firstTeam = authManager.teams.first {

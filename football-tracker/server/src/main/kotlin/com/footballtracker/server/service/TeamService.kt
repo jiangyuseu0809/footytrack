@@ -52,6 +52,7 @@ class TeamService {
         (TeamsTable innerJoin TeamMembersTable)
             .selectAll()
             .where { TeamMembersTable.userUid eq userUid }
+            .orderBy(TeamsTable.createdAt, SortOrder.DESC)
             .map { it.toTeamRow() }
     }
 

@@ -107,7 +107,7 @@ class AuthManager: ObservableObject {
         }
         do {
             let resp = try await ApiClient.shared.getTeams()
-            teams = resp.teams
+            teams = resp.teams.sorted { $0.createdAt > $1.createdAt }
             teamsLoadedAt = Date()
         } catch {
             // Silently handle

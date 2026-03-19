@@ -15,17 +15,20 @@ class CloudSync {
         }
         try? store.context.save()
 
-        let unsynced = store.getUnsyncedSessions()
-        guard !unsynced.isEmpty else { return 0 }
+        let cloud = try await ApiClient.shared.getSessions()
+        let cloudIds = Set(cloud.sessions.map(\.id))
 
-        let dtos = unsynced.map { $0.toDto() }
+        let pending = allSessions.filter { !$0.syncedToCloud || !cloudIds.contains($0.id) }
+        guard !pending.isEmpty else { return 0 }
+
+        let dtos = pending.map { $0.toDto() }
         let _ = try await ApiClient.shared.syncSessions(SyncRequest(sessions: dtos))
 
-        for session in unsynced {
+        for session in pending {
             store.markSynced(session: session)
         }
 
-        return unsynced.count
+        return pending.count
     }
 
     /// Pull sessions from the cloud that don't exist locally.
