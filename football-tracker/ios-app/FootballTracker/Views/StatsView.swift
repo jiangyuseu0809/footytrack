@@ -3,6 +3,7 @@ import SwiftUI
 /// Overall statistics screen aggregating data across all sessions.
 struct StatsView: View {
     @ObservedObject var store: SessionStore
+    @ObservedObject var authManager: AuthManager
 
     private var sessions: [FootballSession] {
         store.sessions
@@ -76,6 +77,45 @@ struct StatsView: View {
         Array(sessions.prefix(3))
     }
 
+    private var achievementItems: [StatsAchievementItem] {
+        let palette: [(Color, Color)] = [
+            (Color(hex: 0xF59E0B), Color(hex: 0xF97316)),
+            (Color(hex: 0x3B82F6), Color(hex: 0x06B6D4)),
+            (Color(hex: 0xA855F7), Color(hex: 0xEC4899)),
+            (Color(hex: 0xEF4444), Color(hex: 0xF43F5E)),
+            (Color(hex: 0x22C55E), Color(hex: 0x10B981)),
+            (Color(hex: 0x6366F1), Color(hex: 0x3B82F6))
+        ]
+
+        let all = authManager.earnedBadges?.allBadges ?? []
+        let earnedIds = Set(authManager.earnedBadges?.earnedBadges.map { $0.badge.id } ?? [])
+
+        let mapped = all.prefix(6).enumerated().map { idx, badge in
+            let colors = palette[idx % palette.count]
+            return StatsAchievementItem(
+                icon: badgeIcon(badge.iconName),
+                title: badge.name,
+                unlocked: earnedIds.contains(badge.id),
+                start: colors.0,
+                end: colors.1
+            )
+        }
+
+        if mapped.count >= 6 { return Array(mapped) }
+
+        let placeholders = [
+            StatsAchievementItem(icon: "heart.fill", title: "铁肺", unlocked: false, start: Color(hex: 0xEF4444), end: Color(hex: 0xF43F5E)),
+            StatsAchievementItem(icon: "medal.fill", title: "最有价值球员", unlocked: false, start: Color(hex: 0x22C55E), end: Color(hex: 0x10B981)),
+            StatsAchievementItem(icon: "trophy.fill", title: "冠军", unlocked: false, start: Color(hex: 0x6366F1), end: Color(hex: 0x3B82F6))
+        ]
+
+        return Array(mapped) + Array(placeholders.prefix(max(0, 6 - mapped.count)))
+    }
+
+    private var unlockedCount: Int {
+        achievementItems.filter(\.unlocked).count
+    }
+
     var body: some View {
         ZStack {
             AppColors.darkBg.ignoresSafeArea()
@@ -89,6 +129,7 @@ struct StatsView: View {
                         overviewSection
                         abilitiesSection
                         trendSection
+                        achievementsSection
                         historySection
                     }
                 }
@@ -200,6 +241,73 @@ struct StatsView: View {
         .cornerRadius(16)
     }
 
+    private var achievementsSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 9) {
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(AppColors.neonBlue.opacity(0.16))
+                    .frame(width: 26, height: 26)
+                    .overlay(
+                        Image(systemName: "medal.fill")
+                            .font(.caption.weight(.semibold))
+                            .foregroundColor(AppColors.neonBlue)
+                    )
+
+                Text("成就")
+                    .font(.headline.weight(.semibold))
+                    .foregroundColor(AppColors.textPrimary)
+
+                Spacer()
+                Text("\(unlockedCount)/\(achievementItems.count)")
+                    .font(.subheadline)
+                    .foregroundColor(AppColors.textSecondary)
+            }
+
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 3), spacing: 10) {
+                ForEach(achievementItems) { item in
+                    VStack(alignment: .leading, spacing: 8) {
+                        RoundedRectangle(cornerRadius: 8)
+                            .fill(item.unlocked ? LinearGradient(colors: [item.start, item.end], startPoint: .topLeading, endPoint: .bottomTrailing) : LinearGradient(colors: [AppColors.cardBgLight, AppColors.cardBgLight], startPoint: .top, endPoint: .bottom))
+                            .frame(height: 44)
+                            .overlay(
+                                Image(systemName: item.icon)
+                                    .font(.title3.weight(.semibold))
+                                    .foregroundColor(item.unlocked ? .white : AppColors.textSecondary.opacity(0.55))
+                            )
+
+                        Text(item.title)
+                            .font(.system(size: 10, weight: .medium))
+                            .foregroundColor(item.unlocked ? AppColors.textPrimary : AppColors.textSecondary.opacity(0.7))
+                            .lineLimit(2)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .multilineTextAlignment(.leading)
+                            .frame(maxWidth: .infinity, minHeight: 26, alignment: .topLeading)
+                    }
+                    .padding(10)
+                    .background(
+                        item.unlocked
+                            ? LinearGradient(
+                                colors: [item.start.opacity(0.28), item.end.opacity(0.18)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                            : LinearGradient(
+                                colors: [AppColors.cardBg, AppColors.cardBg],
+                                startPoint: .top,
+                                endPoint: .bottom
+                            )
+                    )
+                    .shadow(color: item.unlocked ? item.end.opacity(0.30) : Color.black.opacity(0.12), radius: item.unlocked ? 16 : 8, x: 0, y: item.unlocked ? 8 : 4)
+                    .shadow(color: item.unlocked ? item.start.opacity(0.16) : .clear, radius: 8, x: 0, y: 0)
+                    .cornerRadius(12)
+                }
+            }
+        }
+        .padding(14)
+        .background(AppColors.cardBg)
+        .cornerRadius(16)
+    }
+
     private var historySection: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
@@ -263,6 +371,20 @@ struct StatsView: View {
     private var trendDelta: Double? {
         guard trendData.count >= 2 else { return nil }
         return trendData.last!.score - trendData.first!.score
+    }
+
+    private func badgeIcon(_ iconName: String) -> String {
+        switch iconName {
+        case "first_match": return "sportscourt.fill"
+        case "iron_man": return "figure.strengthtraining.traditional"
+        case "century_legend": return "star.fill"
+        case "speed_star": return "bolt.fill"
+        case "marathon_runner": return "figure.run"
+        case "calorie_burner": return "flame.fill"
+        case "perfect_month": return "calendar.badge.checkmark"
+        case "sprint_king": return "hare.fill"
+        default: return "medal.fill"
+        }
     }
 
     private func sectionHeader(title: String, icon: String, showShare: Bool) -> some View {
@@ -339,6 +461,15 @@ private struct StatsMetricCard: View {
         .background(AppColors.cardBgLight)
         .cornerRadius(12)
     }
+}
+
+private struct StatsAchievementItem: Identifiable {
+    let id = UUID()
+    let icon: String
+    let title: String
+    let unlocked: Bool
+    let start: Color
+    let end: Color
 }
 
 private struct AbilityMetric: Identifiable {

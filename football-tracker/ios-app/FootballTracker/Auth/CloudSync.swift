@@ -9,13 +9,13 @@ class CloudSync {
         guard let uid = authManager.currentUid else { return 0 }
 
         // Assign owner to orphan sessions
-        let allSessions = store.sessions
+        let allSessions = store.sessions.filter { $0.ownerUid.isEmpty || $0.ownerUid == uid }
         for session in allSessions where session.ownerUid.isEmpty {
             session.ownerUid = uid
         }
         try? store.context.save()
 
-        let cloud = try await ApiClient.shared.getSessions()
+        let cloud = try await ApiClient.shared.getSessions(forceRefresh: true)
         let cloudIds = Set(cloud.sessions.map(\.id))
 
         let pending = allSessions.filter { !$0.syncedToCloud || !cloudIds.contains($0.id) }
@@ -36,7 +36,7 @@ class CloudSync {
     static func pullFromCloud(store: SessionStore, authManager: AuthManager) async throws -> Int {
         guard let uid = authManager.currentUid else { return 0 }
 
-        let response = try await ApiClient.shared.getSessions()
+        let response = try await ApiClient.shared.getSessions(forceRefresh: true)
         let existingIds = Set(store.sessions.map(\.id))
 
         var restored = 0

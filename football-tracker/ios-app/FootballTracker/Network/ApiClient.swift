@@ -49,7 +49,8 @@ final class ApiClient {
     private func request<T: Decodable>(
         endpoint: String,
         method: String = "GET",
-        body: (any Encodable)? = nil
+        body: (any Encodable)? = nil,
+        cachePolicy: URLRequest.CachePolicy? = nil
     ) async throws -> T {
         guard let url = URL(string: baseURL + endpoint) else {
             throw ApiError.invalidURL
@@ -58,6 +59,9 @@ final class ApiClient {
         var req = URLRequest(url: url)
         req.httpMethod = method
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        if let cachePolicy {
+            req.cachePolicy = cachePolicy
+        }
 
         if let token = token {
             req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
@@ -236,8 +240,11 @@ final class ApiClient {
         )
     }
 
-    func getSessions() async throws -> SessionListResponse {
-        try await request(endpoint: "/api/sessions")
+    func getSessions(forceRefresh: Bool = false) async throws -> SessionListResponse {
+        try await request(
+            endpoint: "/api/sessions",
+            cachePolicy: forceRefresh ? .reloadIgnoringLocalCacheData : nil
+        )
     }
 
     // MARK: - Teams

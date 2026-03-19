@@ -23,8 +23,16 @@ struct FootballTrackerApp: App {
             .onReceive(NotificationCenter.default.publisher(for: WatchSync.didReceiveDataNotification)) { notification in
                 if let data = notification.userInfo as? [String: Any] {
                     Task { @MainActor in
-                        WatchSync.parseWatchData(data, store: sessionStore)
+                        if WatchSync.parseWatchData(data, store: sessionStore),
+                           let sessionId = data["session_id"] as? String {
+                            WatchSync.shared.removePendingUserInfo(sessionId: sessionId)
+                        }
                     }
+                }
+            }
+            .task {
+                await MainActor.run {
+                    WatchSync.shared.flushPendingUserInfo(to: sessionStore)
                 }
             }
         }
@@ -56,7 +64,7 @@ struct MainTabView: View {
             }
 
             NavigationStack {
-                StatsView(store: store)
+                StatsView(store: store, authManager: authManager)
             }
             .tabItem {
                 Image(systemName: "chart.bar.fill")

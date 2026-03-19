@@ -11,6 +11,8 @@ struct ProfileView: View {
     @State private var showEditSheet = false
     @State private var pickerItem: PhotosPickerItem?
     @State private var isUploadingAvatar = false
+    @State private var syncStatus: String?
+    @State private var isSyncing = false
 
     private var totalMatches: Int {
         store.sessions.count
@@ -39,54 +41,6 @@ struct ProfileView: View {
         return "稳健控场"
     }
 
-    private var seasonRating: Double {
-        guard !store.sessions.isEmpty else { return 0 }
-        let maxSpeed = store.sessions.map(\.maxSpeedKmh).max() ?? 0
-        let speedScore = min(1, maxSpeed / 30)
-        let sprintScore = min(1, Double(totalSprints) / Double(max(1, totalMatches * 40)))
-        let distanceScore = min(1, totalDistanceKm / Double(max(1, totalMatches)) / 10)
-        let disciplineScore = max(0, 1 - avgSlack / 100)
-        return (speedScore * 0.3 + sprintScore * 0.25 + distanceScore * 0.25 + disciplineScore * 0.2) * 10
-    }
-
-    private var achievementItems: [ProfileAchievementItem] {
-        let palette: [(Color, Color)] = [
-            (Color(hex: 0xF59E0B), Color(hex: 0xF97316)),
-            (Color(hex: 0x3B82F6), Color(hex: 0x06B6D4)),
-            (Color(hex: 0xA855F7), Color(hex: 0xEC4899)),
-            (Color(hex: 0xEF4444), Color(hex: 0xF43F5E)),
-            (Color(hex: 0x22C55E), Color(hex: 0x10B981)),
-            (Color(hex: 0x6366F1), Color(hex: 0x3B82F6))
-        ]
-
-        let all = authManager.earnedBadges?.allBadges ?? []
-        let earnedIds = Set(authManager.earnedBadges?.earnedBadges.map { $0.badge.id } ?? [])
-
-        let mapped = all.prefix(6).enumerated().map { idx, badge in
-            let colors = palette[idx % palette.count]
-            return ProfileAchievementItem(
-                icon: badgeIcon(badge.iconName),
-                title: badge.name,
-                unlocked: earnedIds.contains(badge.id),
-                start: colors.0,
-                end: colors.1
-            )
-        }
-
-        if mapped.count >= 6 { return Array(mapped) }
-
-        let placeholders = [
-            ProfileAchievementItem(icon: "heart.fill", title: "铁肺", unlocked: false, start: Color(hex: 0xEF4444), end: Color(hex: 0xF43F5E)),
-            ProfileAchievementItem(icon: "medal.fill", title: "最有价值球员", unlocked: false, start: Color(hex: 0x22C55E), end: Color(hex: 0x10B981)),
-            ProfileAchievementItem(icon: "trophy.fill", title: "冠军", unlocked: false, start: Color(hex: 0x6366F1), end: Color(hex: 0x3B82F6))
-        ]
-
-        return Array(mapped) + Array(placeholders.prefix(max(0, 6 - mapped.count)))
-    }
-
-    private var unlockedCount: Int {
-        achievementItems.filter(\.unlocked).count
-    }
 
     var body: some View {
         ZStack {
@@ -95,8 +49,7 @@ struct ProfileView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
                     profileCard
-                    achievementsSection
-                    summarySection
+                    syncSection
                     menuSection(title: "外观", items: appearanceItems)
                     menuSection(title: "账号", items: accountItems)
                     menuSection(title: "设备", items: deviceItems)
@@ -198,77 +151,71 @@ struct ProfileView: View {
         .cornerRadius(18)
     }
 
-    private var achievementsSection: some View {
+    private var syncSection: some View {
         VStack(alignment: .leading, spacing: 10) {
-            HStack {
-                Text("成就")
-                    .font(.title3.weight(.semibold))
-                    .foregroundColor(AppColors.textPrimary)
-                Spacer()
-                Text("\(unlockedCount)/\(achievementItems.count)")
-                    .font(.subheadline)
-                    .foregroundColor(AppColors.textSecondary)
-            }
-
-            LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 3), spacing: 10) {
-                ForEach(achievementItems) { item in
-                    VStack(alignment: .leading, spacing: 8) {
-                        RoundedRectangle(cornerRadius: 8)
-                            .fill(item.unlocked ? LinearGradient(colors: [item.start, item.end], startPoint: .topLeading, endPoint: .bottomTrailing) : LinearGradient(colors: [AppColors.cardBgLight, AppColors.cardBgLight], startPoint: .top, endPoint: .bottom))
-                            .frame(height: 44)
-                            .overlay(
-                                Image(systemName: item.icon)
-                                    .font(.title3.weight(.semibold))
-                                    .foregroundColor(item.unlocked ? .white : AppColors.textSecondary.opacity(0.55))
-                            )
-
-                        Text(item.title)
-                            .font(.system(size: 10, weight: .medium))
-                            .foregroundColor(item.unlocked ? AppColors.textPrimary : AppColors.textSecondary.opacity(0.7))
-                            .lineLimit(2)
-                            .fixedSize(horizontal: false, vertical: true)
-                            .multilineTextAlignment(.leading)
-                            .frame(maxWidth: .infinity, minHeight: 26, alignment: .topLeading)
-                    }
-                    .padding(10)
-                    .background(
-                        item.unlocked
-                            ? LinearGradient(
-                                colors: [item.start.opacity(0.28), item.end.opacity(0.18)],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                            : LinearGradient(
-                                colors: [AppColors.cardBg, AppColors.cardBg],
-                                startPoint: .top,
-                                endPoint: .bottom
-                            )
-                    )
-                    .shadow(color: item.unlocked ? item.end.opacity(0.30) : Color.black.opacity(0.12), radius: item.unlocked ? 16 : 8, x: 0, y: item.unlocked ? 8 : 4)
-                    .shadow(color: item.unlocked ? item.start.opacity(0.16) : .clear, radius: 8, x: 0, y: 0)
-                    .cornerRadius(12)
-                }
-            }
-        }
-    }
-
-    private var summarySection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("赛季总结")
-                .font(.headline)
+            Text("云同步")
+                .font(.title3.weight(.semibold))
                 .foregroundColor(AppColors.textPrimary)
 
-            summaryBar(title: "综合评分", valueText: String(format: "%.1f", seasonRating), progress: seasonRating / 10, start: Color(hex: 0x60A5FA), end: Color(hex: 0x2563EB))
-            summaryBar(title: "跑动距离", valueText: String(format: "%.1f km", totalDistanceKm), progress: min(1, totalDistanceKm / 200), start: Color(hex: 0x4ADE80), end: Color(hex: 0x16A34A))
-            summaryBar(title: "进攻贡献", valueText: "\(Int(Double(totalSprints) * 0.35))", progress: min(1, Double(totalSprints) / 120), start: Color(hex: 0xC084FC), end: Color(hex: 0x9333EA))
+            VStack(spacing: 12) {
+                if let status = syncStatus {
+                    Text(status)
+                        .font(.caption)
+                        .foregroundColor(AppColors.neonBlue)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+
+                HStack(spacing: 12) {
+                    Button {
+                        uploadData()
+                    } label: {
+                        HStack {
+                            Image(systemName: "icloud.and.arrow.up")
+                            Text("立即同步")
+                        }
+                        .font(.subheadline.weight(.medium))
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 44)
+                        .background(AppColors.neonBlue)
+                        .cornerRadius(10)
+                    }
+                    .disabled(isSyncing)
+
+                    Button {
+                        restoreData()
+                    } label: {
+                        HStack {
+                            Image(systemName: "icloud.and.arrow.down")
+                            Text("恢复数据")
+                        }
+                        .font(.subheadline.weight(.medium))
+                        .foregroundColor(AppColors.neonBlue)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 44)
+                        .background(AppColors.cardBgLight)
+                        .cornerRadius(10)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 10)
+                                .stroke(AppColors.neonBlue, lineWidth: 1)
+                        )
+                    }
+                    .disabled(isSyncing)
+                }
+
+                if isSyncing {
+                    ProgressView()
+                        .tint(AppColors.neonBlue)
+                }
+            }
+            .padding(14)
+            .background(AppColors.cardBg)
+            .overlay(
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(Color.white.opacity(0.08), lineWidth: 0.5)
+            )
+            .cornerRadius(16)
         }
-        .padding(14)
-        .background(AppColors.cardBg)
-        .overlay(
-            RoundedRectangle(cornerRadius: 16)
-                .stroke(Color.white.opacity(0.08), lineWidth: 0.5)
-        )
-        .cornerRadius(16)
     }
 
     private var appearanceItems: [ProfileMenuItem] {
@@ -437,32 +384,6 @@ struct ProfileView: View {
         .frame(maxWidth: .infinity)
     }
 
-    private func summaryBar(title: String, valueText: String, progress: Double, start: Color, end: Color) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack {
-                Text(title)
-                    .font(.subheadline)
-                    .foregroundColor(AppColors.textSecondary)
-                Spacer()
-                Text(valueText)
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundColor(AppColors.textPrimary)
-            }
-
-            GeometryReader { proxy in
-                let width = max(0, min(1, progress)) * proxy.size.width
-                ZStack(alignment: .leading) {
-                    Capsule()
-                        .fill(AppColors.cardBgLight)
-                    Capsule()
-                        .fill(LinearGradient(colors: [start, end], startPoint: .leading, endPoint: .trailing))
-                        .frame(width: width)
-                }
-            }
-            .frame(height: 8)
-        }
-    }
-
     private func badgeIcon(_ iconName: String) -> String {
         switch iconName {
         case "first_match": return "sportscourt.fill"
@@ -548,6 +469,36 @@ struct ProfileView: View {
             return
         }
     }
+
+    private func uploadData() {
+        isSyncing = true
+        syncStatus = "正在上传..."
+        Task {
+            do {
+                let count = try await CloudSync.uploadPendingSessions(store: store, authManager: authManager)
+                syncStatus = count > 0
+                    ? "已同步 \(count) 场记录"
+                    : "云端已是最新（无新增记录）"
+            } catch {
+                syncStatus = "同步失败: \(error.localizedDescription)"
+            }
+            isSyncing = false
+        }
+    }
+
+    private func restoreData() {
+        isSyncing = true
+        syncStatus = "正在恢复..."
+        Task {
+            do {
+                let count = try await CloudSync.pullFromCloud(store: store, authManager: authManager)
+                syncStatus = "已恢复 \(count) 场记录"
+            } catch {
+                syncStatus = "恢复失败: \(error.localizedDescription)"
+            }
+            isSyncing = false
+        }
+    }
 }
 
 private struct AvatarCircleView: View {
@@ -610,15 +561,6 @@ private final class AvatarImageLoader: ObservableObject {
             return
         }
     }
-}
-
-private struct ProfileAchievementItem: Identifiable {
-    let id = UUID()
-    let icon: String
-    let title: String
-    let unlocked: Bool
-    let start: Color
-    let end: Color
 }
 
 private struct ProfileMenuItem: Identifiable {

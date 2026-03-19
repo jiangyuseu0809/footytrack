@@ -172,7 +172,9 @@ struct SettingsView: View {
         Task {
             do {
                 let count = try await CloudSync.uploadPendingSessions(store: store, authManager: authManager)
-                syncStatus = "已同步 \(count) 场记录"
+                syncStatus = count > 0
+                    ? "已同步 \(count) 场记录"
+                    : "云端已是最新（无新增记录）"
             } catch {
                 syncStatus = "同步失败: \(error.localizedDescription)"
             }

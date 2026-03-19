@@ -6,6 +6,7 @@ import CoreLocation
 class WatchSync: NSObject, ObservableObject, WCSessionDelegate {
 
     static let shared = WatchSync()
+    private let pendingKey = "watch_pending_user_info_v1"
 
     /// Notification posted when watch data arrives. The userInfo contains the raw watch data.
     static let didReceiveDataNotification = Notification.Name("WatchSyncDidReceiveData")
@@ -55,6 +56,7 @@ class WatchSync: NSObject, ObservableObject, WCSessionDelegate {
 
     /// Called when the watch sends data via transferUserInfo
     func session(_ session: WCSession, didReceiveUserInfo userInfo: [String: Any] = [:]) {
+        enqueuePendingUserInfo(userInfo)
         NotificationCenter.default.post(
             name: WatchSync.didReceiveDataNotification,
             object: nil,
@@ -62,9 +64,45 @@ class WatchSync: NSObject, ObservableObject, WCSessionDelegate {
         )
     }
 
+    @MainActor
+    func flushPendingUserInfo(to store: SessionStore) {
+        let pending = loadPendingUserInfo()
+        guard !pending.isEmpty else { return }
+
+        var remaining: [[String: Any]] = []
+        for item in pending {
+            let saved = WatchSync.parseWatchData(item, store: store)
+            if !saved {
+                remaining.append(item)
+            }
+        }
+        UserDefaults.standard.set(remaining, forKey: pendingKey)
+    }
+
+    func removePendingUserInfo(sessionId: String) {
+        var pending = loadPendingUserInfo()
+        pending.removeAll { ($0["session_id"] as? String) == sessionId }
+        UserDefaults.standard.set(pending, forKey: pendingKey)
+    }
+
+    private func enqueuePendingUserInfo(_ userInfo: [String: Any]) {
+        guard let sessionId = userInfo["session_id"] as? String else { return }
+        var pending = loadPendingUserInfo()
+        if let idx = pending.firstIndex(where: { ($0["session_id"] as? String) == sessionId }) {
+            pending[idx] = userInfo
+        } else {
+            pending.append(userInfo)
+        }
+        UserDefaults.standard.set(pending, forKey: pendingKey)
+    }
+
+    private func loadPendingUserInfo() -> [[String: Any]] {
+        UserDefaults.standard.array(forKey: pendingKey) as? [[String: Any]] ?? []
+    }
+
     /// Parse raw watch data into a FootballSession + TrackPoints
     @MainActor
-    static func parseWatchData(_ data: [String: Any], store: SessionStore) {
+    static func parseWatchData(_ data: [String: Any], store: SessionStore) -> Bool {
         guard let sessionId = data["session_id"] as? String,
               let startTime = data["start_time"] as? TimeInterval,
               let endTime = data["end_time"] as? TimeInterval,
@@ -72,7 +110,11 @@ class WatchSync: NSObject, ObservableObject, WCSessionDelegate {
               let longitudes = data["longitudes"] as? [Double],
               let timestamps = data["timestamps"] as? [TimeInterval],
               let speeds = data["speeds"] as? [Double]
-        else { return }
+        else { return false }
+
+        if store.sessions.contains(where: { $0.id == sessionId }) {
+            return true
+        }
 
         let heartRates = data["heart_rates"] as? [[String: Any]] ?? []
         var hrMap: [(ts: TimeInterval, bpm: Int)] = []
@@ -136,6 +178,8 @@ class WatchSync: NSObject, ObservableObject, WCSessionDelegate {
                 }
             }
         }
+
+        return true
     }
 
     private static func findClosestHr(targetTs: TimeInterval, hrData: [(ts: TimeInterval, bpm: Int)]) -> Int {
