@@ -35,6 +35,12 @@ final class ApiClient {
         let config = URLSessionConfiguration.default
         config.timeoutIntervalForRequest = 30
         config.timeoutIntervalForResource = 30
+        config.urlCache = URLCache(
+            memoryCapacity: 32 * 1024 * 1024,
+            diskCapacity: 200 * 1024 * 1024,
+            diskPath: "footytrack-url-cache"
+        )
+        config.requestCachePolicy = .useProtocolCachePolicy
         session = URLSession(configuration: config)
     }
 

@@ -134,16 +134,7 @@ struct ProfileView: View {
                     Group {
                         if let avatar = authManager.userProfile?.avatarUrl,
                            let url = URL(string: avatar) {
-                            AsyncImage(url: url) { phase in
-                                switch phase {
-                                case .success(let image):
-                                    image
-                                        .resizable()
-                                        .scaledToFill()
-                                default:
-                                    Color.white.overlay(Text("⚽️").font(.system(size: 34)))
-                                }
-                            }
+                            AvatarCircleView(url: url)
                         } else {
                             Color.white.overlay(Text("⚽️").font(.system(size: 34)))
                         }
@@ -541,6 +532,68 @@ struct ProfileView: View {
                 object: nil,
                 userInfo: ["message": "头像上传失败，请重试"]
             )
+            return
+        }
+    }
+}
+
+private struct AvatarCircleView: View {
+    let url: URL
+    @StateObject private var loader = AvatarImageLoader()
+
+    var body: some View {
+        Group {
+            if let image = loader.image {
+                Image(uiImage: image)
+                    .resizable()
+                    .scaledToFill()
+            } else {
+                Color.white.overlay(Text("⚽️").font(.system(size: 34)))
+            }
+        }
+        .task(id: url) {
+            await loader.load(from: url)
+        }
+    }
+}
+
+@MainActor
+private final class AvatarImageLoader: ObservableObject {
+    @Published private(set) var image: UIImage?
+    private static let memoryCache = NSCache<NSURL, UIImage>()
+
+    func load(from url: URL) async {
+        let key = url as NSURL
+
+        if let memoryImage = Self.memoryCache.object(forKey: key) {
+            image = memoryImage
+            return
+        }
+
+        var request = URLRequest(url: url)
+        request.cachePolicy = .returnCacheDataElseLoad
+        request.timeoutInterval = 15
+
+        if let cached = URLCache.shared.cachedResponse(for: request),
+           let diskImage = UIImage(data: cached.data) {
+            Self.memoryCache.setObject(diskImage, forKey: key)
+            image = diskImage
+            return
+        }
+
+        do {
+            let (data, response) = try await URLSession.shared.data(for: request)
+            guard let http = response as? HTTPURLResponse,
+                  200..<300 ~= http.statusCode,
+                  let fetchedImage = UIImage(data: data) else {
+                return
+            }
+
+            let cached = CachedURLResponse(response: response, data: data)
+            URLCache.shared.storeCachedResponse(cached, for: request)
+            Self.memoryCache.setObject(fetchedImage, forKey: key)
+            image = fetchedImage
+        } catch {
             return
         }
     }
