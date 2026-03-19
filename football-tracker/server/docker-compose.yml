@@ -22,6 +22,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+    volumes:
+      - /var/www/footytrack/uploads:/var/www/footytrack/uploads
     environment:
       # Override database URL to use Docker service name
       APP_DATABASE_URL: jdbc:postgresql://postgres:5432/football_tracker
