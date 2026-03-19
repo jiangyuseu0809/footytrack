@@ -126,28 +126,6 @@ struct TeamHubView: View {
             }
     }
 
-    private var activityBoard: [TeamLeaderItem] {
-        teamMembers
-            .map { ($0, Double($0.sessionCount) * 3 + ($0.totalDistanceMeters / 1000)) }
-            .sorted { $0.1 > $1.1 }
-            .prefix(3)
-            .enumerated()
-            .map { idx, tuple in
-                TeamLeaderItem(name: displayName(tuple.0), value: String(format: "%.1f 分", tuple.1), avatar: avatarText(tuple.0), rank: idx + 1)
-            }
-    }
-
-    private var attendanceRateBoard: [TeamLeaderItem] {
-        let maxSessions = max(1, teamMembers.map { Int($0.sessionCount) }.max() ?? 1)
-        return teamMembers
-            .sorted { $0.sessionCount > $1.sessionCount }
-            .prefix(3)
-            .enumerated()
-            .map { idx, m in
-                let rate = Int((Double(m.sessionCount) / Double(maxSessions)) * 100)
-                return TeamLeaderItem(name: displayName(m), value: "\(rate)%", avatar: avatarText(m), rank: idx + 1)
-            }
-    }
 
     var body: some View {
         ZStack {
@@ -295,8 +273,6 @@ struct TeamHubView: View {
             VStack(spacing: 12) {
                 leaderboardCard(title: "出勤榜", icon: "calendar", colors: [Color(hex: 0xF59E0B), Color(hex: 0xF97316)], items: attendanceBoard)
                 leaderboardCard(title: "跑动王者", icon: "bolt.fill", colors: [Color(hex: 0xA855F7), Color(hex: 0xEC4899)], items: distanceBoard)
-                leaderboardCard(title: "活跃榜", icon: "chart.line.uptrend.xyaxis", colors: [Color(hex: 0x60A5FA), Color(hex: 0x22D3EE)], items: activityBoard)
-                leaderboardCard(title: "出勤率", icon: "person.3.fill", colors: [Color(hex: 0x4ADE80), Color(hex: 0x10B981)], items: attendanceRateBoard)
             }
         }
     }
