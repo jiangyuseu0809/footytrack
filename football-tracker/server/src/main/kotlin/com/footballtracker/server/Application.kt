@@ -46,5 +46,5 @@ fun Application.module() {
     configureSerialization()
     configureStatusPages()
     configureAuthentication(config.jwt)
-    configureRouting(jwtService, smsCodeStore, tencentSmsService, weChatService, userService, sessionService, teamService, badgeService)
+    configureRouting(jwtService, smsCodeStore, tencentSmsService, weChatService, userService, sessionService, teamService, badgeService, config.avatar)
 }

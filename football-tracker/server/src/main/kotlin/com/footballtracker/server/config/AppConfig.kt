@@ -6,7 +6,8 @@ data class AppConfig(
     val database: DatabaseConfig,
     val jwt: JwtConfig,
     val tencent: TencentConfig,
-    val wechat: WeChatConfig
+    val wechat: WeChatConfig,
+    val avatar: AvatarConfig
 )
 
 data class DatabaseConfig(
@@ -33,6 +34,12 @@ data class TencentConfig(
 data class WeChatConfig(
     val appId: String,
     val appSecret: String
+)
+
+data class AvatarConfig(
+    val baseDir: String,
+    val publicBaseUrl: String,
+    val maxBytes: Long
 )
 
 fun Application.loadConfig(): AppConfig {
@@ -62,6 +69,11 @@ fun Application.loadConfig(): AppConfig {
         wechat = WeChatConfig(
             appId = env("APP_WECHAT_APP_ID", "app.wechat.appId"),
             appSecret = env("APP_WECHAT_APP_SECRET", "app.wechat.appSecret")
+        ),
+        avatar = AvatarConfig(
+            baseDir = env("APP_AVATAR_BASE_DIR", "app.avatar.baseDir"),
+            publicBaseUrl = env("APP_AVATAR_PUBLIC_BASE_URL", "app.avatar.publicBaseUrl"),
+            maxBytes = env("APP_AVATAR_MAX_BYTES", "app.avatar.maxBytes").toLong()
         )
     )
 }

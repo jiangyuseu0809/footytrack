@@ -28,6 +28,7 @@ struct UserProfileResponse: Decodable {
     let nickname: String
     let weightKg: Double
     let age: Int
+    let avatarUrl: String?
     let authProvider: String
     let createdAt: Int64
 }
@@ -36,6 +37,10 @@ struct UpdateProfileRequest: Encodable {
     let nickname: String?
     let weightKg: Double?
     let age: Int?
+}
+
+struct AvatarUploadResponse: Decodable {
+    let avatarUrl: String
 }
 
 // MARK: - Sessions

@@ -24,3 +24,7 @@ app:
   wechat:
     appId: "YOUR_WECHAT_APP_ID"
     appSecret: "YOUR_WECHAT_APP_SECRET"
+  avatar:
+    baseDir: "/var/www/footytrack/uploads/avatars"
+    publicBaseUrl: "https://footytrack.cn/uploads/avatars"
+    maxBytes: 524288

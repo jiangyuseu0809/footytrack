@@ -1,10 +1,16 @@
 import SwiftUI
+import PhotosUI
+#if canImport(UIKit)
+import UIKit
+#endif
 
 struct ProfileView: View {
     @ObservedObject var store: SessionStore
     @ObservedObject var authManager: AuthManager
     @State private var isLoading = true
     @State private var showEditSheet = false
+    @State private var pickerItem: PhotosPickerItem?
+    @State private var isUploadingAvatar = false
 
     private var totalMatches: Int {
         store.sessions.count
@@ -114,6 +120,9 @@ struct ProfileView: View {
                 authManager.refreshProfileTimestamp()
             }
         }
+        .task(id: pickerItem) {
+            await uploadAvatarIfNeeded()
+        }
     }
 
     private var profileCard: some View {
@@ -121,12 +130,37 @@ struct ProfileView: View {
 
         return VStack(spacing: 14) {
             HStack(alignment: .top, spacing: 12) {
-                ZStack {
-                    Circle()
-                        .fill(Color.white)
-                        .frame(width: 76, height: 76)
-                    Text("⚽️")
-                        .font(.system(size: 34))
+                ZStack(alignment: .bottomTrailing) {
+                    Group {
+                        if let avatar = authManager.userProfile?.avatarUrl,
+                           let url = URL(string: avatar) {
+                            AsyncImage(url: url) { phase in
+                                switch phase {
+                                case .success(let image):
+                                    image
+                                        .resizable()
+                                        .scaledToFill()
+                                default:
+                                    Color.white.overlay(Text("⚽️").font(.system(size: 34)))
+                                }
+                            }
+                        } else {
+                            Color.white.overlay(Text("⚽️").font(.system(size: 34)))
+                        }
+                    }
+                    .frame(width: 76, height: 76)
+                    .clipShape(Circle())
+
+                    PhotosPicker(selection: $pickerItem, matching: .images) {
+                        ZStack {
+                            Circle().fill(Color.white)
+                            Image(systemName: isUploadingAvatar ? "hourglass" : "camera.fill")
+                                .font(.caption.weight(.bold))
+                                .foregroundColor(AppColors.neonBlue)
+                        }
+                        .frame(width: 24, height: 24)
+                    }
+                    .disabled(isUploadingAvatar)
                 }
 
                 VStack(alignment: .leading, spacing: 4) {
@@ -466,6 +500,39 @@ struct ProfileView: View {
         async let badgesLoad: () = authManager.loadBadgesIfNeeded()
         _ = await (profileLoad, teamsLoad, badgesLoad)
         isLoading = false
+    }
+
+    private func uploadAvatarIfNeeded() async {
+        guard let item = pickerItem, !isUploadingAvatar else { return }
+        isUploadingAvatar = true
+        defer {
+            isUploadingAvatar = false
+            pickerItem = nil
+        }
+
+        do {
+            guard let data = try await item.loadTransferable(type: Data.self),
+                  let image = UIImage(data: data) else { return }
+            let resp = try await ApiClient.shared.updateAvatar(image)
+            if var profile = authManager.userProfile {
+                profile = UserProfileResponse(
+                    uid: profile.uid,
+                    phone: profile.phone,
+                    wechatOpenId: profile.wechatOpenId,
+                    username: profile.username,
+                    nickname: profile.nickname,
+                    weightKg: profile.weightKg,
+                    age: profile.age,
+                    avatarUrl: resp.avatarUrl,
+                    authProvider: profile.authProvider,
+                    createdAt: profile.createdAt
+                )
+                authManager.userProfile = profile
+                authManager.refreshProfileTimestamp()
+            }
+        } catch {
+            return
+        }
     }
 }
 

@@ -97,6 +97,15 @@ struct TeamHubView: View {
         team != nil
     }
 
+    private var teamCreatedDateText: String {
+        guard let ts = team?.createdAt else { return "--" }
+        let date = Date(timeIntervalSince1970: TimeInterval(ts) / 1000.0)
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "zh_CN")
+        formatter.dateFormat = "yyyy-MM-dd"
+        return formatter.string(from: date)
+    }
+
     private var totalSessions: Int64 {
         teamMembers.reduce(0) { $0 + $1.sessionCount }
     }
@@ -164,7 +173,7 @@ struct TeamHubView: View {
                     Text(team?.name ?? "我的球队")
                         .font(.title3.weight(.bold))
                         .foregroundColor(.white)
-                    Text("成立于 2024")
+                    Text("成立于 \(teamCreatedDateText)")
                         .font(.caption)
                         .foregroundColor(Color.white.opacity(0.85))
                 }
@@ -363,7 +372,7 @@ struct TeamHubView: View {
                 .cornerRadius(18)
 
                 featureRow(icon: "person.3.fill", title: "组建阵容", desc: "邀请队友并管理球队成员")
-                featureRow(icon: "trophy.fill", title: "查看排行", desc: "统计出勤、跑动和活跃度")
+                featureRow(icon: "trophy.fill", title: "查看排行", desc: "统计出勤和跑动数据")
                 featureRow(icon: "chart.line.uptrend.xyaxis", title: "一起进步", desc: "通过数据追踪团队表现")
 
                 NavigationLink(destination: TeamListView(authManager: authManager)) {

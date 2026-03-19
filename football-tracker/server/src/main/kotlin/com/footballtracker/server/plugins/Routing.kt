@@ -16,14 +16,15 @@ fun Application.configureRouting(
     userService: UserService,
     sessionService: SessionService,
     teamService: TeamService,
-    badgeService: BadgeService
+    badgeService: BadgeService,
+    avatarConfig: com.footballtracker.server.config.AvatarConfig
 ) {
     routing {
         route("/api") {
             authRoutes(jwtService, smsCodeStore, tencentSmsService, weChatService, userService)
 
             authenticate("auth-jwt") {
-                userRoutes(userService)
+                userRoutes(userService, avatarConfig)
                 sessionRoutes(sessionService, badgeService)
                 teamRoutes(teamService)
                 badgeRoutes(badgeService)

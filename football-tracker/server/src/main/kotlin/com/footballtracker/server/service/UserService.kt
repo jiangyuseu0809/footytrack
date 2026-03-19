@@ -4,6 +4,7 @@ import com.footballtracker.server.db.tables.UsersTable
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.transactions.transaction
 import java.util.*
+import java.util.UUID
 
 data class UserRow(
     val uid: UUID,
@@ -13,6 +14,7 @@ data class UserRow(
     val nickname: String,
     val weightKg: Double,
     val age: Int,
+    val avatarUrl: String?,
     val authProvider: String,
     val createdAt: Long
 )
@@ -84,6 +86,12 @@ class UserService {
         }
     }
 
+    fun updateAvatar(uid: UUID, avatarUrl: String?) = transaction {
+        UsersTable.update({ UsersTable.uid eq uid }) {
+            it[UsersTable.avatarUrl] = avatarUrl
+        }
+    }
+
     private fun ResultRow.toUserRow() = UserRow(
         uid = this[UsersTable.uid],
         phone = this[UsersTable.phone],
@@ -92,6 +100,7 @@ class UserService {
         nickname = this[UsersTable.nickname],
         weightKg = this[UsersTable.weightKg],
         age = this[UsersTable.age],
+        avatarUrl = this[UsersTable.avatarUrl],
         authProvider = this[UsersTable.authProvider],
         createdAt = this[UsersTable.createdAt]
     )

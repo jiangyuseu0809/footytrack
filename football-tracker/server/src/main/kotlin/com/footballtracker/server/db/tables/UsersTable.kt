@@ -11,6 +11,7 @@ object UsersTable : Table("users") {
     val nickname = varchar("nickname", 50).default("")
     val weightKg = double("weight_kg").default(70.0)
     val age = integer("age").default(25)
+    val avatarUrl = varchar("avatar_url", 500).nullable()
     val authProvider = varchar("auth_provider", 20)  // "phone" | "wechat" | "password"
     val createdAt = long("created_at").default(System.currentTimeMillis())
 
