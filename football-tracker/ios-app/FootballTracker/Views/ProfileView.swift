@@ -231,11 +231,21 @@ struct ProfileView: View {
                             .frame(maxWidth: .infinity, minHeight: 26, alignment: .topLeading)
                     }
                     .padding(10)
-                    .background(item.unlocked ? AppColors.cardBgLight.opacity(0.6) : AppColors.cardBg)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 12)
-                            .stroke(Color.white.opacity(0.08), lineWidth: 0.5)
+                    .background(
+                        item.unlocked
+                            ? LinearGradient(
+                                colors: [item.start.opacity(0.28), item.end.opacity(0.18)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                            : LinearGradient(
+                                colors: [AppColors.cardBg, AppColors.cardBg],
+                                startPoint: .top,
+                                endPoint: .bottom
+                            )
                     )
+                    .shadow(color: item.unlocked ? item.end.opacity(0.30) : Color.black.opacity(0.12), radius: item.unlocked ? 16 : 8, x: 0, y: item.unlocked ? 8 : 4)
+                    .shadow(color: item.unlocked ? item.start.opacity(0.16) : .clear, radius: 8, x: 0, y: 0)
                     .cornerRadius(12)
                 }
             }
