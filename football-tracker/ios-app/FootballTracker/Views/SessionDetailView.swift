@@ -70,7 +70,7 @@ struct SessionDetailView: View {
                             .foregroundColor(AppColors.textPrimary)
                     }
                     Spacer()
-                    SlackBadge(index: stats.slackIndex, label: stats.slackLabel)
+                    SlackBadge(index: stats.slackIndex)
                 }
                 .padding()
                 .background(AppColors.cardBg)
