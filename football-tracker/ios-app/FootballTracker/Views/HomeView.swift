@@ -8,7 +8,6 @@ struct HomeView: View {
     @ObservedObject private var watchSync = WatchSync.shared
     @State private var showWatchAlert = false
     @State private var isWeeklyCardFlipped = false
-    @AppStorage("home_has_shown_card_flip_hint") private var hasShownCardFlipHint = false
 
     private struct MonthSection: Identifiable {
         let id: String
@@ -91,6 +90,32 @@ struct HomeView: View {
 
     private let weekTargetSessions = 5
 
+    private var activeSessions: [FootballSession] {
+        isWeeklyCardFlipped ? todaySessions : thisWeekSessions
+    }
+
+    private var activeTotalDistanceKm: Double {
+        activeSessions.reduce(0.0) { $0 + $1.totalDistanceMeters } / 1000.0
+    }
+
+    private var activeTotalCalories: Double {
+        activeSessions.reduce(0.0) { $0 + $1.caloriesBurned }
+    }
+
+    private var activeTotalSprints: Int {
+        activeSessions.reduce(0) { $0 + $1.sprintCount }
+    }
+
+    private var activeTotalMinutes: Int {
+        activeSessions.reduce(0) { result, session in
+            result + Int(session.endTime.timeIntervalSince(session.startTime) / 60)
+        }
+    }
+
+    private var activeMaxSpeed: Double {
+        activeSessions.map(\.maxSpeedKmh).max() ?? 0
+    }
+
     var body: some View {
         ZStack {
             LinearGradient(
@@ -101,18 +126,19 @@ struct HomeView: View {
             .ignoresSafeArea()
 
             ScrollView(showsIndicators: false) {
-                VStack(spacing: 16) {
+                VStack(alignment: .leading, spacing: 16) {
                     topActionCards
-                    overviewHeroCard
 
                     if store.sessions.isEmpty {
                         emptyStateCard
                     } else {
-                        heatmapEntryCard
+                        keyStatsSection
+                        heatmapSection
                     }
                 }
                 .padding(.horizontal, 16)
-                .padding(.vertical, 16)
+                .padding(.top, 16)
+                .padding(.bottom, 20)
             }
         }
         .navigationTitle("野球记")
@@ -122,21 +148,13 @@ struct HomeView: View {
                 watchButton
             }
         }
-        .alert("安装 Apple Watch App", isPresented: $showWatchAlert) {
+        .alert("安装 Apple Watch 应用", isPresented: $showWatchAlert) {
             Button("前往安装") {
                 openWatchApp()
             }
             Button("取消", role: .cancel) {}
         } message: {
             Text("在 Apple Watch 上安装野球记，即可记录踢球数据并自动同步到手机。")
-        }
-        .task {
-            guard !hasShownCardFlipHint else { return }
-            hasShownCardFlipHint = true
-            try? await Task.sleep(nanoseconds: 700_000_000)
-            withAnimation(.easeInOut(duration: 0.45)) {
-                isWeeklyCardFlipped = true
-            }
         }
     }
 
@@ -163,170 +181,116 @@ struct HomeView: View {
     }
 
     private var topActionCards: some View {
-        HStack(spacing: 6) {
+        HStack(spacing: 12) {
             FlippableTopActionCard(
                 frontTitle: "本周训练",
-                frontSubtitle: "\(thisWeekSessionsCount) 场",
+                frontValue: "\(thisWeekSessionsCount)",
+                frontUnit: "场",
                 backTitle: "今日训练",
-                backSubtitle: "\(todaySessionsCount) 场",
+                backValue: "\(todaySessionsCount)",
+                backUnit: "场",
                 icon: "calendar",
-                iconBg: AppColors.neonBlue.opacity(0.18),
-                iconColor: AppColors.neonBlue,
+                iconBg: Color.white.opacity(0.2),
+                iconColor: .white,
                 cardBg: AppColors.cardBg,
                 borderColor: AppColors.neonBlue.opacity(0.2),
                 isFlipped: $isWeeklyCardFlipped
             )
+            .frame(maxWidth: .infinity, minHeight: 150, maxHeight: 150)
 
             TopActionCard(
                 title: "加入比赛",
-                subtitle: "点击加入",
-                icon: "figure.soccer",
-                iconBg: AppColors.neonPurple.opacity(0.18),
-                iconColor: AppColors.neonPurple
+                subtitle: "发现附近比赛",
+                icon: "person.2.fill",
+                iconBg: AppColors.neonBlue.opacity(0.16),
+                iconColor: AppColors.neonBlue
             )
+            .frame(maxWidth: .infinity, minHeight: 150, maxHeight: 150)
         }
     }
 
-    private var overviewHeroCard: some View {
-        ZStack {
-            overviewCardFace(title: "本周训练总览", subtitle: "本周 \(thisWeekSessionsCount) 场训练", sessions: thisWeekSessions, rotation: 0, opacity: isWeeklyCardFlipped ? 0 : 1)
-            overviewCardFace(title: "今日训练总览", subtitle: "今日 \(todaySessionsCount) 场训练", sessions: todaySessions, rotation: 180, opacity: isWeeklyCardFlipped ? 1 : 0)
+    private var keyStatsSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("关键数据")
+                .font(.title3.weight(.semibold))
+                .foregroundColor(AppColors.textPrimary)
+
+            ZStack {
+                keyStatsFace(for: thisWeekSessions, modeTag: "+本周", rotation: 0, opacity: isWeeklyCardFlipped ? 0 : 1)
+                keyStatsFace(for: todaySessions, modeTag: "+今日", rotation: 180, opacity: isWeeklyCardFlipped ? 1 : 0)
+            }
+            .rotation3DEffect(
+                .degrees(isWeeklyCardFlipped ? 180 : 0),
+                axis: (x: 0, y: 1, z: 0),
+                perspective: 0.7
+            )
+            .animation(.easeInOut(duration: 0.45), value: isWeeklyCardFlipped)
         }
-        .rotation3DEffect(
-            .degrees(isWeeklyCardFlipped ? 180 : 0),
-            axis: (x: 0, y: 1, z: 0),
-            perspective: 0.7
-        )
-        .animation(.easeInOut(duration: 0.45), value: isWeeklyCardFlipped)
     }
 
-    private func overviewCardFace(title: String, subtitle: String, sessions: [FootballSession], rotation: Double, opacity: Double) -> some View {
+    private func keyStatsFace(for sessions: [FootballSession], modeTag: String, rotation: Double, opacity: Double) -> some View {
         let totalDistanceKm = sessions.reduce(0.0) { $0 + $1.totalDistanceMeters } / 1000.0
         let totalCalories = sessions.reduce(0.0) { $0 + $1.caloriesBurned }
-        let totalDurationMinutes = sessions.reduce(0) { result, session in
+        let totalSprints = sessions.reduce(0) { $0 + $1.sprintCount }
+        let totalMinutes = sessions.reduce(0) { result, session in
             result + Int(session.endTime.timeIntervalSince(session.startTime) / 60)
         }
+        let maxSpeed = sessions.map(\.maxSpeedKmh).max() ?? 0
 
-        let progressTarget = title == "今日训练总览" ? 1 : weekTargetSessions
-        let progress = progressTarget > 0 ? min(Double(sessions.count) / Double(progressTarget), 1.0) : 0
-        let progressPercent = Int(progress * 100)
-        let remaining = max(progressTarget - sessions.count, 0)
-
-        return VStack(alignment: .leading, spacing: 14) {
-            HStack(alignment: .top) {
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(title)
-                        .font(.headline.weight(.semibold))
-                        .foregroundColor(AppColors.textPrimary)
-                    Text(subtitle)
-                        .font(.caption2)
-                        .foregroundColor(AppColors.textSecondary)
-                }
-
-                Spacer()
-
-                Text(String(format: "%.1f km", totalDistanceKm))
-                    .font(.title3.weight(.bold))
-                    .monospacedDigit()
-                    .foregroundColor(AppColors.textPrimary)
-                    .padding(.horizontal, 11)
-                    .padding(.vertical, 7)
-                    .background(AppColors.cardBgLight)
-                    .clipShape(Capsule())
+        return VStack(spacing: 0) {
+            HStack(spacing: 12) {
+                DashboardStatTile(title: "跑动距离", value: String(format: "%.1f km", totalDistanceKm), icon: "figure.run", iconColor: Color(hex: 0xA855F7), changeText: modeTag)
+                DashboardStatTile(title: "冲刺次数", value: "\(totalSprints)", icon: "bolt.fill", iconColor: Color(hex: 0xF97316), changeText: "+\(totalSprints)")
             }
 
-            progressBar(progress: progress, progressPercent: progressPercent, remainingSessions: remaining, targetSessions: progressTarget)
-
-            HStack(spacing: 8) {
-                HeroMetricChip(value: String(format: "%.0f", totalCalories), label: "总热量", icon: "flame.fill", tint: AppColors.calorieOrange)
-                HeroMetricChip(value: "\(totalDurationMinutes) 分", label: "总时长", icon: "clock.fill", tint: AppColors.neonBlue)
-                HeroMetricChip(value: "\(sessions.count)", label: "场次", icon: "sportscourt.fill", tint: AppColors.speedGreen)
-            }
-
-            HStack(spacing: 8) {
-                HeroMetricChip(value: String(format: "%.1f km", totalDistanceKm), label: "跑动距离", icon: "figure.run", tint: AppColors.neonBlue)
-                HeroMetricChip(value: String(format: "%.1f km/h", sessions.map(\.maxSpeedKmh).max() ?? 0), label: "最高速度", icon: "speedometer", tint: AppColors.speedGreen)
-                HeroMetricChip(value: "\(sessions.isEmpty ? 0 : Int(Double(sessions.map(\.slackIndex).reduce(0, +)) / Double(sessions.count)))", label: "摸鱼指数", icon: "bolt.fill", tint: AppColors.slackYellow)
+            HStack(spacing: 12) {
+                DashboardStatTile(title: "消耗热量", value: String(format: "%.0f", totalCalories), icon: "flame.fill", iconColor: Color(hex: 0xEF4444), changeText: "+\(Int(totalCalories))")
+                DashboardStatTile(title: "训练时长", value: formatDuration(totalMinutes), icon: "clock.fill", iconColor: Color(hex: 0x22D3EE), changeText: String(format: "%.1f km/h", maxSpeed))
             }
         }
-        .padding(16)
-        .background(
-            LinearGradient(
-                colors: [AppColors.cardBgLight, AppColors.cardBg],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-        )
+        .padding(14)
+        .background(AppColors.cardBg)
+        .clipShape(RoundedRectangle(cornerRadius: 18))
         .overlay(
             RoundedRectangle(cornerRadius: 18)
-                .stroke(Color.white.opacity(0.08), lineWidth: 1)
+                .stroke(Color.white.opacity(0.08), lineWidth: 0.8)
         )
-        .clipShape(RoundedRectangle(cornerRadius: 18))
         .rotation3DEffect(.degrees(rotation), axis: (x: 0, y: 1, z: 0))
         .opacity(opacity)
     }
 
-    private func progressBar(progress: Double, progressPercent: Int, remainingSessions: Int, targetSessions: Int) -> some View {
-        VStack(spacing: 8) {
-            HStack {
-                Text("目标 \(targetSessions) 场")
-                    .font(.caption2)
-                    .foregroundColor(AppColors.textSecondary)
+    private var heatmapSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("活动热区")
+                .font(.title3.weight(.semibold))
+                .foregroundColor(AppColors.textPrimary)
 
-                Spacer()
-
-                Text("\(progressPercent)%")
-                    .font(.caption.weight(.semibold))
-                    .monospacedDigit()
-                    .foregroundColor(AppColors.textPrimary)
-            }
-
-            GeometryReader { proxy in
-                ZStack(alignment: .leading) {
-                    RoundedRectangle(cornerRadius: 6)
-                        .fill(Color.white.opacity(0.08))
-                        .frame(height: 7)
-
-                    RoundedRectangle(cornerRadius: 6)
-                        .fill(AppColors.neonGradient)
-                        .frame(
-                            width: progress == 0 ? 0 : max(18, proxy.size.width * progress),
-                            height: 7
-                        )
-                }
-            }
-            .frame(height: 7)
-
-            HStack {
-                Text(remainingSessions == 0
-                     ? "目标已达成"
-                     : "还差 \(remainingSessions) 场达标")
-                    .font(.caption2)
-                    .foregroundColor(AppColors.textSecondary)
-
-                Spacer()
-            }
+            heatmapEntryCard
         }
     }
 
-
     private var currentModeTitle: String {
-        isWeeklyCardFlipped ? "今日数据分析" : "本周数据分析"
+        isWeeklyCardFlipped ? "今日分析" : "本周分析"
     }
 
     private var currentModeSubtitle: String {
         if isWeeklyCardFlipped {
-            return "聚合今日 \(todaySessionsCount) 场训练轨迹"
+            return "查看今日 \(todaySessionsCount) 场训练分析"
         }
-        return "聚合本周 \(thisWeekSessionsCount) 场训练轨迹"
+        return "查看本周 \(thisWeekSessionsCount) 场训练分析"
     }
 
     private var currentModeSessions: [FootballSession] {
         isWeeklyCardFlipped ? todaySessions : thisWeekSessions
     }
 
-    private var currentModeTrackPoints: [TrackPointRecord] {
-        currentModeSessions.flatMap { store.getTrackPoints(for: $0) }
+    private func formatDuration(_ totalMinutes: Int) -> String {
+        let hours = totalMinutes / 60
+        let minutes = totalMinutes % 60
+        if hours == 0 {
+            return "\(minutes)分"
+        }
+        return "\(hours)小时\(minutes)分"
     }
 
     private var heatmapEntryCard: some View {
@@ -373,7 +337,7 @@ struct HomeView: View {
             RoundedRectangle(cornerRadius: 18)
                 .fill(
                     LinearGradient(
-                        colors: [Color(hex: 0x1B8E5F), Color(hex: 0x11573A)],
+                        colors: [Color(hex: 0x16803B), Color(hex: 0x166534)],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
                     )
@@ -389,14 +353,14 @@ struct HomeView: View {
                         .font(.headline.weight(.bold))
                         .foregroundColor(.white)
                     Spacer()
-                    Image(systemName: "chevron.right.circle.fill")
-                        .font(.title3)
+                    Image(systemName: "chevron.right")
+                        .font(.subheadline.weight(.bold))
                         .foregroundColor(.white.opacity(0.9))
                 }
 
                 Text(subtitle)
                     .font(.caption)
-                    .foregroundColor(.white.opacity(0.92))
+                    .foregroundColor(.white.opacity(0.9))
 
                 HStack(spacing: 8) {
                     Label("\(sessions.count) 场", systemImage: "sportscourt")
@@ -414,23 +378,87 @@ struct HomeView: View {
     }
 
     private var emptyStateCard: some View {
-        VStack(spacing: 10) {
-            Image(systemName: "sportscourt")
-                .font(.system(size: 34))
-                .foregroundColor(AppColors.neonBlue)
+        VStack(spacing: 14) {
+            RoundedRectangle(cornerRadius: 20)
+                .fill(Color(hex: 0x1F2937))
+                .frame(width: 94, height: 94)
+                .overlay(
+                    Image(systemName: "applewatch")
+                        .font(.system(size: 42))
+                        .foregroundColor(AppColors.textSecondary)
+                )
 
-            Text("还没有训练记录")
-                .font(.headline)
+            Text("暂无数据")
+                .font(.title3.weight(.bold))
                 .foregroundColor(AppColors.textPrimary)
 
-            Text("请在 Apple Watch 上开始一场训练")
+            Text("连接 Apple Watch 后即可开始记录你的足球表现。")
                 .font(.subheadline)
                 .foregroundColor(AppColors.textSecondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 12)
+
+            Button {
+                showWatchAlert = true
+            } label: {
+                Text("连接 Apple Watch")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+                    .background(
+                        LinearGradient(
+                            colors: [Color(hex: 0x3B82F6), Color(hex: 0x4F46E5)],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                    )
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+            }
+            .buttonStyle(.plain)
+
+            VStack(spacing: 8) {
+                emptyFeatureRow(icon: "bolt.fill", title: "实时表现", desc: "比赛中实时查看关键数据")
+                emptyFeatureRow(icon: "scope", title: "热区图", desc: "查看你的跑动分布")
+                emptyFeatureRow(icon: "chart.bar.fill", title: "高级分析", desc: "智能洞察你的训练表现")
+            }
+            .padding(.top, 6)
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 28)
+        .padding(16)
         .background(AppColors.cardBg)
         .clipShape(RoundedRectangle(cornerRadius: 16))
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(Color.white.opacity(0.06), lineWidth: 1)
+        )
+    }
+
+    private func emptyFeatureRow(icon: String, title: String, desc: String) -> some View {
+        HStack(spacing: 10) {
+            RoundedRectangle(cornerRadius: 10)
+                .fill(AppColors.cardBgLight)
+                .frame(width: 36, height: 36)
+                .overlay(
+                    Image(systemName: icon)
+                        .font(.caption.weight(.semibold))
+                        .foregroundColor(AppColors.textSecondary)
+                )
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundColor(AppColors.textPrimary)
+                Text(desc)
+                    .font(.caption)
+                    .foregroundColor(AppColors.textSecondary)
+            }
+
+            Spacer()
+        }
+        .padding(10)
+        .background(AppColors.cardBgLight.opacity(0.45))
+        .clipShape(RoundedRectangle(cornerRadius: 10))
     }
 }
 
@@ -452,7 +480,7 @@ struct HomeAnalysisDetailView: View {
 
         var dateText: String {
             let formatter = DateFormatter()
-            formatter.dateFormat = "MM/dd HH:mm"
+            formatter.dateFormat = "MM-dd HH:mm"
             return formatter.string(from: session.startTime)
         }
     }
@@ -528,7 +556,7 @@ struct HomeAnalysisDetailView: View {
                     } else if isWeeklyMode {
                         LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
                             StatCardView(label: "总距离", value: String(format: "%.1f", stats.totalDistanceMeters / 1000), unit: "km", color: .blue)
-                            StatCardView(label: "总时长", value: "\(weeklyTotalDurationMinutes)", unit: "min", color: .teal)
+                            StatCardView(label: "总时长", value: "\(weeklyTotalDurationMinutes)", unit: "分", color: .teal)
                             StatCardView(label: "平均速度", value: String(format: "%.1f", weeklyAvgSpeed), unit: "km/h", color: .orange)
                             StatCardView(label: "最高速度", value: String(format: "%.1f", perSessionItems.map { $0.stats.maxSpeedKmh }.max() ?? 0), unit: "km/h", color: .red)
                             StatCardView(label: "平均心率", value: "\(weeklyAvgHeartRate)", unit: "bpm", color: .pink)
@@ -547,7 +575,7 @@ struct HomeAnalysisDetailView: View {
                                             .font(.subheadline.weight(.semibold))
                                             .foregroundColor(AppColors.textPrimary)
                                         Spacer()
-                                        Text("\(item.durationMinutes) min")
+                                        Text("\(item.durationMinutes) 分")
                                             .font(.caption)
                                             .foregroundColor(AppColors.textSecondary)
                                     }
@@ -675,45 +703,46 @@ struct TopActionCard: View {
     let iconColor: Color
 
     var body: some View {
-        HStack(spacing: 6) {
-            VStack(alignment: .leading, spacing: 1) {
-                Text(title)
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundColor(AppColors.textPrimary)
-                Text(subtitle)
-                    .font(.caption2)
-                    .foregroundColor(AppColors.textSecondary)
-                    .lineLimit(1)
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(iconBg)
+                    .frame(width: 30, height: 30)
+                    .overlay(
+                        Image(systemName: icon)
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundColor(iconColor)
+                    )
+                Spacer()
             }
 
-            Spacer(minLength: 2)
+            Text(title)
+                .font(.system(size: 17, weight: .semibold))
+                .foregroundColor(AppColors.textPrimary)
 
-            RoundedRectangle(cornerRadius: 8)
-                .fill(iconBg)
-                .frame(width: 28, height: 28)
-                .overlay(
-                    Image(systemName: icon)
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundColor(iconColor)
-                )
+            Text(subtitle)
+                .font(.caption)
+                .foregroundColor(AppColors.textSecondary)
+                .lineLimit(1)
         }
-        .frame(maxWidth: .infinity, minHeight: 64, alignment: .leading)
-        .padding(.horizontal, 10)
-        .padding(.vertical, 8)
+        .frame(maxWidth: .infinity, minHeight: 120, alignment: .topLeading)
+        .padding(14)
         .background(AppColors.cardBg)
         .overlay(
-            RoundedRectangle(cornerRadius: 11)
+            RoundedRectangle(cornerRadius: 16)
                 .stroke(Color.white.opacity(0.05), lineWidth: 1)
         )
-        .clipShape(RoundedRectangle(cornerRadius: 11))
+        .clipShape(RoundedRectangle(cornerRadius: 16))
     }
 }
 
 struct FlippableTopActionCard: View {
     let frontTitle: String
-    let frontSubtitle: String
+    let frontValue: String
+    let frontUnit: String
     let backTitle: String
-    let backSubtitle: String
+    let backValue: String
+    let backUnit: String
     let icon: String
     let iconBg: Color
     let iconColor: Color
@@ -723,8 +752,8 @@ struct FlippableTopActionCard: View {
 
     var body: some View {
         ZStack {
-            cardFace(title: frontTitle, subtitle: frontSubtitle, rotation: 0, opacity: isFlipped ? 0 : 1)
-            cardFace(title: backTitle, subtitle: backSubtitle, rotation: 180, opacity: isFlipped ? 1 : 0)
+            cardFace(title: frontTitle, value: frontValue, unit: frontUnit, rotation: 0, opacity: isFlipped ? 0 : 1)
+            cardFace(title: backTitle, value: backValue, unit: backUnit, rotation: 180, opacity: isFlipped ? 1 : 0)
         }
         .rotation3DEffect(
             .degrees(isFlipped ? 180 : 0),
@@ -738,45 +767,61 @@ struct FlippableTopActionCard: View {
         }
     }
 
-    private func cardFace(title: String, subtitle: String, rotation: Double, opacity: Double) -> some View {
-        HStack(spacing: 6) {
-            VStack(alignment: .leading, spacing: 1) {
-                Text(title)
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundColor(AppColors.textPrimary)
-                Text(subtitle)
-                    .font(.caption2)
-                    .foregroundColor(AppColors.neonBlue.opacity(0.88))
-                    .lineLimit(1)
-            }
-
-            Spacer(minLength: 2)
-
-            VStack(spacing: 4) {
-                Image(systemName: "arrow.triangle.2.circlepath")
-                    .font(.system(size: 10, weight: .bold))
-                    .foregroundColor(AppColors.neonBlue.opacity(0.9))
-                    .frame(width: 16, height: 16)
-
+    private func cardFace(title: String, value: String, unit: String, rotation: Double, opacity: Double) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
                 RoundedRectangle(cornerRadius: 8)
                     .fill(iconBg)
-                    .frame(width: 28, height: 28)
+                    .frame(width: 30, height: 30)
                     .overlay(
                         Image(systemName: icon)
-                            .font(.system(size: 13, weight: .semibold))
+                            .font(.system(size: 14, weight: .semibold))
                             .foregroundColor(iconColor)
                     )
+
+                Spacer()
+
+                Image(systemName: "arrow.triangle.2.circlepath")
+                    .font(.system(size: 12, weight: .bold))
+                    .foregroundColor(.white.opacity(0.75))
+            }
+
+            Text(title)
+                .font(.system(size: 17, weight: .semibold))
+                .foregroundColor(.white)
+
+            Spacer(minLength: 0)
+
+            HStack(alignment: .bottom, spacing: 6) {
+                Text(value)
+                    .font(.system(size: 44, weight: .bold))
+                    .monospacedDigit()
+                    .foregroundColor(.white)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+
+                Spacer()
+
+                Text(unit)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(.white.opacity(0.9))
+                    .padding(.bottom, 6)
             }
         }
-        .frame(maxWidth: .infinity, minHeight: 64, alignment: .leading)
-        .padding(.horizontal, 10)
-        .padding(.vertical, 8)
-        .background(cardBg)
+        .frame(maxWidth: .infinity, minHeight: 120, alignment: .topLeading)
+        .padding(14)
+        .background(
+            LinearGradient(
+                colors: [Color(hex: 0x3B82F6), Color(hex: 0x4F46E5)],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+        )
         .overlay(
-            RoundedRectangle(cornerRadius: 11)
+            RoundedRectangle(cornerRadius: 16)
                 .stroke(borderColor, lineWidth: 1)
         )
-        .clipShape(RoundedRectangle(cornerRadius: 11))
+        .clipShape(RoundedRectangle(cornerRadius: 16))
         .rotation3DEffect(.degrees(rotation), axis: (x: 0, y: 1, z: 0))
         .opacity(opacity)
     }
@@ -787,33 +832,48 @@ struct DashboardStatTile: View {
     let value: String
     let icon: String
     let iconColor: Color
+    let changeText: String
 
     var body: some View {
         VStack(alignment: .leading, spacing: 9) {
-            Image(systemName: icon)
-                .font(.caption.weight(.bold))
-                .foregroundColor(iconColor)
+            HStack {
+                Image(systemName: icon)
+                    .font(.caption.weight(.bold))
+                    .foregroundColor(iconColor)
+
+                Spacer()
+
+                HStack(spacing: 3) {
+                    Image(systemName: "arrow.up.right")
+                        .font(.system(size: 9, weight: .bold))
+                    Text(changeText)
+                        .font(.system(size: 10, weight: .medium))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
+                }
+                .foregroundColor(Color(hex: 0x60A5FA))
+                .padding(.horizontal, 6)
+                .padding(.vertical, 3)
+                .background(Color.white.opacity(0.08))
+                .clipShape(Capsule())
+            }
 
             Text(title)
-                .font(.caption2)
+                .font(.caption)
                 .foregroundColor(AppColors.textSecondary)
                 .lineLimit(1)
 
             Text(value)
-                .font(.subheadline.weight(.semibold))
+                .font(.system(size: 20, weight: .bold))
                 .monospacedDigit()
                 .foregroundColor(AppColors.textPrimary)
                 .lineLimit(1)
-                .minimumScaleFactor(0.82)
+                .minimumScaleFactor(0.75)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(12)
-        .background(AppColors.cardBg)
-        .overlay(
-            RoundedRectangle(cornerRadius: 14)
-                .stroke(Color.white.opacity(0.06), lineWidth: 1)
-        )
-        .clipShape(RoundedRectangle(cornerRadius: 14))
+        .background(AppColors.cardBgLight.opacity(0.55))
+        .clipShape(RoundedRectangle(cornerRadius: 12))
     }
 }
 
@@ -852,7 +912,7 @@ struct SessionRow: View {
 
                 let distKm = String(format: "%.1f", session.totalDistanceMeters / 1000.0)
                 let durationMin = Int(session.endTime.timeIntervalSince(session.startTime) / 60)
-                Text("\(distKm) km · \(durationMin) 分钟")
+                Text("\(distKm) 公里 · \(durationMin) 分钟")
                     .font(.caption2)
                     .monospacedDigit()
                     .foregroundColor(AppColors.textSecondary)

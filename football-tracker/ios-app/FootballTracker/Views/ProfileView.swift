@@ -71,7 +71,7 @@ struct ProfileView: View {
 
         let placeholders = [
             ProfileAchievementItem(icon: "heart.fill", title: "铁肺", unlocked: false, start: Color(hex: 0xEF4444), end: Color(hex: 0xF43F5E)),
-            ProfileAchievementItem(icon: "medal.fill", title: "MVP", unlocked: false, start: Color(hex: 0x22C55E), end: Color(hex: 0x10B981)),
+            ProfileAchievementItem(icon: "medal.fill", title: "最有价值球员", unlocked: false, start: Color(hex: 0x22C55E), end: Color(hex: 0x10B981)),
             ProfileAchievementItem(icon: "trophy.fill", title: "冠军", unlocked: false, start: Color(hex: 0x6366F1), end: Color(hex: 0x3B82F6))
         ]
 
@@ -134,11 +134,11 @@ struct ProfileView: View {
                         .font(.title3.weight(.bold))
                         .foregroundColor(.white)
 
-                    Text("\(playStyle) • Level \(playerLevel)")
+                    Text("\(playStyle) • 等级 \(playerLevel)")
                         .font(.subheadline)
                         .foregroundColor(Color.white.opacity(0.85))
 
-                    Text("Pro Member")
+                    Text("高级会员")
                         .font(.caption.weight(.semibold))
                         .foregroundColor(.white)
                         .padding(.horizontal, 10)
@@ -151,9 +151,9 @@ struct ProfileView: View {
             }
 
             HStack(spacing: 0) {
-                profileStat(value: "\(totalMatches)", label: "Matches")
-                profileStat(value: playStyle, label: "Play Style")
-                profileStat(value: "\(totalSprints)", label: "Sprints")
+                profileStat(value: "\(totalMatches)", label: "比赛场次")
+                profileStat(value: playStyle, label: "球风")
+                profileStat(value: "\(totalSprints)", label: "冲刺次数")
             }
             .padding(.top, 12)
             .overlay(alignment: .top) {
@@ -176,7 +176,7 @@ struct ProfileView: View {
     private var achievementsSection: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
-                Text("Achievements")
+                Text("成就")
                     .font(.title3.weight(.semibold))
                     .foregroundColor(AppColors.textPrimary)
                 Spacer()
@@ -216,13 +216,13 @@ struct ProfileView: View {
 
     private var summarySection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Season Summary")
+            Text("赛季总结")
                 .font(.headline)
                 .foregroundColor(AppColors.textPrimary)
 
-            summaryBar(title: "Overall Rating", valueText: String(format: "%.1f", seasonRating), progress: seasonRating / 10, start: Color(hex: 0x60A5FA), end: Color(hex: 0x2563EB))
-            summaryBar(title: "Distance Covered", valueText: String(format: "%.1f km", totalDistanceKm), progress: min(1, totalDistanceKm / 200), start: Color(hex: 0x4ADE80), end: Color(hex: 0x16A34A))
-            summaryBar(title: "Goal Contributions", valueText: "\(Int(Double(totalSprints) * 0.35))", progress: min(1, Double(totalSprints) / 120), start: Color(hex: 0xC084FC), end: Color(hex: 0x9333EA))
+            summaryBar(title: "综合评分", valueText: String(format: "%.1f", seasonRating), progress: seasonRating / 10, start: Color(hex: 0x60A5FA), end: Color(hex: 0x2563EB))
+            summaryBar(title: "跑动距离", valueText: String(format: "%.1f km", totalDistanceKm), progress: min(1, totalDistanceKm / 200), start: Color(hex: 0x4ADE80), end: Color(hex: 0x16A34A))
+            summaryBar(title: "进攻贡献", valueText: "\(Int(Double(totalSprints) * 0.35))", progress: min(1, Double(totalSprints) / 120), start: Color(hex: 0xC084FC), end: Color(hex: 0x9333EA))
         }
         .padding(14)
         .background(AppColors.cardBg)
@@ -235,29 +235,29 @@ struct ProfileView: View {
 
     private var appearanceItems: [ProfileMenuItem] {
         [
-            ProfileMenuItem(icon: "moon.fill", title: "Theme", action: .theme, trailingValue: "Dark", isToggle: true)
+            ProfileMenuItem(icon: "moon.fill", title: "主题", action: .theme, trailingValue: "深色", isToggle: true)
         ]
     }
 
     private var accountItems: [ProfileMenuItem] {
         [
-            ProfileMenuItem(icon: "person.fill", title: "Edit Profile", action: .editProfile),
-            ProfileMenuItem(icon: "bell.fill", title: "Notifications", action: .notifications, badge: "3"),
-            ProfileMenuItem(icon: "square.and.arrow.up", title: "Share Profile", action: .share)
+            ProfileMenuItem(icon: "person.fill", title: "编辑资料", action: .editProfile),
+            ProfileMenuItem(icon: "bell.fill", title: "通知", action: .notifications, badge: "3"),
+            ProfileMenuItem(icon: "square.and.arrow.up", title: "分享主页", action: .share)
         ]
     }
 
     private var deviceItems: [ProfileMenuItem] {
         [
-            ProfileMenuItem(icon: "applewatch", title: "Apple Watch", action: .watch, status: "Connected")
+            ProfileMenuItem(icon: "applewatch", title: "Apple Watch", action: .watch, status: "已连接")
         ]
     }
 
     private var supportItems: [ProfileMenuItem] {
         [
-            ProfileMenuItem(icon: "gearshape.fill", title: "Settings", action: .settings),
-            ProfileMenuItem(icon: "shield.fill", title: "Privacy & Security", action: .privacy),
-            ProfileMenuItem(icon: "questionmark.circle.fill", title: "Help & Support", action: .help)
+            ProfileMenuItem(icon: "gearshape.fill", title: "设置", action: .settings),
+            ProfileMenuItem(icon: "shield.fill", title: "隐私与安全", action: .privacy),
+            ProfileMenuItem(icon: "questionmark.circle.fill", title: "帮助与支持", action: .help)
         ]
     }
 
@@ -366,7 +366,7 @@ struct ProfileView: View {
         Button {
             authManager.logout()
         } label: {
-            Text("Sign Out")
+            Text("退出登录")
                 .font(.subheadline.weight(.semibold))
                 .foregroundColor(AppColors.heartRed)
                 .frame(maxWidth: .infinity)
@@ -375,7 +375,7 @@ struct ProfileView: View {
     }
 
     private var versionText: some View {
-        Text("Version \(appVersion)")
+        Text("版本 \(appVersion)")
             .font(.caption)
             .foregroundColor(AppColors.textSecondary.opacity(0.7))
             .frame(maxWidth: .infinity)

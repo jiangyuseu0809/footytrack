@@ -506,7 +506,7 @@ private struct MatchHistoryRow: View {
     let session: FootballSession
 
     private var resultTag: String {
-        session.slackIndex < 45 ? "W" : "L"
+        session.slackIndex < 45 ? "优" : "需提升"
     }
 
     private var resultColor: Color {

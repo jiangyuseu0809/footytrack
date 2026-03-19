@@ -186,7 +186,7 @@ struct TeamHubView: View {
                     Text(team?.name ?? "我的球队")
                         .font(.title3.weight(.bold))
                         .foregroundColor(.white)
-                    Text("Since 2024")
+                    Text("成立于 2024")
                         .font(.caption)
                         .foregroundColor(Color.white.opacity(0.85))
                 }
@@ -200,9 +200,9 @@ struct TeamHubView: View {
             }
 
             HStack(spacing: 0) {
-                teamStatItem(value: "\(teamMembers.count)", label: "Members")
-                teamStatItem(value: "\(totalSessions)", label: "Sessions")
-                teamStatItem(value: String(format: "%.1f", averageDistanceKm), label: "Avg km")
+                teamStatItem(value: "\(teamMembers.count)", label: "成员")
+                teamStatItem(value: "\(totalSessions)", label: "总场次")
+                teamStatItem(value: String(format: "%.1f", averageDistanceKm), label: "平均距离")
             }
             .padding(.top, 8)
             .overlay(alignment: .top) {
@@ -225,14 +225,14 @@ struct TeamHubView: View {
     private var squadSection: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
-                Text("Squad")
+                Text("阵容")
                     .font(.title3.weight(.semibold))
                     .foregroundColor(AppColors.textPrimary)
                 Spacer()
                 NavigationLink(destination: TeamListView(authManager: authManager)) {
                     HStack(spacing: 4) {
                         Image(systemName: "plus")
-                        Text("Add")
+                        Text("添加")
                     }
                     .font(.subheadline.weight(.medium))
                     .foregroundColor(AppColors.neonBlue)
@@ -254,7 +254,7 @@ struct TeamHubView: View {
                             Text(displayName(member))
                                 .font(.subheadline.weight(.medium))
                                 .foregroundColor(AppColors.textPrimary)
-                            Text(member.role == "owner" ? "Captain" : "Member")
+                            Text(member.role == "owner" ? "队长" : "成员")
                                 .font(.caption)
                                 .foregroundColor(AppColors.textSecondary)
                         }
@@ -288,15 +288,15 @@ struct TeamHubView: View {
 
     private var leaderboardsSection: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("Leaderboards")
+            Text("排行榜")
                 .font(.title3.weight(.semibold))
                 .foregroundColor(AppColors.textPrimary)
 
             VStack(spacing: 12) {
-                leaderboardCard(title: "Top Attendance", icon: "calendar", colors: [Color(hex: 0xF59E0B), Color(hex: 0xF97316)], items: attendanceBoard)
-                leaderboardCard(title: "Distance Kings", icon: "bolt.fill", colors: [Color(hex: 0xA855F7), Color(hex: 0xEC4899)], items: distanceBoard)
-                leaderboardCard(title: "Activity Leaders", icon: "chart.line.uptrend.xyaxis", colors: [Color(hex: 0x60A5FA), Color(hex: 0x22D3EE)], items: activityBoard)
-                leaderboardCard(title: "Attendance Rate", icon: "person.3.fill", colors: [Color(hex: 0x4ADE80), Color(hex: 0x10B981)], items: attendanceRateBoard)
+                leaderboardCard(title: "出勤榜", icon: "calendar", colors: [Color(hex: 0xF59E0B), Color(hex: 0xF97316)], items: attendanceBoard)
+                leaderboardCard(title: "跑动王者", icon: "bolt.fill", colors: [Color(hex: 0xA855F7), Color(hex: 0xEC4899)], items: distanceBoard)
+                leaderboardCard(title: "活跃榜", icon: "chart.line.uptrend.xyaxis", colors: [Color(hex: 0x60A5FA), Color(hex: 0x22D3EE)], items: activityBoard)
+                leaderboardCard(title: "出勤率", icon: "person.3.fill", colors: [Color(hex: 0x4ADE80), Color(hex: 0x10B981)], items: attendanceRateBoard)
             }
         }
     }
