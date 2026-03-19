@@ -83,6 +83,29 @@ final class ApiClient {
         }
     }
 
+    private func requestWithFallback<T: Decodable>(
+        endpoints: [String],
+        method: String = "GET",
+        body: (any Encodable)? = nil
+    ) async throws -> T {
+        precondition(!endpoints.isEmpty)
+
+        var lastError: Error?
+        for endpoint in endpoints {
+            do {
+                let result: T = try await request(endpoint: endpoint, method: method, body: body)
+                return result
+            } catch let ApiError.httpError(code, _) where code == 404 {
+                lastError = ApiError.httpError(code, "接口不存在")
+                continue
+            } catch {
+                throw error
+            }
+        }
+
+        throw (lastError ?? ApiError.httpError(404, "接口不存在"))
+    }
+
     // MARK: - Auth
 
     func login(username: String, password: String) async throws -> AuthResponse {
@@ -132,32 +155,32 @@ final class ApiClient {
     // MARK: - Teams
 
     func createTeam(name: String) async throws -> TeamResponse {
-        try await request(
-            endpoint: "/api/teams",
+        try await requestWithFallback(
+            endpoints: ["/api/teams", "/teams"],
             method: "POST",
             body: CreateTeamRequest(name: name)
         )
     }
 
     func getTeams() async throws -> TeamListResponse {
-        try await request(endpoint: "/api/teams")
+        try await requestWithFallback(endpoints: ["/api/teams", "/teams"])
     }
 
     func getTeamDetail(teamId: String) async throws -> TeamDetailResponse {
-        try await request(endpoint: "/api/teams/\(teamId)")
+        try await requestWithFallback(endpoints: ["/api/teams/\(teamId)", "/teams/\(teamId)"])
     }
 
     func joinTeam(inviteCode: String) async throws -> TeamResponse {
-        try await request(
-            endpoint: "/api/teams/join",
+        try await requestWithFallback(
+            endpoints: ["/api/teams/join", "/teams/join"],
             method: "POST",
             body: JoinTeamRequest(inviteCode: inviteCode)
         )
     }
 
     func leaveTeam(teamId: String) async throws -> MessageResponse {
-        try await request(
-            endpoint: "/api/teams/\(teamId)/leave",
+        try await requestWithFallback(
+            endpoints: ["/api/teams/\(teamId)/leave", "/teams/\(teamId)/leave"],
             method: "POST"
         )
     }

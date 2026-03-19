@@ -29,5 +29,10 @@ fun Application.configureRouting(
                 badgeRoutes(badgeService)
             }
         }
+
+        // Backward-compatible team routes for reverse proxies that strip /api.
+        authenticate("auth-jwt") {
+            teamRoutes(teamService)
+        }
     }
 }

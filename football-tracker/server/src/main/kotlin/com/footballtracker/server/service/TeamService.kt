@@ -39,10 +39,10 @@ class TeamService {
         } get TeamsTable.id
 
         TeamMembersTable.insert {
-            it[teamId] = teamId
-            it[userUid] = ownerUid
-            it[role] = "owner"
-            it[joinedAt] = now
+            it[TeamMembersTable.teamId] = teamId
+            it[TeamMembersTable.userUid] = ownerUid
+            it[TeamMembersTable.role] = "owner"
+            it[TeamMembersTable.joinedAt] = now
         }
 
         TeamRow(teamId, name, code, ownerUid, now)
@@ -111,7 +111,9 @@ class TeamService {
 
     fun leaveTeam(teamId: UUID, userUid: UUID): Boolean = transaction {
         val deleted = TeamMembersTable.deleteWhere {
-            (TeamMembersTable.teamId eq teamId) and (TeamMembersTable.userUid eq userUid)
+            SqlExpressionBuilder.run {
+                (TeamMembersTable.teamId eq teamId) and (TeamMembersTable.userUid eq userUid)
+            }
         }
         deleted > 0
     }
