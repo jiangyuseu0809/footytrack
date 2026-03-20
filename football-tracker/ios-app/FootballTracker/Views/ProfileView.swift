@@ -27,6 +27,10 @@ struct ProfileView: View {
         store.sessions.reduce(0) { $0 + $1.totalDistanceMeters } / 1000
     }
 
+    private var totalCalories: Double {
+        store.sessions.reduce(0) { $0 + $1.caloriesBurned }
+    }
+
     private var avgSlack: Double {
         guard !store.sessions.isEmpty else { return 0 }
         return Double(store.sessions.reduce(0) { $0 + $1.slackIndex }) / Double(store.sessions.count)
@@ -131,8 +135,8 @@ struct ProfileView: View {
 
             HStack(spacing: 0) {
                 profileStat(value: "\(totalMatches)", label: "比赛场次")
-                profileStat(value: playStyle, label: "球风")
-                profileStat(value: "\(totalSprints)", label: "冲刺次数")
+                profileStat(value: String(format: "%.1fkm", totalDistanceKm), label: "总距离")
+                profileStat(value: String(format: "%.0f", totalCalories), label: "总卡路里")
             }
             .padding(.top, 12)
             .overlay(alignment: .top) {
