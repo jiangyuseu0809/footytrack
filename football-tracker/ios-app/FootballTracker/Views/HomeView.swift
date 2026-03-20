@@ -322,40 +322,62 @@ struct HomeView: View {
     }
 
     private var heatmapEntryCard: some View {
-        NavigationLink(
-            destination: HomeAnalysisDetailView(
-                title: currentModeTitle,
-                sessions: currentModeSessions,
-                isWeeklyMode: !isWeeklyCardFlipped,
-                store: store
-            )
-        ) {
-            ZStack {
-                heatmapEntryFace(
-                    title: "本周数据分析",
-                    subtitle: "查看本周 \(thisWeekSessionsCount) 场训练分析",
-                    sessions: thisWeekSessions,
-                    rotation: 0,
-                    opacity: isWeeklyCardFlipped ? 0 : 1
-                )
-
-                heatmapEntryFace(
-                    title: "今日数据分析",
-                    subtitle: "查看今日 \(todaySessionsCount) 场训练分析",
-                    sessions: todaySessions,
-                    rotation: 180,
-                    opacity: isWeeklyCardFlipped ? 1 : 0
-                )
+        Group {
+            if isWeeklyCardFlipped {
+                // Today mode: navigate to match detail
+                if todaySessions.count == 1, let todaySession = todaySessions.first {
+                    NavigationLink(destination: SessionDetailView(session: todaySession, store: store)) {
+                        heatmapEntryContent
+                    }
+                    .buttonStyle(.plain)
+                } else {
+                    NavigationLink(destination: AllMatchesView(sessions: todaySessions, store: store)) {
+                        heatmapEntryContent
+                    }
+                    .buttonStyle(.plain)
+                }
+            } else {
+                // Weekly mode: navigate to analysis
+                NavigationLink(
+                    destination: HomeAnalysisDetailView(
+                        title: currentModeTitle,
+                        sessions: currentModeSessions,
+                        isWeeklyMode: true,
+                        store: store
+                    )
+                ) {
+                    heatmapEntryContent
+                }
+                .buttonStyle(.plain)
             }
-            .rotation3DEffect(
-                .degrees(isWeeklyCardFlipped ? 180 : 0),
-                axis: (x: 0, y: 1, z: 0),
-                perspective: 0.7
-            )
-            .animation(.easeInOut(duration: 0.45), value: isWeeklyCardFlipped)
-            .frame(height: 132)
         }
-        .buttonStyle(.plain)
+    }
+
+    private var heatmapEntryContent: some View {
+        ZStack {
+            heatmapEntryFace(
+                title: "本周数据分析",
+                subtitle: "查看本周 \(thisWeekSessionsCount) 场训练分析",
+                sessions: thisWeekSessions,
+                rotation: 0,
+                opacity: isWeeklyCardFlipped ? 0 : 1
+            )
+
+            heatmapEntryFace(
+                title: "今日数据分析",
+                subtitle: "查看今日 \(todaySessionsCount) 场训练详情",
+                sessions: todaySessions,
+                rotation: 180,
+                opacity: isWeeklyCardFlipped ? 1 : 0
+            )
+        }
+        .rotation3DEffect(
+            .degrees(isWeeklyCardFlipped ? 180 : 0),
+            axis: (x: 0, y: 1, z: 0),
+            perspective: 0.7
+        )
+        .animation(.easeInOut(duration: 0.45), value: isWeeklyCardFlipped)
+        .frame(height: 132)
     }
 
     private func heatmapEntryFace(title: String, subtitle: String, sessions: [FootballSession], rotation: Double, opacity: Double) -> some View {

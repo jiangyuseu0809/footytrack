@@ -16,14 +16,20 @@ struct SessionDetailView: View {
     private var dateStr: String {
         let formatter = DateFormatter()
         formatter.locale = Locale(identifier: "zh_CN")
-        formatter.dateFormat = "yyyy-MM-dd EEE HH:mm"
+        formatter.dateFormat = "yyyy年M月d日 EEEE"
         return formatter.string(from: session.startTime)
     }
 
-    private var endStr: String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "HH:mm"
-        return formatter.string(from: session.endTime)
+    private var timeRangeStr: String {
+        let start = DateFormatter()
+        start.dateFormat = "HH:mm"
+        let end = DateFormatter()
+        end.dateFormat = "HH:mm"
+        return "\(start.string(from: session.startTime)) - \(end.string(from: session.endTime))"
+    }
+
+    private var durationMin: Int {
+        Int(session.endTime.timeIntervalSince(session.startTime) / 60)
     }
 
     var body: some View {
@@ -32,87 +38,206 @@ struct SessionDetailView: View {
 
             ScrollView {
                 VStack(spacing: 16) {
-                // Location name
-                if !session.locationName.isEmpty {
-                    HStack(spacing: 6) {
-                        Image(systemName: "mappin.circle.fill")
-                            .foregroundColor(AppColors.neonBlue)
-                        Text(session.locationName)
-                            .font(.subheadline.weight(.medium))
-                            .foregroundColor(AppColors.textPrimary)
-                        Spacer()
+                    // Venue & Time Card
+                    venueTimeCard
+
+                    // Key Stats Grid
+                    keyStatsSection
+
+                    // Speed Chart
+                    if !trackPoints.isEmpty {
+                        chartSection(title: "速度", icon: "bolt.fill", iconColor: Color(hex: 0x3B82F6)) {
+                            SpeedChartView(points: trackPoints, showHeartRate: false)
+                        }
                     }
-                    .padding(12)
-                    .background(AppColors.cardBg)
-                    .cornerRadius(12)
-                }
 
-                // Stats Grid
-                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
-                    StatCardView(label: "总距离", value: String(format: "%.1f", stats.totalDistanceMeters / 1000), unit: "km", color: .blue)
-                    StatCardView(label: "最高速度", value: String(format: "%.1f", stats.maxSpeedKmh), unit: "km/h", color: .red)
-                    StatCardView(label: "平均速度", value: String(format: "%.1f", stats.avgSpeedKmh), unit: "km/h", color: .teal)
-                    StatCardView(label: "冲刺次数", value: "\(stats.sprintCount)", unit: "次", color: .orange)
-                    StatCardView(label: "高强度距离", value: String(format: "%.1f", stats.highIntensityDistanceMeters / 1000), unit: "km", color: .red)
-                    StatCardView(label: "卡路里", value: "\(Int(stats.caloriesBurned))", unit: "kcal", color: .orange)
-                    StatCardView(label: "平均心率", value: "\(stats.avgHeartRate)", unit: "bpm", color: .pink)
-                    StatCardView(label: "最高心率", value: "\(stats.maxHeartRate)", unit: "bpm", color: .red)
-                }
-
-                // Slack Index
-                HStack {
-                    VStack(alignment: .leading) {
-                        Text("摸鱼指数")
-                            .font(.caption)
-                            .foregroundColor(AppColors.textSecondary)
-                        Text("\(stats.slackIndex)/100")
-                            .font(.title.weight(.bold))
-                            .foregroundColor(AppColors.textPrimary)
+                    // Heart Rate Chart
+                    if trackPoints.contains(where: { $0.heartRate > 0 }) {
+                        chartSection(title: "心率", icon: "heart.fill", iconColor: Color(hex: 0xEF4444)) {
+                            SpeedChartView(points: trackPoints, showHeartRate: true)
+                        }
                     }
-                    Spacer()
-                    SlackBadge(index: stats.slackIndex)
-                }
-                .padding()
-                .background(AppColors.cardBg)
-                .cornerRadius(12)
 
-                StatCardView(label: "覆盖率", value: String(format: "%.0f", stats.coveragePercent), unit: "%", color: AppColors.neonPurple)
+                    // Fatigue Chart
+                    if !stats.fatigueSegments.isEmpty {
+                        chartSection(title: "体力曲线", icon: "flame.fill", iconColor: Color(hex: 0xF59E0B)) {
+                            FatigueChartView(segments: stats.fatigueSegments)
+                        }
+                    }
 
-                Divider().overlay(AppColors.dividerColor)
-
-                // Speed Chart
-                if !trackPoints.isEmpty {
-                    SpeedChartView(points: trackPoints, showHeartRate: false)
+                    // Heatmap
+                    if !trackPoints.isEmpty {
+                        let lats = trackPoints.map(\.latitude)
+                        let lons = trackPoints.map(\.longitude)
+                        chartSection(title: "活动热图", icon: "map.fill", iconColor: Color(hex: 0x10B981)) {
+                            HeatmapOverlayView(
+                                grid: stats.heatmapGrid,
+                                minLat: lats.min()!,
+                                maxLat: lats.max()!,
+                                minLon: lons.min()!,
+                                maxLon: lons.max()!
+                            )
+                        }
+                    }
                 }
-
-                // Heart Rate Chart
-                if trackPoints.contains(where: { $0.heartRate > 0 }) {
-                    SpeedChartView(points: trackPoints, showHeartRate: true)
-                }
-
-                // Fatigue Chart
-                if !stats.fatigueSegments.isEmpty {
-                    FatigueChartView(segments: stats.fatigueSegments)
-                }
-
-                // Heatmap on map
-                if !trackPoints.isEmpty {
-                    let lats = trackPoints.map(\.latitude)
-                    let lons = trackPoints.map(\.longitude)
-                    HeatmapOverlayView(
-                        grid: stats.heatmapGrid,
-                        minLat: lats.min()!,
-                        maxLat: lats.max()!,
-                        minLon: lons.min()!,
-                        maxLon: lons.max()!
-                    )
-                }
-                }
-                .padding()
+                .padding(.horizontal, 16)
+                .padding(.top, 12)
+                .padding(.bottom, 20)
             }
         }
-        .navigationTitle("\(dateStr) - \(endStr)")
+        .navigationTitle("比赛详情")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbarTitleDisplayMode(.inline)
+    }
+
+    // MARK: - Venue & Time Card
+
+    private var venueTimeCard: some View {
+        VStack(spacing: 12) {
+            // Venue
+            HStack(spacing: 12) {
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(LinearGradient(colors: [Color(hex: 0xA855F7), Color(hex: 0xEC4899)], startPoint: .topLeading, endPoint: .bottomTrailing))
+                    .frame(width: 32, height: 32)
+                    .overlay(
+                        Image(systemName: "mappin.and.ellipse")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundColor(.white)
+                    )
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("场地")
+                        .font(.system(size: 11))
+                        .foregroundColor(AppColors.textSecondary)
+                    Text(session.locationName.isEmpty ? "球场训练" : session.locationName)
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundColor(AppColors.textPrimary)
+                }
+                Spacer()
+            }
+
+            // Time
+            HStack(spacing: 12) {
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(LinearGradient(colors: [Color(hex: 0x3B82F6), Color(hex: 0x06B6D4)], startPoint: .topLeading, endPoint: .bottomTrailing))
+                    .frame(width: 32, height: 32)
+                    .overlay(
+                        Image(systemName: "clock.fill")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundColor(.white)
+                    )
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("时间")
+                        .font(.system(size: 11))
+                        .foregroundColor(AppColors.textSecondary)
+                    Text("\(dateStr) • \(timeRangeStr)")
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundColor(AppColors.textPrimary)
+                }
+                Spacer()
+            }
+        }
+        .padding(16)
+        .background(AppColors.cardBg)
+        .cornerRadius(16)
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(Color.white.opacity(0.08), lineWidth: 0.5)
+        )
+    }
+
+    // MARK: - Key Stats
+
+    private var keyStatsSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("核心数据")
+                .font(.system(size: 20, weight: .semibold))
+                .foregroundColor(AppColors.textPrimary)
+
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 3), spacing: 10) {
+                keyStatCard(icon: "clock.fill", label: "运动时长", value: "\(durationMin)", unit: "min",
+                            gradient: [Color(hex: 0x3B82F6), Color(hex: 0x06B6D4)])
+                keyStatCard(icon: "figure.run", label: "总距离", value: String(format: "%.1f", session.totalDistanceMeters / 1000), unit: "km",
+                            gradient: [Color(hex: 0xA855F7), Color(hex: 0xEC4899)])
+                keyStatCard(icon: "bolt.fill", label: "冲刺次数", value: "\(session.sprintCount)", unit: "次",
+                            gradient: [Color(hex: 0xF59E0B), Color(hex: 0xF97316)])
+                keyStatCard(icon: "speedometer", label: "最高速度", value: String(format: "%.1f", session.maxSpeedKmh), unit: "km/h",
+                            gradient: [Color(hex: 0xEF4444), Color(hex: 0xF97316)])
+                keyStatCard(icon: "gauge.with.dots.needle.33percent", label: "平均速度", value: String(format: "%.1f", session.avgSpeedKmh), unit: "km/h",
+                            gradient: [Color(hex: 0x10B981), Color(hex: 0x34D399)])
+                keyStatCard(icon: "flame.fill", label: "卡路里", value: "\(Int(session.caloriesBurned))", unit: "kcal",
+                            gradient: [Color(hex: 0xF59E0B), Color(hex: 0xEF4444)])
+            }
+
+            // Second row: heart rate + slack
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 3), spacing: 10) {
+                keyStatCard(icon: "heart.fill", label: "平均心率", value: "\(session.avgHeartRate)", unit: "bpm",
+                            gradient: [Color(hex: 0xEF4444), Color(hex: 0xEC4899)])
+                keyStatCard(icon: "heart.circle.fill", label: "最高心率", value: "\(session.maxHeartRate)", unit: "bpm",
+                            gradient: [Color(hex: 0xDC2626), Color(hex: 0xEF4444)])
+                keyStatCard(icon: "circle.hexagongrid.fill", label: "覆盖率", value: String(format: "%.0f", session.coveragePercent), unit: "%",
+                            gradient: [Color(hex: 0x8B5CF6), Color(hex: 0xA855F7)])
+            }
+        }
+    }
+
+    private func keyStatCard(icon: String, label: String, value: String, unit: String, gradient: [Color]) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            RoundedRectangle(cornerRadius: 10)
+                .fill(LinearGradient(colors: gradient, startPoint: .topLeading, endPoint: .bottomTrailing))
+                .frame(width: 36, height: 36)
+                .overlay(
+                    Image(systemName: icon)
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(.white)
+                )
+
+            Text(label)
+                .font(.system(size: 10))
+                .foregroundColor(AppColors.textSecondary)
+
+            HStack(alignment: .lastTextBaseline, spacing: 2) {
+                Text(value)
+                    .font(.system(size: 20, weight: .bold))
+                    .foregroundColor(AppColors.textPrimary)
+                Text(unit)
+                    .font(.system(size: 11))
+                    .foregroundColor(AppColors.textSecondary)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(12)
+        .background(AppColors.cardBg)
+        .cornerRadius(14)
+        .overlay(
+            RoundedRectangle(cornerRadius: 14)
+                .stroke(Color.white.opacity(0.08), lineWidth: 0.5)
+        )
+    }
+
+    // MARK: - Chart Section
+
+    private func chartSection<Content: View>(title: String, icon: String, iconColor: Color, @ViewBuilder content: () -> Content) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 8) {
+                Image(systemName: icon)
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundColor(iconColor)
+                Text(title)
+                    .font(.system(size: 20, weight: .semibold))
+                    .foregroundColor(AppColors.textPrimary)
+            }
+
+            content()
+                .padding(16)
+                .background(AppColors.cardBg)
+                .cornerRadius(16)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16)
+                        .stroke(Color.white.opacity(0.08), lineWidth: 0.5)
+                )
+        }
     }
 }
 

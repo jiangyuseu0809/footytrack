@@ -312,7 +312,7 @@ struct StatsView: View {
             HStack {
                 sectionHeader(title: "比赛记录", icon: "clock.arrow.circlepath", showShare: false)
                 Spacer()
-                NavigationLink(destination: AllMatchesView(sessions: sessions)) {
+                NavigationLink(destination: AllMatchesView(sessions: sessions, store: store)) {
                     HStack(spacing: 4) {
                         Text("查看全部")
                         Image(systemName: "chevron.right")
@@ -325,7 +325,10 @@ struct StatsView: View {
             }
 
             ForEach(recentMatches, id: \.id) { session in
-                MatchHistoryRow(session: session)
+                NavigationLink(destination: SessionDetailView(session: session, store: store)) {
+                    MatchHistoryRow(session: session)
+                }
+                .buttonStyle(.plain)
             }
         }
         .padding(14)
@@ -761,6 +764,7 @@ private struct EmptyPreviewCard: View {
 
 struct AllMatchesView: View {
     let sessions: [FootballSession]
+    let store: SessionStore
 
     var body: some View {
         ZStack {
@@ -769,7 +773,10 @@ struct AllMatchesView: View {
             ScrollView {
                 LazyVStack(spacing: 10) {
                     ForEach(sessions, id: \.id) { session in
-                        MatchHistoryRow(session: session)
+                        NavigationLink(destination: SessionDetailView(session: session, store: store)) {
+                            MatchHistoryRow(session: session)
+                        }
+                        .buttonStyle(.plain)
                     }
                 }
                 .padding(.horizontal, 16)
