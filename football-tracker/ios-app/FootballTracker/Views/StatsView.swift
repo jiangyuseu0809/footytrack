@@ -764,28 +764,83 @@ private struct EmptyPreviewCard: View {
 
 struct AllMatchesView: View {
     let sessions: [FootballSession]
-    let store: SessionStore
+    @ObservedObject var store: SessionStore
+
+    @State private var sessionToDelete: FootballSession?
+    @State private var showLocalDeleteAlert = false
+    @State private var showCloudDeleteAlert = false
+    @State private var selectedSession: FootballSession?
+    @State private var navigateToDetail = false
 
     var body: some View {
         ZStack {
             AppColors.darkBg.ignoresSafeArea()
 
-            ScrollView {
-                LazyVStack(spacing: 10) {
-                    ForEach(sessions, id: \.id) { session in
-                        NavigationLink(destination: SessionDetailView(session: session, store: store)) {
-                            MatchHistoryRow(session: session)
+            List {
+                ForEach(sessions, id: \.id) { session in
+                    MatchHistoryRow(session: session)
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            selectedSession = session
+                            navigateToDetail = true
                         }
-                        .buttonStyle(.plain)
-                    }
+                        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                            Button(role: .destructive) {
+                                sessionToDelete = session
+                                if session.syncedToCloud {
+                                    showCloudDeleteAlert = true
+                                } else {
+                                    showLocalDeleteAlert = true
+                                }
+                            } label: {
+                                Label("删除", systemImage: "trash")
+                            }
+                        }
+                        .listRowBackground(Color.clear)
+                        .listRowInsets(EdgeInsets(top: 5, leading: 16, bottom: 5, trailing: 16))
+                        .listRowSeparator(.hidden)
                 }
-                .padding(.horizontal, 16)
-                .padding(.top, 12)
-                .padding(.bottom, 20)
             }
+            .listStyle(.plain)
+            .scrollContentBackground(.hidden)
         }
         .navigationTitle("全部比赛")
         .navigationBarTitleDisplayMode(.inline)
         .toolbarTitleDisplayMode(.inline)
+        .navigationDestination(isPresented: $navigateToDetail) {
+            if let session = selectedSession {
+                SessionDetailView(session: session, store: store)
+            }
+        }
+        .alert("确认删除", isPresented: $showLocalDeleteAlert) {
+            Button("取消", role: .cancel) { sessionToDelete = nil }
+            Button("删除", role: .destructive) { deleteLocalOnly() }
+        } message: {
+            Text("该记录未同步到云端，删除后将无法恢复。")
+        }
+        .alert("确认删除", isPresented: $showCloudDeleteAlert) {
+            Button("取消", role: .cancel) { sessionToDelete = nil }
+            Button("仅删除本地", role: .destructive) { deleteLocalOnly() }
+            Button("同时删除云端", role: .destructive) { deleteWithCloud() }
+        } message: {
+            Text("该记录已同步到云端，是否同时删除云端数据？")
+        }
+    }
+
+    private func deleteLocalOnly() {
+        guard let session = sessionToDelete else { return }
+        store.deleteSession(session)
+        sessionToDelete = nil
+    }
+
+    private func deleteWithCloud() {
+        guard let session = sessionToDelete else { return }
+        let sessionId = session.id
+        store.deleteSession(session)
+        sessionToDelete = nil
+
+        Task {
+            _ = try? await ApiClient.shared.deleteSession(id: sessionId)
+        }
     }
 }

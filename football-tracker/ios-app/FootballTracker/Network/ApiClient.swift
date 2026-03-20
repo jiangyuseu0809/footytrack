@@ -247,6 +247,13 @@ final class ApiClient {
         )
     }
 
+    func deleteSession(id: String) async throws -> MessageResponse {
+        try await request(
+            endpoint: "/api/sessions/\(id)",
+            method: "DELETE"
+        )
+    }
+
     // MARK: - Teams
 
     func createTeam(name: String) async throws -> TeamResponse {

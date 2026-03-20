@@ -3,6 +3,7 @@ package com.footballtracker.server.routes
 import com.footballtracker.server.service.BadgeService
 import com.footballtracker.server.service.SessionRow
 import com.footballtracker.server.service.SessionService
+import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
@@ -99,6 +100,19 @@ fun Route.sessionRoutes(sessionService: SessionService, badgeService: BadgeServi
                 )
             }
             call.respond(SessionListResponse(sessions = sessions))
+        }
+
+        delete("/{id}") {
+            val uid = UUID.fromString(call.jwtUid())
+            val sessionId = call.parameters["id"] ?: return@delete call.respond(
+                HttpStatusCode.BadRequest, mapOf("error" to "缺少 session id")
+            )
+            val deleted = sessionService.deleteSession(uid, sessionId)
+            if (deleted) {
+                call.respond(mapOf("message" to "已删除"))
+            } else {
+                call.respond(HttpStatusCode.NotFound, mapOf("error" to "记录不存在"))
+            }
         }
     }
 }

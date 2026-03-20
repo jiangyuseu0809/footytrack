@@ -2,6 +2,7 @@ package com.footballtracker.server.service
 
 import com.footballtracker.server.db.tables.SessionsTable
 import org.jetbrains.exposed.sql.*
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.transactions.transaction
 import java.util.*
 
@@ -80,6 +81,12 @@ class SessionService {
                 }
             }
         }
+    }
+
+    fun deleteSession(ownerUid: UUID, sessionId: String): Boolean = transaction {
+        SessionsTable.deleteWhere {
+            (SessionsTable.id eq sessionId) and (SessionsTable.ownerUid eq ownerUid)
+        } > 0
     }
 
     private fun ResultRow.toSessionRow() = SessionRow(
