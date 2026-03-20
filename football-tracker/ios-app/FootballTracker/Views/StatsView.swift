@@ -263,7 +263,7 @@ struct StatsView: View {
                     .foregroundColor(AppColors.textSecondary)
             }
 
-            LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 3), spacing: 10) {
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 3), spacing: 14) {
                 ForEach(achievementItems) { item in
                     VStack(alignment: .leading, spacing: 8) {
                         RoundedRectangle(cornerRadius: 8)
@@ -297,8 +297,7 @@ struct StatsView: View {
                                 endPoint: .bottom
                             )
                     )
-                    .shadow(color: item.unlocked ? item.end.opacity(0.30) : Color.black.opacity(0.12), radius: item.unlocked ? 16 : 8, x: 0, y: item.unlocked ? 8 : 4)
-                    .shadow(color: item.unlocked ? item.start.opacity(0.16) : .clear, radius: 8, x: 0, y: 0)
+                    .shadow(color: item.unlocked ? item.end.opacity(0.20) : Color.black.opacity(0.08), radius: item.unlocked ? 6 : 3, x: 0, y: item.unlocked ? 3 : 2)
                     .cornerRadius(12)
                 }
             }
@@ -313,7 +312,7 @@ struct StatsView: View {
             HStack {
                 sectionHeader(title: "比赛记录", icon: "clock.arrow.circlepath", showShare: false)
                 Spacer()
-                Button(action: {}) {
+                NavigationLink(destination: AllMatchesView(sessions: sessions)) {
                     HStack(spacing: 4) {
                         Text("查看全部")
                         Image(systemName: "chevron.right")
@@ -633,11 +632,18 @@ private struct StatsTrendChart: View {
     }
 }
 
-private struct MatchHistoryRow: View {
+struct MatchHistoryRow: View {
     let session: FootballSession
 
     private var resultTag: String {
-        session.slackIndex < 45 ? "优" : "需提升"
+        let name = session.locationName.isEmpty ? "球场训练" : session.locationName
+        let first = name.first ?? "F"
+        // Convert Chinese character to its pinyin initial
+        let mutable = NSMutableString(string: String(first))
+        CFStringTransform(mutable, nil, kCFStringTransformToLatin, false)
+        CFStringTransform(mutable, nil, kCFStringTransformStripDiacritics, false)
+        let initial = (mutable as String).first?.uppercased() ?? "F"
+        return initial
     }
 
     private var resultColor: Color {
@@ -655,12 +661,12 @@ private struct MatchHistoryRow: View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(alignment: .top) {
                 Circle()
-                    .fill(resultColor.opacity(0.2))
+                    .fill(Color(hex: 0x3B82F6).opacity(0.2))
                     .frame(width: 30, height: 30)
                     .overlay(
                         Text(resultTag)
                             .font(.caption.weight(.bold))
-                            .foregroundColor(resultColor)
+                            .foregroundColor(Color(hex: 0x3B82F6))
                     )
 
                 VStack(alignment: .leading, spacing: 2) {
@@ -750,5 +756,29 @@ private struct EmptyPreviewCard: View {
         .padding(10)
         .background(AppColors.cardBgLight)
         .cornerRadius(10)
+    }
+}
+
+struct AllMatchesView: View {
+    let sessions: [FootballSession]
+
+    var body: some View {
+        ZStack {
+            AppColors.darkBg.ignoresSafeArea()
+
+            ScrollView {
+                LazyVStack(spacing: 10) {
+                    ForEach(sessions, id: \.id) { session in
+                        MatchHistoryRow(session: session)
+                    }
+                }
+                .padding(.horizontal, 16)
+                .padding(.top, 12)
+                .padding(.bottom, 20)
+            }
+        }
+        .navigationTitle("全部比赛")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbarTitleDisplayMode(.inline)
     }
 }
