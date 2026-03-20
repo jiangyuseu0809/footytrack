@@ -362,12 +362,7 @@ struct HomeView: View {
             }
         }
         .navigationDestination(isPresented: $navigateToWeeklyAnalysis) {
-            HomeAnalysisDetailView(
-                title: currentModeTitle,
-                sessions: currentModeSessions,
-                isWeeklyMode: true,
-                store: store
-            )
+            WeeklySummaryView(store: store)
         }
         .navigationDestination(isPresented: $navigateToTodayDetail) {
             if let session = todaySessions.first {
