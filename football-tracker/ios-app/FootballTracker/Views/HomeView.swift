@@ -8,6 +8,9 @@ struct HomeView: View {
     @ObservedObject private var watchSync = WatchSync.shared
     @State private var showWatchAlert = false
     @State private var isWeeklyCardFlipped = false
+    @State private var navigateToTodayDetail = false
+    @State private var navigateToTodayList = false
+    @State private var navigateToWeeklyAnalysis = false
     @State private var isWatchPulseAnimating = false
 
     private struct MonthSection: Identifiable {
@@ -322,38 +325,6 @@ struct HomeView: View {
     }
 
     private var heatmapEntryCard: some View {
-        Group {
-            if isWeeklyCardFlipped {
-                // Today mode: navigate to match detail
-                if todaySessions.count == 1, let todaySession = todaySessions.first {
-                    NavigationLink(destination: SessionDetailView(session: todaySession, store: store)) {
-                        heatmapEntryContent
-                    }
-                    .buttonStyle(.plain)
-                } else {
-                    NavigationLink(destination: AllMatchesView(sessions: todaySessions, store: store)) {
-                        heatmapEntryContent
-                    }
-                    .buttonStyle(.plain)
-                }
-            } else {
-                // Weekly mode: navigate to analysis
-                NavigationLink(
-                    destination: HomeAnalysisDetailView(
-                        title: currentModeTitle,
-                        sessions: currentModeSessions,
-                        isWeeklyMode: true,
-                        store: store
-                    )
-                ) {
-                    heatmapEntryContent
-                }
-                .buttonStyle(.plain)
-            }
-        }
-    }
-
-    private var heatmapEntryContent: some View {
         ZStack {
             heatmapEntryFace(
                 title: "本周数据分析",
@@ -378,6 +349,34 @@ struct HomeView: View {
         )
         .animation(.easeInOut(duration: 0.45), value: isWeeklyCardFlipped)
         .frame(height: 132)
+        .contentShape(Rectangle())
+        .onTapGesture {
+            if isWeeklyCardFlipped {
+                if todaySessions.count == 1 {
+                    navigateToTodayDetail = true
+                } else {
+                    navigateToTodayList = true
+                }
+            } else {
+                navigateToWeeklyAnalysis = true
+            }
+        }
+        .navigationDestination(isPresented: $navigateToWeeklyAnalysis) {
+            HomeAnalysisDetailView(
+                title: currentModeTitle,
+                sessions: currentModeSessions,
+                isWeeklyMode: true,
+                store: store
+            )
+        }
+        .navigationDestination(isPresented: $navigateToTodayDetail) {
+            if let session = todaySessions.first {
+                SessionDetailView(session: session, store: store)
+            }
+        }
+        .navigationDestination(isPresented: $navigateToTodayList) {
+            AllMatchesView(sessions: todaySessions, store: store)
+        }
     }
 
     private func heatmapEntryFace(title: String, subtitle: String, sessions: [FootballSession], rotation: Double, opacity: Double) -> some View {
