@@ -154,67 +154,88 @@ struct ProfileView: View {
     private var syncSection: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text("云同步")
-                .font(.title3.weight(.semibold))
+                .font(.system(size: 20, weight: .semibold))
                 .foregroundColor(AppColors.textPrimary)
 
-            VStack(spacing: 12) {
-                if let status = syncStatus {
-                    Text(status)
-                        .font(.caption)
-                        .foregroundColor(AppColors.neonBlue)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                }
+            // Two-column card buttons
+            HStack(spacing: 12) {
+                // Sync Now - primary blue card (blue-600)
+                Button {
+                    uploadData()
+                } label: {
+                    VStack(spacing: 8) {
+                        Circle()
+                            .fill(Color.white.opacity(0.2))
+                            .frame(width: 40, height: 40)
+                            .overlay(
+                                Image(systemName: "icloud.and.arrow.up")
+                                    .font(.system(size: 18, weight: .semibold))
+                                    .foregroundColor(.white)
+                            )
 
-                HStack(spacing: 12) {
-                    Button {
-                        uploadData()
-                    } label: {
-                        HStack {
-                            Image(systemName: "icloud.and.arrow.up")
-                            Text("立即同步")
-                        }
-                        .font(.subheadline.weight(.medium))
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 44)
-                        .background(AppColors.neonBlue)
-                        .cornerRadius(10)
+                        Text("立即同步")
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundColor(.white)
                     }
-                    .disabled(isSyncing)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 16)
+                    .background(Color(hex: 0x2563EB))
+                    .cornerRadius(14)
+                }
+                .disabled(isSyncing)
 
-                    Button {
-                        restoreData()
-                    } label: {
-                        HStack {
-                            Image(systemName: "icloud.and.arrow.down")
-                            Text("恢复数据")
-                        }
-                        .font(.subheadline.weight(.medium))
-                        .foregroundColor(AppColors.neonBlue)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 44)
-                        .background(AppColors.cardBgLight)
-                        .cornerRadius(10)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 10)
-                                .stroke(AppColors.neonBlue, lineWidth: 1)
-                        )
+                // Restore Data - secondary card (gray-800 + gray-700 border)
+                Button {
+                    restoreData()
+                } label: {
+                    VStack(spacing: 8) {
+                        Circle()
+                            .fill(Color(hex: 0x374151))
+                            .frame(width: 40, height: 40)
+                            .overlay(
+                                Image(systemName: "icloud.and.arrow.down")
+                                    .font(.system(size: 18, weight: .semibold))
+                                    .foregroundColor(Color(hex: 0x60A5FA))
+                            )
+
+                        Text("恢复数据")
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundColor(AppColors.textPrimary)
                     }
-                    .disabled(isSyncing)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 16)
+                    .background(Color(hex: 0x1F2937))
+                    .cornerRadius(14)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 14)
+                            .stroke(Color(hex: 0x374151), lineWidth: 2)
+                    )
                 }
-
-                if isSyncing {
-                    ProgressView()
-                        .tint(AppColors.neonBlue)
-                }
+                .disabled(isSyncing)
             }
-            .padding(14)
-            .background(AppColors.cardBg)
-            .overlay(
-                RoundedRectangle(cornerRadius: 16)
-                    .stroke(Color.white.opacity(0.08), lineWidth: 0.5)
-            )
-            .cornerRadius(16)
+
+            // Sync info bar
+            if isSyncing || syncStatus != nil {
+                HStack(spacing: 8) {
+                    if isSyncing {
+                        ProgressView()
+                            .tint(Color(hex: 0x60A5FA))
+                            .scaleEffect(0.7)
+                    } else {
+                        Circle()
+                            .fill(AppColors.speedGreen)
+                            .frame(width: 6, height: 6)
+                    }
+
+                    Text(syncStatus ?? "")
+                        .font(.system(size: 13))
+                        .foregroundColor(AppColors.textSecondary)
+                }
+                .padding(12)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Color(hex: 0x111827))
+                .cornerRadius(14)
+            }
         }
     }
 
@@ -249,7 +270,7 @@ struct ProfileView: View {
     private func menuSection(title: String, items: [ProfileMenuItem]) -> some View {
         VStack(alignment: .leading, spacing: 10) {
             Text(title)
-                .font(.title3.weight(.semibold))
+                .font(.system(size: 20, weight: .semibold))
                 .foregroundColor(AppColors.textPrimary)
 
             VStack(spacing: 0) {
