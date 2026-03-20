@@ -13,6 +13,12 @@ class WatchSync: NSObject, ObservableObject, WCSessionDelegate {
 
     @Published var isWatchAppInstalled: Bool = false
     @Published var isPaired: Bool = false
+    @Published var isReachable: Bool = false
+
+    /// True when a Watch is paired to this iPhone.
+    var isWatchConnected: Bool {
+        isPaired
+    }
 
     override init() {
         super.init()
@@ -26,9 +32,13 @@ class WatchSync: NSObject, ObservableObject, WCSessionDelegate {
     private func updateWatchState() {
         guard WCSession.isSupported() else { return }
         let session = WCSession.default
+        let paired = session.isPaired
+        let installed = session.isWatchAppInstalled
+        let reachable = session.isReachable
         DispatchQueue.main.async {
-            self.isPaired = session.isPaired
-            self.isWatchAppInstalled = session.isWatchAppInstalled
+            self.isPaired = paired
+            self.isWatchAppInstalled = installed
+            self.isReachable = reachable
         }
     }
 
@@ -51,6 +61,10 @@ class WatchSync: NSObject, ObservableObject, WCSessionDelegate {
     }
 
     func sessionWatchStateDidChange(_ session: WCSession) {
+        updateWatchState()
+    }
+
+    func sessionReachabilityDidChange(_ session: WCSession) {
         updateWatchState()
     }
 

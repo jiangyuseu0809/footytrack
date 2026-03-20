@@ -158,12 +158,12 @@ struct HomeView: View {
             Text("在 Apple Watch 上安装野球记，即可记录踢球数据并自动同步到手机。")
         }
         .onAppear {
-            if watchSync.isWatchAppInstalled {
+            if watchSync.isWatchConnected {
                 isWatchPulseAnimating = true
             }
         }
-        .onChange(of: watchSync.isWatchAppInstalled) { _, installed in
-            if installed {
+        .onChange(of: watchSync.isWatchConnected) { _, connected in
+            if connected {
                 isWatchPulseAnimating = true
             } else {
                 isWatchPulseAnimating = false
@@ -173,12 +173,12 @@ struct HomeView: View {
 
     private var watchButton: some View {
         Button {
-            if !watchSync.isWatchAppInstalled {
+            if !watchSync.isWatchConnected {
                 showWatchAlert = true
             }
         } label: {
             ZStack {
-                if watchSync.isWatchAppInstalled {
+                if watchSync.isWatchConnected {
                     Circle()
                         .fill(AppColors.neonBlue.opacity(0.26))
                         .frame(width: 28, height: 28)
@@ -190,11 +190,11 @@ struct HomeView: View {
                         )
                 }
 
-                Image(systemName: watchSync.isWatchAppInstalled
+                Image(systemName: watchSync.isWatchConnected
                       ? "applewatch.radiowaves.left.and.right"
                       : "applewatch")
                     .font(.body.weight(.medium))
-                    .foregroundColor(watchSync.isWatchAppInstalled
+                    .foregroundColor(watchSync.isWatchConnected
                                      ? AppColors.neonBlue
                                      : AppColors.textSecondary)
             }

@@ -7,6 +7,7 @@ import UIKit
 struct ProfileView: View {
     @ObservedObject var store: SessionStore
     @ObservedObject var authManager: AuthManager
+    @ObservedObject private var watchSync = WatchSync.shared
     @State private var isLoading = true
     @State private var showEditSheet = false
     @State private var pickerItem: PhotosPickerItem?
@@ -254,8 +255,9 @@ struct ProfileView: View {
     }
 
     private var deviceItems: [ProfileMenuItem] {
-        [
-            ProfileMenuItem(icon: "applewatch", title: "Apple Watch", action: .watch, status: "已连接")
+        let watchStatus = watchSync.isWatchConnected ? "已连接" : "未连接"
+        return [
+            ProfileMenuItem(icon: "applewatch", title: "Apple Watch", action: .watch, status: watchStatus)
         ]
     }
 
@@ -341,7 +343,7 @@ struct ProfileView: View {
             if let status = item.status {
                 Text(status)
                     .font(.caption.weight(.medium))
-                    .foregroundColor(AppColors.speedGreen)
+                    .foregroundColor(status == "已连接" ? AppColors.speedGreen : AppColors.textSecondary)
             }
 
             if let trailingValue = item.trailingValue {
