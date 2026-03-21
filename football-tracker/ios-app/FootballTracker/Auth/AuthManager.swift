@@ -2,6 +2,7 @@ import Foundation
 
 private let kTokenKey = "auth_token"
 private let kUidKey = "auth_uid"
+private let kMatchesCacheKey = "cached_upcoming_matches"
 
 @MainActor
 class AuthManager: ObservableObject {
@@ -29,6 +30,11 @@ class AuthManager: ObservableObject {
             ApiClient.shared.token = token
             currentUid = uid
             isLoggedIn = true
+        }
+        // Restore cached matches so HomeView renders instantly
+        if let data = UserDefaults.standard.data(forKey: kMatchesCacheKey),
+           let cached = try? JSONDecoder().decode([MatchResponse].self, from: data) {
+            upcomingMatches = cached
         }
     }
 
@@ -86,6 +92,7 @@ class AuthManager: ObservableObject {
         teamDetailsById = [:]
         teamDetailsLoadedAt = [:]
         isLoggedIn = false
+        UserDefaults.standard.removeObject(forKey: kMatchesCacheKey)
     }
 
     func loadProfile() async {
@@ -150,6 +157,7 @@ class AuthManager: ObservableObject {
             let resp = try await ApiClient.shared.getUpcomingMatches()
             upcomingMatches = resp.matches
             matchesLoadedAt = Date()
+            persistMatches()
         } catch {
             // Silently handle
         }
@@ -157,6 +165,12 @@ class AuthManager: ObservableObject {
 
     func invalidateMatches() {
         matchesLoadedAt = nil
+    }
+
+    private func persistMatches() {
+        if let data = try? JSONEncoder().encode(upcomingMatches) {
+            UserDefaults.standard.set(data, forKey: kMatchesCacheKey)
+        }
     }
 
     func loadTeamDetailIfNeeded(teamId: String, forceRefresh: Bool = false) async -> TeamDetailResponse? {

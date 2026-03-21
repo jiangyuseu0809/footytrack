@@ -136,7 +136,10 @@ struct HomeView: View {
                 VStack(alignment: .leading, spacing: 16) {
                     topActionCards
 
-                    if let nextMatch = authManager.upcomingMatches.first {
+                    if let nextMatch = authManager.upcomingMatches.first(where: { match in
+                        let matchDate = Date(timeIntervalSince1970: TimeInterval(match.matchDate) / 1000.0)
+                        return Date().timeIntervalSince(matchDate) < 4 * 3600
+                    }) {
                         upcomingMatchCard(nextMatch)
                     }
 
@@ -316,10 +319,10 @@ struct HomeView: View {
     private var topActionCards: some View {
         HStack(spacing: 12) {
             FlippableTopActionCard(
-                frontTitle: "本周训练",
+                frontTitle: "本周比赛",
                 frontValue: "\(thisWeekSessionsCount)",
                 frontUnit: "场",
-                backTitle: "今日训练",
+                backTitle: "今日比赛",
                 backValue: "\(todaySessionsCount)",
                 backUnit: "场",
                 icon: "calendar",
@@ -416,9 +419,9 @@ struct HomeView: View {
 
     private var currentModeSubtitle: String {
         if isWeeklyCardFlipped {
-            return "查看今日 \(todaySessionsCount) 场训练分析"
+            return "查看今日 \(todaySessionsCount) 场比赛分析"
         }
-        return "查看本周 \(thisWeekSessionsCount) 场训练分析"
+        return "查看本周 \(thisWeekSessionsCount) 场比赛分析"
     }
 
     private var currentModeSessions: [FootballSession] {
@@ -438,7 +441,7 @@ struct HomeView: View {
         ZStack {
             heatmapEntryFace(
                 title: "本周数据分析",
-                subtitle: "查看本周 \(thisWeekSessionsCount) 场训练分析",
+                subtitle: "查看本周 \(thisWeekSessionsCount) 场比赛分析",
                 sessions: thisWeekSessions,
                 rotation: 0,
                 opacity: isWeeklyCardFlipped ? 0 : 1
@@ -446,7 +449,7 @@ struct HomeView: View {
 
             heatmapEntryFace(
                 title: "今日数据分析",
-                subtitle: "查看今日 \(todaySessionsCount) 场训练详情",
+                subtitle: "查看今日 \(todaySessionsCount) 场比赛详情",
                 sessions: todaySessions,
                 rotation: 180,
                 opacity: isWeeklyCardFlipped ? 1 : 0
@@ -462,12 +465,14 @@ struct HomeView: View {
         .contentShape(Rectangle())
         .onTapGesture {
             if isWeeklyCardFlipped {
+                guard !todaySessions.isEmpty else { return }
                 if todaySessions.count == 1 {
                     navigateToTodayDetail = true
                 } else {
                     navigateToTodayList = true
                 }
             } else {
+                guard !thisWeekSessions.isEmpty else { return }
                 navigateToWeeklyAnalysis = true
             }
         }
@@ -490,7 +495,13 @@ struct HomeView: View {
         return ZStack {
             RoundedRectangle(cornerRadius: 18)
                 .fill(
-                    LinearGradient(
+                    sessions.isEmpty
+                    ? LinearGradient(
+                        colors: [AppColors.cardBg, AppColors.cardBg],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                    : LinearGradient(
                         colors: [Color(hex: 0x16803B), Color(hex: 0x166534)],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
@@ -501,31 +512,45 @@ struct HomeView: View {
                         .stroke(Color.white.opacity(0.12), lineWidth: 1)
                 )
 
-            VStack(alignment: .leading, spacing: 10) {
-                HStack {
+            if sessions.isEmpty {
+                VStack(spacing: 8) {
+                    Image(systemName: "figure.soccer")
+                        .font(.system(size: 24))
+                        .foregroundColor(AppColors.textSecondary)
                     Text(title)
                         .font(.headline.weight(.bold))
-                        .foregroundColor(.white)
-                    Spacer()
-                    Image(systemName: "chevron.right")
-                        .font(.subheadline.weight(.bold))
+                        .foregroundColor(AppColors.textPrimary)
+                    Text("暂无比赛数据，去踢球吧")
+                        .font(.caption)
+                        .foregroundColor(AppColors.textSecondary)
+                }
+            } else {
+                VStack(alignment: .leading, spacing: 10) {
+                    HStack {
+                        Text(title)
+                            .font(.headline.weight(.bold))
+                            .foregroundColor(.white)
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .font(.subheadline.weight(.bold))
+                            .foregroundColor(.white.opacity(0.9))
+                    }
+
+                    Text(subtitle)
+                        .font(.caption)
                         .foregroundColor(.white.opacity(0.9))
-                }
 
-                Text(subtitle)
-                    .font(.caption)
-                    .foregroundColor(.white.opacity(0.9))
-
-                HStack(spacing: 8) {
-                    Label("\(sessions.count) 场", systemImage: "sportscourt")
-                    Label("\(points.count) 点", systemImage: "point.3.connected.trianglepath.dotted")
+                    HStack(spacing: 8) {
+                        Label("\(sessions.count) 场", systemImage: "sportscourt")
+                        Label("\(points.count) 点", systemImage: "point.3.connected.trianglepath.dotted")
+                    }
+                    .font(.caption2.weight(.semibold))
+                    .foregroundColor(.white)
+                    .padding(.top, 2)
                 }
-                .font(.caption2.weight(.semibold))
-                .foregroundColor(.white)
-                .padding(.top, 2)
+                .padding(.horizontal, 16)
+                .frame(maxHeight: .infinity, alignment: .center)
             }
-            .padding(.horizontal, 16)
-            .frame(maxHeight: .infinity, alignment: .center)
         }
         .rotation3DEffect(.degrees(rotation), axis: (x: 0, y: 1, z: 0))
         .opacity(opacity)

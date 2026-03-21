@@ -161,7 +161,7 @@ struct CreateMatchRequest: Encodable {
     let groupColors: String
 }
 
-struct MatchResponse: Decodable, Identifiable {
+struct MatchResponse: Codable, Identifiable {
     let id: String
     let creatorUid: String
     let title: String
