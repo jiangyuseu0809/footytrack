@@ -72,6 +72,31 @@ class WatchSync: NSObject, ObservableObject, WCSessionDelegate {
     /// Called when the watch sends data via transferUserInfo
     func session(_ session: WCSession, didReceiveUserInfo userInfo: [String: Any] = [:]) {
         enqueuePendingUserInfo(userInfo)
+
+        // Send local notification immediately (works even when app was terminated)
+        if let sessionId = userInfo["session_id"] as? String,
+           let startTime = userInfo["start_time"] as? TimeInterval,
+           let endTime = userInfo["end_time"] as? TimeInterval {
+
+            let durationMin = Int(endTime - startTime) / 60
+            let notifContent = UNMutableNotificationContent()
+            notifContent.title = "比赛记录完成"
+            notifContent.body = String(format: "时长 %d 分钟，点击查看详细数据", durationMin)
+            notifContent.sound = .default
+            let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 1, repeats: false)
+            let request = UNNotificationRequest(identifier: "session_\(sessionId)", content: notifContent, trigger: trigger)
+            Task { try? await UNUserNotificationCenter.current().add(request) }
+
+            // Track unread session IDs immediately
+            let ud = UserDefaults.standard
+            var unreadIds = ud.stringArray(forKey: "unread_session_ids") ?? []
+            if !unreadIds.contains(sessionId) {
+                unreadIds.append(sessionId)
+            }
+            ud.set(unreadIds, forKey: "unread_session_ids")
+            ud.set(unreadIds.count, forKey: "unread_session_count")
+        }
+
         NotificationCenter.default.post(
             name: WatchSync.didReceiveDataNotification,
             object: nil,
@@ -176,26 +201,10 @@ class WatchSync: NSObject, ObservableObject, WCSessionDelegate {
 
         store.saveSession(session)
 
-        // Send local notification to iPhone
-        let distanceKm = stats.totalDistanceMeters / 1000
-        let durationMin = Int(endTime - startTime) / 60
-        let notifContent = UNMutableNotificationContent()
-        notifContent.title = "比赛记录完成"
-        notifContent.body = String(format: "跑动 %.1f km，时长 %d 分钟", distanceKm, durationMin)
-        notifContent.sound = .default
-        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 1, repeats: false)
-        let request = UNNotificationRequest(identifier: "session_\(sessionId)", content: notifContent, trigger: trigger)
-        Task { try? await UNUserNotificationCenter.current().add(request) }
-
-        // Track unread session IDs + increment count
-        let ud = UserDefaults.standard
-        var unreadIds = ud.stringArray(forKey: "unread_session_ids") ?? []
-        if !unreadIds.contains(sessionId) {
-            unreadIds.append(sessionId)
+        // Post to refresh UI (notification + unread already tracked in didReceiveUserInfo)
+        DispatchQueue.main.async {
+            NotificationCenter.default.post(name: .sessionRecorded, object: nil)
         }
-        ud.set(unreadIds, forKey: "unread_session_ids")
-        ud.set(unreadIds.count, forKey: "unread_session_count")
-        NotificationCenter.default.post(name: .sessionRecorded, object: nil)
 
         // Reverse geocode the first GPS point to get location name
         if let firstPoint = trackPoints.first {
