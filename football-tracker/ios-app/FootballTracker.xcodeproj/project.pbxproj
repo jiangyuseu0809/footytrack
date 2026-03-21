@@ -38,6 +38,7 @@
 		C1A2B3D4E5F60718293A4B5C /* RadarChartView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4E5F6071829A3B4C5D6E7F8 /* RadarChartView.swift */; };
 		CE774E22735FC3A1D7455257 /* ProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 754C6ACB7B9D970C8F07EE85 /* ProfileView.swift */; };
 		D80555D855E9816377F1558D /* SessionDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C33629BCDCE91E205E4B5BA0 /* SessionDetailView.swift */; };
+		A1B2C3D4E5F607182930B1C2 /* SessionNotificationsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2C3D4E5F6071829A1B2C3D5 /* SessionNotificationsView.swift */; };
 		E1A2B3C4D5E6F7089920A1B3 /* WeeklySummaryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A2B3C4D5E6F7089920A1B3 /* WeeklySummaryView.swift */; };
 		DE3F876A06775F463F7EA6C4 /* FootballTrackerApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B9B26AA77BCEEE349400CD5 /* FootballTrackerApp.swift */; };
 		EAD17DD90BDF6722DE9C2806 /* ApiClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 81D2A5230ED4A84374356B09 /* ApiClient.swift */; };
@@ -92,6 +93,7 @@
 		AA6F44E157B2DA43DA6A12FC /* HeatmapOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HeatmapOverlay.swift; sourceTree = "<group>"; };
 		B8C1B75F43C086C7B2B783ED /* ApiModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApiModels.swift; sourceTree = "<group>"; };
 		C33629BCDCE91E205E4B5BA0 /* SessionDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionDetailView.swift; sourceTree = "<group>"; };
+		B2C3D4E5F6071829A1B2C3D5 /* SessionNotificationsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionNotificationsView.swift; sourceTree = "<group>"; };
 		C734DBFE843729083ED11899 /* TeamListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TeamListView.swift; sourceTree = "<group>"; };
 		CC9529A100BB82C498512A2E /* TrackingManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrackingManager.swift; sourceTree = "<group>"; };
 		D25D605E8EF09E6663AD799E /* LoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginView.swift; sourceTree = "<group>"; };
@@ -184,6 +186,7 @@
 				754C6ACB7B9D970C8F07EE85 /* ProfileView.swift */,
 				0121AC136016B27CD7DC492C /* RegisterView.swift */,
 				C33629BCDCE91E205E4B5BA0 /* SessionDetailView.swift */,
+				B2C3D4E5F6071829A1B2C3D5 /* SessionNotificationsView.swift */,
 				92AD7C951EE82977F1DCB23F /* SettingsView.swift */,
 				F058CF3ECEDBF005C5223459 /* StatsView.swift */,
 				A21787C3A32BF8532A0BA98F /* TeamDetailView.swift */,
@@ -367,6 +370,7 @@
 				C1A2B3D4E5F60718293A4B5C /* RadarChartView.swift in Sources */,
 				83627E21819162E4E2C18AC4 /* RegisterView.swift in Sources */,
 				D80555D855E9816377F1558D /* SessionDetailView.swift in Sources */,
+				A1B2C3D4E5F607182930B1C2 /* SessionNotificationsView.swift in Sources */,
 				1CCF85B16D0E6E506314C23F /* SessionStore.swift in Sources */,
 				1501FB6DD67A8FD84F4C18E1 /* SettingsView.swift in Sources */,
 				AC255495176844D056814B6C /* SpeedChart.swift in Sources */,

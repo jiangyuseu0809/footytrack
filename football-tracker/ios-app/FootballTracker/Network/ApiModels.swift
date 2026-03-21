@@ -4,6 +4,7 @@ import Foundation
 
 extension Notification.Name {
     static let matchCreated = Notification.Name("matchCreated")
+    static let sessionRecorded = Notification.Name("sessionRecorded")
 }
 
 // MARK: - Auth

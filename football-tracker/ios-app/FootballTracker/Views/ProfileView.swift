@@ -14,6 +14,7 @@ struct ProfileView: View {
     @State private var isUploadingAvatar = false
     @State private var syncStatus: String?
     @State private var isSyncing = false
+    @State private var unreadSessionCount = UserDefaults.standard.integer(forKey: "unread_session_count")
 
     private var totalMatches: Int {
         store.sessions.count
@@ -80,6 +81,9 @@ struct ProfileView: View {
         }
         .task(id: pickerItem) {
             await uploadAvatarIfNeeded()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .sessionRecorded)) { _ in
+            unreadSessionCount = UserDefaults.standard.integer(forKey: "unread_session_count")
         }
     }
 
@@ -253,7 +257,7 @@ struct ProfileView: View {
     private var accountItems: [ProfileMenuItem] {
         [
             ProfileMenuItem(icon: "person.fill", title: "编辑资料", action: .editProfile),
-            ProfileMenuItem(icon: "bell.fill", title: "通知", action: .notifications, badge: "3"),
+            ProfileMenuItem(icon: "bell.fill", title: "通知", action: .notifications, badge: unreadSessionCount > 0 ? "\(unreadSessionCount)" : nil),
             ProfileMenuItem(icon: "square.and.arrow.up", title: "分享主页", action: .share)
         ]
     }
@@ -300,21 +304,35 @@ struct ProfileView: View {
     @ViewBuilder
     private func menuRow(item: ProfileMenuItem) -> some View {
         if item.action == .settings {
-            NavigationLink(destination: SettingsView(store: store, authManager: authManager)) {
+            NavigationLink {
+                SettingsView(store: store, authManager: authManager)
+            } label: {
                 menuRowContent(item: item)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 12)
+                    .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .padding(.horizontal, 12)
-            .padding(.vertical, 12)
+        } else if item.action == .notifications {
+            NavigationLink {
+                SessionNotificationsView(store: store)
+            } label: {
+                menuRowContent(item: item)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 12)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
         } else {
             Button {
                 handleMenuAction(item.action)
             } label: {
                 menuRowContent(item: item)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 12)
+                    .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .padding(.horizontal, 12)
-            .padding(.vertical, 12)
         }
     }
 

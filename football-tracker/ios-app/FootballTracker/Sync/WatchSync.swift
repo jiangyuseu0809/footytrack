@@ -1,6 +1,7 @@
 import Foundation
 import WatchConnectivity
 import CoreLocation
+import UserNotifications
 
 /// Receives session data from the paired Apple Watch via WatchConnectivity.
 class WatchSync: NSObject, ObservableObject, WCSessionDelegate {
@@ -15,9 +16,9 @@ class WatchSync: NSObject, ObservableObject, WCSessionDelegate {
     @Published var isPaired: Bool = false
     @Published var isReachable: Bool = false
 
-    /// True when a Watch is paired to this iPhone.
+    /// True when a Watch is paired to this iPhone and the Watch app is installed.
     var isWatchConnected: Bool {
-        isPaired
+        isPaired && isWatchAppInstalled
     }
 
     override init() {
@@ -174,6 +175,27 @@ class WatchSync: NSObject, ObservableObject, WCSessionDelegate {
         )
 
         store.saveSession(session)
+
+        // Send local notification to iPhone
+        let distanceKm = stats.totalDistanceMeters / 1000
+        let durationMin = Int(endTime - startTime) / 60
+        let notifContent = UNMutableNotificationContent()
+        notifContent.title = "比赛记录完成"
+        notifContent.body = String(format: "跑动 %.1f km，时长 %d 分钟", distanceKm, durationMin)
+        notifContent.sound = .default
+        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 1, repeats: false)
+        let request = UNNotificationRequest(identifier: "session_\(sessionId)", content: notifContent, trigger: trigger)
+        Task { try? await UNUserNotificationCenter.current().add(request) }
+
+        // Track unread session IDs + increment count
+        let ud = UserDefaults.standard
+        var unreadIds = ud.stringArray(forKey: "unread_session_ids") ?? []
+        if !unreadIds.contains(sessionId) {
+            unreadIds.append(sessionId)
+        }
+        ud.set(unreadIds, forKey: "unread_session_ids")
+        ud.set(unreadIds.count, forKey: "unread_session_count")
+        NotificationCenter.default.post(name: .sessionRecorded, object: nil)
 
         // Reverse geocode the first GPS point to get location name
         if let firstPoint = trackPoints.first {

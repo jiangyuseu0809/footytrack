@@ -1,4 +1,5 @@
 import SwiftUI
+import UserNotifications
 
 @main
 struct FootballTrackerApp: App {
@@ -44,6 +45,7 @@ struct FootballTrackerApp: App {
 struct MainTabView: View {
     @ObservedObject var store: SessionStore
     @ObservedObject var authManager: AuthManager
+    @State private var unreadCount = UserDefaults.standard.integer(forKey: "unread_session_count")
 
     var body: some View {
         TabView {
@@ -78,6 +80,7 @@ struct MainTabView: View {
                 Image(systemName: "person.fill")
                 Text("我的")
             }
+            .badge(unreadCount > 0 ? unreadCount : 0)
         }
         .tint(AppColors.neonBlue)
         .task {
@@ -85,6 +88,12 @@ struct MainTabView: View {
                 _ = try? await CloudSync.uploadPendingSessions(store: store, authManager: authManager)
             }
             await authManager.preloadData()
+            // Request notification permission
+            let center = UNUserNotificationCenter.current()
+            _ = try? await center.requestAuthorization(options: [.alert, .sound, .badge])
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .sessionRecorded)) { _ in
+            unreadCount = UserDefaults.standard.integer(forKey: "unread_session_count")
         }
     }
 }
