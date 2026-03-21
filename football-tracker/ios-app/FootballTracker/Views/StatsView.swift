@@ -4,6 +4,7 @@ import SwiftUI
 struct StatsView: View {
     @ObservedObject var store: SessionStore
     @ObservedObject var authManager: AuthManager
+    @State private var selectedAchievement: StatsAchievementItem?
 
     private var sessions: [FootballSession] {
         store.sessions
@@ -95,6 +96,7 @@ struct StatsView: View {
             return StatsAchievementItem(
                 icon: badgeIcon(badge.iconName),
                 title: badge.name,
+                description: badge.description,
                 unlocked: earnedIds.contains(badge.id),
                 start: colors.0,
                 end: colors.1
@@ -104,9 +106,9 @@ struct StatsView: View {
         if mapped.count >= 6 { return Array(mapped) }
 
         let placeholders = [
-            StatsAchievementItem(icon: "heart.fill", title: "铁肺", unlocked: false, start: Color(hex: 0xEF4444), end: Color(hex: 0xF43F5E)),
-            StatsAchievementItem(icon: "medal.fill", title: "最有价值球员", unlocked: false, start: Color(hex: 0x22C55E), end: Color(hex: 0x10B981)),
-            StatsAchievementItem(icon: "trophy.fill", title: "冠军", unlocked: false, start: Color(hex: 0x6366F1), end: Color(hex: 0x3B82F6))
+            StatsAchievementItem(icon: "heart.fill", title: "铁肺", description: "敬请期待", unlocked: false, start: Color(hex: 0xEF4444), end: Color(hex: 0xF43F5E)),
+            StatsAchievementItem(icon: "medal.fill", title: "最有价值球员", description: "敬请期待", unlocked: false, start: Color(hex: 0x22C55E), end: Color(hex: 0x10B981)),
+            StatsAchievementItem(icon: "trophy.fill", title: "冠军", description: "敬请期待", unlocked: false, start: Color(hex: 0x6366F1), end: Color(hex: 0x3B82F6))
         ]
 
         return Array(mapped) + Array(placeholders.prefix(max(0, 6 - mapped.count)))
@@ -265,46 +267,61 @@ struct StatsView: View {
 
             LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 3), spacing: 14) {
                 ForEach(achievementItems) { item in
-                    VStack(alignment: .leading, spacing: 8) {
-                        RoundedRectangle(cornerRadius: 8)
-                            .fill(item.unlocked ? LinearGradient(colors: [item.start, item.end], startPoint: .topLeading, endPoint: .bottomTrailing) : LinearGradient(colors: [AppColors.cardBgLight, AppColors.cardBgLight], startPoint: .top, endPoint: .bottom))
-                            .frame(height: 44)
-                            .overlay(
-                                Image(systemName: item.icon)
-                                    .font(.title3.weight(.semibold))
-                                    .foregroundColor(item.unlocked ? .white : AppColors.textSecondary.opacity(0.55))
-                            )
+                    Button {
+                        selectedAchievement = item
+                    } label: {
+                        VStack(alignment: .leading, spacing: 8) {
+                            RoundedRectangle(cornerRadius: 8)
+                                .fill(item.unlocked ? LinearGradient(colors: [item.start, item.end], startPoint: .topLeading, endPoint: .bottomTrailing) : LinearGradient(colors: [AppColors.cardBgLight, AppColors.cardBgLight], startPoint: .top, endPoint: .bottom))
+                                .frame(height: 44)
+                                .overlay(
+                                    Image(systemName: item.icon)
+                                        .font(.title3.weight(.semibold))
+                                        .foregroundColor(item.unlocked ? .white : AppColors.textSecondary.opacity(0.55))
+                                )
 
-                        Text(item.title)
-                            .font(.system(size: 10, weight: .medium))
-                            .foregroundColor(item.unlocked ? AppColors.textPrimary : AppColors.textSecondary.opacity(0.7))
-                            .lineLimit(2)
-                            .fixedSize(horizontal: false, vertical: true)
-                            .multilineTextAlignment(.leading)
-                            .frame(maxWidth: .infinity, minHeight: 26, alignment: .topLeading)
+                            Text(item.title)
+                                .font(.system(size: 10, weight: .medium))
+                                .foregroundColor(item.unlocked ? AppColors.textPrimary : AppColors.textSecondary.opacity(0.7))
+                                .lineLimit(2)
+                                .fixedSize(horizontal: false, vertical: true)
+                                .multilineTextAlignment(.leading)
+                                .frame(maxWidth: .infinity, minHeight: 26, alignment: .topLeading)
+                        }
+                        .padding(10)
+                        .background(
+                            item.unlocked
+                                ? LinearGradient(
+                                    colors: [item.start.opacity(0.28), item.end.opacity(0.18)],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                                : LinearGradient(
+                                    colors: [AppColors.cardBg, AppColors.cardBg],
+                                    startPoint: .top,
+                                    endPoint: .bottom
+                                )
+                        )
+                        .shadow(color: item.unlocked ? item.end.opacity(0.20) : Color.black.opacity(0.08), radius: item.unlocked ? 6 : 3, x: 0, y: item.unlocked ? 3 : 2)
+                        .cornerRadius(12)
                     }
-                    .padding(10)
-                    .background(
-                        item.unlocked
-                            ? LinearGradient(
-                                colors: [item.start.opacity(0.28), item.end.opacity(0.18)],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                            : LinearGradient(
-                                colors: [AppColors.cardBg, AppColors.cardBg],
-                                startPoint: .top,
-                                endPoint: .bottom
-                            )
-                    )
-                    .shadow(color: item.unlocked ? item.end.opacity(0.20) : Color.black.opacity(0.08), radius: item.unlocked ? 6 : 3, x: 0, y: item.unlocked ? 3 : 2)
-                    .cornerRadius(12)
+                    .buttonStyle(.plain)
                 }
             }
         }
         .padding(14)
         .background(AppColors.cardBg)
         .cornerRadius(16)
+        .alert(selectedAchievement?.title ?? "", isPresented: Binding<Bool>(
+            get: { selectedAchievement != nil },
+            set: { if !$0 { selectedAchievement = nil } }
+        )) {
+            Button("知道了", role: .cancel) { selectedAchievement = nil }
+        } message: {
+            if let item = selectedAchievement {
+                Text(item.unlocked ? "已解锁\n\n\(item.description)" : "如何获取：\(item.description)")
+            }
+        }
     }
 
     private var historySection: some View {
@@ -469,6 +486,7 @@ private struct StatsAchievementItem: Identifiable {
     let id = UUID()
     let icon: String
     let title: String
+    let description: String
     let unlocked: Bool
     let start: Color
     let end: Color
