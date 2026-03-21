@@ -7,7 +7,14 @@ data class AppConfig(
     val jwt: JwtConfig,
     val tencent: TencentConfig,
     val wechat: WeChatConfig,
-    val avatar: AvatarConfig
+    val avatar: AvatarConfig,
+    val openai: OpenAiConfig
+)
+
+data class OpenAiConfig(
+    val endpoint: String,
+    val apiKey: String,
+    val deploymentName: String
 )
 
 data class DatabaseConfig(
@@ -74,6 +81,11 @@ fun Application.loadConfig(): AppConfig {
             baseDir = env("APP_AVATAR_BASE_DIR", "app.avatar.baseDir"),
             publicBaseUrl = env("APP_AVATAR_PUBLIC_BASE_URL", "app.avatar.publicBaseUrl"),
             maxBytes = env("APP_AVATAR_MAX_BYTES", "app.avatar.maxBytes").toLong()
+        ),
+        openai = OpenAiConfig(
+            endpoint = env("APP_OPENAI_ENDPOINT", "app.openai.endpoint"),
+            apiKey = env("APP_OPENAI_API_KEY", "app.openai.apiKey"),
+            deploymentName = env("APP_OPENAI_DEPLOYMENT", "app.openai.deploymentName")
         )
     )
 }

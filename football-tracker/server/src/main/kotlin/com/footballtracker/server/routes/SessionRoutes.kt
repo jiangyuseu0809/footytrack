@@ -1,6 +1,7 @@
 package com.footballtracker.server.routes
 
 import com.footballtracker.server.service.BadgeService
+import com.footballtracker.server.service.PlayerAnalysisService
 import com.footballtracker.server.service.SessionRow
 import com.footballtracker.server.service.SessionService
 import io.ktor.http.*
@@ -40,7 +41,15 @@ data class SyncResponse(val synced: Int)
 @Serializable
 data class SessionListResponse(val sessions: List<SessionDto>)
 
-fun Route.sessionRoutes(sessionService: SessionService, badgeService: BadgeService) {
+@Serializable
+data class PlayerAnalysisResponse(
+    val type: String,
+    val description: String,
+    val strengths: List<String>,
+    val advice: String
+)
+
+fun Route.sessionRoutes(sessionService: SessionService, badgeService: BadgeService, playerAnalysisService: PlayerAnalysisService) {
     route("/sessions") {
         post("/sync") {
             val uid = UUID.fromString(call.jwtUid())
@@ -113,6 +122,17 @@ fun Route.sessionRoutes(sessionService: SessionService, badgeService: BadgeServi
             } else {
                 call.respond(HttpStatusCode.NotFound, mapOf("error" to "记录不存在"))
             }
+        }
+
+        get("/analysis") {
+            val uid = UUID.fromString(call.jwtUid())
+            val result = playerAnalysisService.analyzePlayerType(uid)
+            call.respond(PlayerAnalysisResponse(
+                type = result.type,
+                description = result.description,
+                strengths = result.strengths,
+                advice = result.advice
+            ))
         }
     }
 }

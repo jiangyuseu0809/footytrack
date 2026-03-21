@@ -1,4 +1,6 @@
 # Football Tracker
+.env
+*.log
 
 *.iml
 .gradle

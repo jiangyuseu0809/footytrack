@@ -90,6 +90,15 @@ struct MessageResponse: Decodable {
     let error: String?
 }
 
+// MARK: - Player Analysis
+
+struct PlayerAnalysisResponse: Decodable {
+    let type: String
+    let description: String
+    let strengths: [String]
+    let advice: String
+}
+
 // MARK: - Teams
 
 struct CreateTeamRequest: Encodable {

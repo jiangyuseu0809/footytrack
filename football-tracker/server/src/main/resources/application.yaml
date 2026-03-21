@@ -28,3 +28,7 @@ app:
     baseDir: "/var/www/footytrack/uploads/avatars"
     publicBaseUrl: "https://footytrack.cn/uploads/avatars"
     maxBytes: 524288
+  openai:
+    endpoint: "YOUR_AZURE_OPENAI_ENDPOINT"
+    apiKey: "YOUR_AZURE_OPENAI_API_KEY"
+    deploymentName: "gpt-4o-mini"

@@ -254,6 +254,10 @@ final class ApiClient {
         )
     }
 
+    func getPlayerAnalysis() async throws -> PlayerAnalysisResponse {
+        try await request(endpoint: "/api/sessions/analysis")
+    }
+
     // MARK: - Teams
 
     func createTeam(name: String) async throws -> TeamResponse {

@@ -5,6 +5,8 @@ struct StatsView: View {
     @ObservedObject var store: SessionStore
     @ObservedObject var authManager: AuthManager
     @State private var selectedAchievement: StatsAchievementItem?
+    @State private var playerAnalysis: PlayerAnalysisResponse?
+    @State private var isLoadingAnalysis = false
 
     private var sessions: [FootballSession] {
         store.sessions
@@ -36,11 +38,7 @@ struct StatsView: View {
         return Double(sessions.map(\.slackIndex).reduce(0, +)) / Double(sessions.count)
     }
 
-    private var playerLevel: Int {
-        min(30, max(1, totalSessions / 2 + 1))
-    }
-
-    private var playerStyle: (title: String, description: String) {
+    private var fallbackPlayerStyle: (title: String, description: String) {
         if avgSprints >= 35 && maxSpeed >= 27 {
             return ("冲刺先锋", "你擅长高强度冲刺与纵向推进，具备很强的爆发力。")
         }
@@ -143,6 +141,16 @@ struct StatsView: View {
         .navigationTitle("统计")
         .navigationBarTitleDisplayMode(.inline)
         .toolbarTitleDisplayMode(.inline)
+        .task {
+            guard !sessions.isEmpty, playerAnalysis == nil else { return }
+            isLoadingAnalysis = true
+            do {
+                playerAnalysis = try await ApiClient.shared.getPlayerAnalysis()
+            } catch {
+                // Fallback to local logic — playerAnalysis stays nil
+            }
+            isLoadingAnalysis = false
+        }
     }
 
     private var styleSection: some View {
@@ -152,26 +160,57 @@ struct StatsView: View {
                     Text("AI 类型")
                         .font(.caption)
                         .foregroundColor(Color.white.opacity(0.75))
-                    Text(playerStyle.title)
-                        .font(.title2.weight(.bold))
-                        .foregroundColor(.white)
+                    if isLoadingAnalysis {
+                        HStack(spacing: 6) {
+                            ProgressView()
+                                .tint(.white)
+                            Text("分析中...")
+                                .font(.title2.weight(.bold))
+                                .foregroundColor(.white)
+                        }
+                    } else {
+                        Text(playerAnalysis?.type ?? fallbackPlayerStyle.title)
+                            .font(.title2.weight(.bold))
+                            .foregroundColor(.white)
+                    }
                 }
 
                 Spacer()
-
-                Text("Lv. \(playerLevel)")
-                    .font(.caption.weight(.semibold))
-                    .foregroundColor(.white)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 6)
-                    .background(Color.white.opacity(0.2))
-                    .cornerRadius(999)
             }
 
-            Text(playerStyle.description)
+            Text(playerAnalysis?.description ?? fallbackPlayerStyle.description)
                 .font(.subheadline)
                 .foregroundColor(Color.white.opacity(0.92))
                 .fixedSize(horizontal: false, vertical: true)
+
+            if let analysis = playerAnalysis {
+                if !analysis.strengths.isEmpty {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("优势")
+                            .font(.caption.weight(.semibold))
+                            .foregroundColor(Color.white.opacity(0.75))
+                        ForEach(analysis.strengths, id: \.self) { strength in
+                            HStack(spacing: 4) {
+                                Image(systemName: "checkmark.circle.fill")
+                                    .font(.caption2)
+                                Text(strength)
+                                    .font(.caption)
+                            }
+                            .foregroundColor(Color.white.opacity(0.92))
+                        }
+                    }
+                }
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("建议")
+                        .font(.caption.weight(.semibold))
+                        .foregroundColor(Color.white.opacity(0.75))
+                    Text(analysis.advice)
+                        .font(.caption)
+                        .foregroundColor(Color.white.opacity(0.92))
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
         }
         .padding(16)
         .background(

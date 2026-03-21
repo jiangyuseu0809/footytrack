@@ -18,6 +18,7 @@ fun Application.configureRouting(
     teamService: TeamService,
     badgeService: BadgeService,
     matchService: MatchService,
+    playerAnalysisService: PlayerAnalysisService,
     avatarConfig: com.footballtracker.server.config.AvatarConfig
 ) {
     routing {
@@ -26,7 +27,7 @@ fun Application.configureRouting(
 
             authenticate("auth-jwt") {
                 userRoutes(userService, avatarConfig)
-                sessionRoutes(sessionService, badgeService)
+                sessionRoutes(sessionService, badgeService, playerAnalysisService)
                 teamRoutes(teamService)
                 badgeRoutes(badgeService)
                 matchRoutes(matchService)
