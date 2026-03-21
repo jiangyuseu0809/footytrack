@@ -11,6 +11,7 @@ import com.footballtracker.server.service.UserService
 import com.footballtracker.server.service.WeChatService
 import com.footballtracker.server.service.TeamService
 import com.footballtracker.server.service.BadgeService
+import com.footballtracker.server.service.MatchService
 import io.ktor.server.application.*
 import io.ktor.server.plugins.cors.routing.*
 import io.ktor.http.*
@@ -32,6 +33,7 @@ fun Application.module() {
     val sessionService = SessionService()
     val teamService = TeamService()
     val badgeService = BadgeService()
+    val matchService = MatchService()
 
     // Install plugins
     install(CORS) {
@@ -46,5 +48,5 @@ fun Application.module() {
     configureSerialization()
     configureStatusPages()
     configureAuthentication(config.jwt)
-    configureRouting(jwtService, smsCodeStore, tencentSmsService, weChatService, userService, sessionService, teamService, badgeService, config.avatar)
+    configureRouting(jwtService, smsCodeStore, tencentSmsService, weChatService, userService, sessionService, teamService, badgeService, matchService, config.avatar)
 }

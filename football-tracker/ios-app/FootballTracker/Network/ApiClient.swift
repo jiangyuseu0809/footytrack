@@ -296,4 +296,43 @@ final class ApiClient {
     func checkBadges() async throws -> CheckBadgesResponse {
         try await request(endpoint: "/api/badges/check", method: "POST")
     }
+
+    // MARK: - Matches
+
+    func createMatch(_ req: CreateMatchRequest) async throws -> MatchResponse {
+        try await request(
+            endpoint: "/api/matches",
+            method: "POST",
+            body: req
+        )
+    }
+
+    func getUpcomingMatches() async throws -> MatchListResponse {
+        try await request(endpoint: "/api/matches")
+    }
+
+    func getMatchDetail(matchId: String) async throws -> MatchDetailResponse {
+        try await request(endpoint: "/api/matches/\(matchId)")
+    }
+
+    func registerForMatch(matchId: String) async throws -> MessageResponse {
+        try await request(
+            endpoint: "/api/matches/\(matchId)/register",
+            method: "POST"
+        )
+    }
+
+    func cancelMatchRegistration(matchId: String) async throws -> MessageResponse {
+        try await request(
+            endpoint: "/api/matches/\(matchId)/cancel",
+            method: "POST"
+        )
+    }
+
+    func deleteMatch(matchId: String) async throws -> MessageResponse {
+        try await request(
+            endpoint: "/api/matches/\(matchId)",
+            method: "DELETE"
+        )
+    }
 }

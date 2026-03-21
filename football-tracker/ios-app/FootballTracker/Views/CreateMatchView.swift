@@ -176,6 +176,7 @@ struct CreateMatchView: View {
     @State private var shareLink = ""
     @State private var linkCopied = false
     @State private var isCreating = false
+    @State private var createError: String?
 
     private var totalPlayers: Int { groupCount * playersPerGroup }
 
@@ -286,6 +287,14 @@ struct CreateMatchView: View {
         }
         .sheet(isPresented: $showCustomColorSheet) {
             customColorSheet
+        }
+        .alert("创建失败", isPresented: Binding<Bool>(
+            get: { createError != nil },
+            set: { if !$0 { createError = nil } }
+        )) {
+            Button("确定", role: .cancel) { createError = nil }
+        } message: {
+            Text(createError ?? "")
         }
     }
 
@@ -1608,12 +1617,45 @@ struct CreateMatchView: View {
         guard isFormValid else { return }
         isCreating = true
 
-        // TODO: Call API to create match — POST /api/matches
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
-            let mockId = UUID().uuidString.prefix(8).lowercased()
-            shareLink = "https://footytrack.cn/m/\(mockId)"
+        let cal = Calendar.current
+        let hour = cal.component(.hour, from: matchTime)
+        let minute = cal.component(.minute, from: matchTime)
+
+        // Compute next match date from selected weekdays
+        guard let nearestDate = sortedWeekdays.map({ $0.nextDate() }).min() else {
             isCreating = false
-            showShareSheet = true
+            return
+        }
+        var dateComps = cal.dateComponents([.year, .month, .day], from: nearestDate)
+        dateComps.hour = hour
+        dateComps.minute = minute
+        let matchDateValue = cal.date(from: dateComps) ?? nearestDate
+        let matchDateMillis = Int64(matchDateValue.timeIntervalSince1970 * 1000)
+
+        let colorsString = groupColors.map(\.rawValue).joined(separator: ",")
+        let weekdayLabels = sortedWeekdays.map(\.label).joined(separator: "、")
+        let title = "\(weekdayLabels) \(String(format: "%02d:%02d", hour, minute)) \(location)"
+
+        let req = CreateMatchRequest(
+            title: title,
+            matchDate: matchDateMillis,
+            location: location.trimmingCharacters(in: .whitespacesAndNewlines),
+            groups: groupCount,
+            playersPerGroup: playersPerGroup,
+            groupColors: colorsString
+        )
+
+        Task {
+            do {
+                let matchResp = try await ApiClient.shared.createMatch(req)
+                shareLink = "https://footytrack.cn/m/\(matchResp.id)"
+                isCreating = false
+                showShareSheet = true
+                NotificationCenter.default.post(name: .matchCreated, object: nil)
+            } catch {
+                isCreating = false
+                createError = error.localizedDescription
+            }
         }
     }
 

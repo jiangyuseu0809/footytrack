@@ -1,5 +1,11 @@
 import Foundation
 
+// MARK: - Notification Names
+
+extension Notification.Name {
+    static let matchCreated = Notification.Name("matchCreated")
+}
+
 // MARK: - Auth
 
 struct LoginRequest: Encodable {
@@ -142,4 +148,47 @@ struct EarnedBadgesResponse: Decodable {
 
 struct CheckBadgesResponse: Decodable {
     let newBadges: [BadgeResponse]
+}
+
+// MARK: - Matches
+
+struct CreateMatchRequest: Encodable {
+    let title: String
+    let matchDate: Int64
+    let location: String
+    let groups: Int
+    let playersPerGroup: Int
+    let groupColors: String
+}
+
+struct MatchResponse: Decodable, Identifiable {
+    let id: String
+    let creatorUid: String
+    let title: String
+    let matchDate: Int64
+    let location: String
+    let groups: Int
+    let playersPerGroup: Int
+    let groupColors: String
+    let status: String
+    let registrationCount: Int64
+    let createdAt: Int64
+}
+
+struct MatchListResponse: Decodable {
+    let matches: [MatchResponse]
+}
+
+struct MatchRegistrationResponse: Decodable, Identifiable {
+    let userUid: String
+    let nickname: String
+    let registeredAt: Int64
+
+    var id: String { userUid }
+}
+
+struct MatchDetailResponse: Decodable {
+    let match: MatchResponse
+    let registrations: [MatchRegistrationResponse]
+    let isRegistered: Bool
 }

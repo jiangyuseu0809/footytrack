@@ -12,10 +12,12 @@ class AuthManager: ObservableObject {
     @Published var userProfile: UserProfileResponse?
     @Published var teams: [TeamResponse] = []
     @Published var earnedBadges: EarnedBadgesResponse?
+    @Published var upcomingMatches: [MatchResponse] = []
 
     private var profileLoadedAt: Date?
     private var teamsLoadedAt: Date?
     private var badgesLoadedAt: Date?
+    private var matchesLoadedAt: Date?
     private var teamDetailsById: [String: TeamDetailResponse] = [:]
     private var teamDetailsLoadedAt: [String: Date] = [:]
     private let cacheTTL: TimeInterval = 300
@@ -59,12 +61,13 @@ class AuthManager: ObservableObject {
         }
     }
 
-    /// Preload profile, teams, badges so views render instantly
+    /// Preload profile, teams, badges, matches so views render instantly
     func preloadData() async {
         async let p: () = loadProfileIfNeeded()
         async let t: () = loadTeamsIfNeeded()
         async let b: () = loadBadgesIfNeeded()
-        _ = await (p, t, b)
+        async let m: () = loadMatchesIfNeeded()
+        _ = await (p, t, b, m)
     }
 
     func logout() {
@@ -75,9 +78,11 @@ class AuthManager: ObservableObject {
         userProfile = nil
         teams = []
         earnedBadges = nil
+        upcomingMatches = []
         profileLoadedAt = nil
         teamsLoadedAt = nil
         badgesLoadedAt = nil
+        matchesLoadedAt = nil
         teamDetailsById = [:]
         teamDetailsLoadedAt = [:]
         isLoggedIn = false
@@ -133,6 +138,25 @@ class AuthManager: ObservableObject {
 
     func invalidateBadges() {
         badgesLoadedAt = nil
+    }
+
+    func loadMatchesIfNeeded(forceRefresh: Bool = false) async {
+        if !forceRefresh,
+           let loadedAt = matchesLoadedAt,
+           Date().timeIntervalSince(loadedAt) < cacheTTL {
+            return
+        }
+        do {
+            let resp = try await ApiClient.shared.getUpcomingMatches()
+            upcomingMatches = resp.matches
+            matchesLoadedAt = Date()
+        } catch {
+            // Silently handle
+        }
+    }
+
+    func invalidateMatches() {
+        matchesLoadedAt = nil
     }
 
     func loadTeamDetailIfNeeded(teamId: String, forceRefresh: Bool = false) async -> TeamDetailResponse? {

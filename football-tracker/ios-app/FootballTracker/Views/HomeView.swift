@@ -5,6 +5,7 @@ import UIKit
 /// Home screen dashboard with monthly overview and session timeline.
 struct HomeView: View {
     @ObservedObject var store: SessionStore
+    @ObservedObject var authManager: AuthManager
     @ObservedObject private var watchSync = WatchSync.shared
     @State private var showWatchAlert = false
     @State private var isWeeklyCardFlipped = false
@@ -13,6 +14,7 @@ struct HomeView: View {
     @State private var navigateToWeeklyAnalysis = false
     @State private var isWatchPulseAnimating = false
     @State private var navigateToCreateMatch = false
+    @State private var navigateToMatchDetail = false
 
     private struct MonthSection: Identifiable {
         let id: String
@@ -134,6 +136,10 @@ struct HomeView: View {
                 VStack(alignment: .leading, spacing: 16) {
                     topActionCards
 
+                    if let nextMatch = authManager.upcomingMatches.first {
+                        upcomingMatchCard(nextMatch)
+                    }
+
                     if store.sessions.isEmpty {
                         emptyStateCard
                     } else {
@@ -173,6 +179,11 @@ struct HomeView: View {
                 isWatchPulseAnimating = false
             }
         }
+        .onReceive(NotificationCenter.default.publisher(for: .matchCreated)) { _ in
+            Task {
+                await authManager.loadMatchesIfNeeded(forceRefresh: true)
+            }
+        }
     }
 
     private var watchButton: some View {
@@ -209,6 +220,96 @@ struct HomeView: View {
     private func openWatchApp() {
         if let url = URL(string: "itms-watchs://") {
             UIApplication.shared.open(url)
+        }
+    }
+
+    private func upcomingMatchCard(_ match: MatchResponse) -> some View {
+        let matchDate = Date(timeIntervalSince1970: TimeInterval(match.matchDate) / 1000.0)
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "zh_CN")
+        formatter.dateFormat = "M月d日 EEEE HH:mm"
+        let dateText = formatter.string(from: matchDate)
+        let colors = match.groupColors.split(separator: ",").map(String.init)
+        let totalPlayers = match.groups * match.playersPerGroup
+
+        return Button {
+            navigateToMatchDetail = true
+        } label: {
+            VStack(alignment: .leading, spacing: 10) {
+                HStack {
+                    Text("即将开赛")
+                        .font(.caption.weight(.bold))
+                        .foregroundColor(.black)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 3)
+                        .background(Color(hex: 0xFACC15))
+                        .clipShape(RoundedRectangle(cornerRadius: 6))
+
+                    Spacer()
+
+                    Image(systemName: "chevron.right")
+                        .font(.caption.weight(.bold))
+                        .foregroundColor(.white.opacity(0.7))
+                }
+
+                Text(match.title)
+                    .font(.headline.weight(.bold))
+                    .foregroundColor(.white)
+                    .lineLimit(1)
+
+                HStack(spacing: 14) {
+                    Label(dateText, systemImage: "calendar")
+                    Label(match.location, systemImage: "mappin")
+                        .lineLimit(1)
+                }
+                .font(.caption)
+                .foregroundColor(.white.opacity(0.85))
+
+                HStack(spacing: 14) {
+                    Label("\(match.registrationCount)/\(totalPlayers)人", systemImage: "person.2.fill")
+
+                    if colors.count >= 2 {
+                        HStack(spacing: 4) {
+                            ForEach(colors, id: \.self) { colorName in
+                                Circle()
+                                    .fill(teamColorFromName(colorName))
+                                    .frame(width: 12, height: 12)
+                            }
+                        }
+                    }
+                }
+                .font(.caption.weight(.medium))
+                .foregroundColor(.white.opacity(0.9))
+            }
+            .padding(14)
+            .background(
+                LinearGradient(
+                    colors: [Color(hex: 0x16803B), Color(hex: 0x166534)],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(Color(hex: 0xFACC15).opacity(0.4), lineWidth: 1)
+            )
+            .clipShape(RoundedRectangle(cornerRadius: 16))
+        }
+        .buttonStyle(.plain)
+        .navigationDestination(isPresented: $navigateToMatchDetail) {
+            MatchDetailView(matchId: match.id, authManager: authManager)
+        }
+    }
+
+    private func teamColorFromName(_ name: String) -> Color {
+        switch name.trimmingCharacters(in: .whitespaces).lowercased() {
+        case "red": return Color(hex: 0xEF4444)
+        case "blue": return Color(hex: 0x3B82F6)
+        case "green": return Color(hex: 0x22C55E)
+        case "orange": return Color(hex: 0xF97316)
+        case "yellow": return Color(hex: 0xFACC15)
+        case "white": return Color.white
+        default: return Color.gray
         }
     }
 

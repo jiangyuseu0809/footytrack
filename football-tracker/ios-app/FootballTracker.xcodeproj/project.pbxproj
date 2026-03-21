@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		012191B142DC845EEBB29A1B /* AppColors.swift in Sources */ = {isa = PBXBuildFile; fileRef = D30F5CE3D9C9CF74E94B4B90 /* AppColors.swift */; };
 		03F1A2B3C4D5E6F7089920C1 /* CreateMatchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 04F1A2B3C4D5E6F7089920C1 /* CreateMatchView.swift */; };
+		05A1B2C3D4E5F607A8B9C0D1 /* MatchDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 06A1B2C3D4E5F607A8B9C0D1 /* MatchDetailView.swift */; };
 		046B0A51704DD3EE532486E2 /* CloudSync.swift in Sources */ = {isa = PBXBuildFile; fileRef = 10A47937B735C6DF31421B3A /* CloudSync.swift */; };
 		1501FB6DD67A8FD84F4C18E1 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 92AD7C951EE82977F1DCB23F /* SettingsView.swift */; };
 		1CCF85B16D0E6E506314C23F /* SessionStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 80B33E38BCB2D01074CF7D98 /* SessionStore.swift */; };
@@ -68,6 +69,7 @@
 
 /* Begin PBXFileReference section */
 		04F1A2B3C4D5E6F7089920C1 /* CreateMatchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateMatchView.swift; sourceTree = "<group>"; };
+		06A1B2C3D4E5F607A8B9C0D1 /* MatchDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MatchDetailView.swift; sourceTree = "<group>"; };
 		0121AC136016B27CD7DC492C /* RegisterView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RegisterView.swift; sourceTree = "<group>"; };
 		10A47937B735C6DF31421B3A /* CloudSync.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CloudSync.swift; sourceTree = "<group>"; };
 		16174BC065AFC1C9C5C51525 /* HeatmapView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HeatmapView.swift; sourceTree = "<group>"; };
@@ -177,6 +179,7 @@
 				16174BC065AFC1C9C5C51525 /* HeatmapView.swift */,
 				1F265F7DD0BE6099A998F644 /* HomeView.swift */,
 				D25D605E8EF09E6663AD799E /* LoginView.swift */,
+				06A1B2C3D4E5F607A8B9C0D1 /* MatchDetailView.swift */,
 				FCDCFF943267F00D39A478EA /* OnboardingView.swift */,
 				754C6ACB7B9D970C8F07EE85 /* ProfileView.swift */,
 				0121AC136016B27CD7DC492C /* RegisterView.swift */,
@@ -358,6 +361,7 @@
 				659F7E6C9E1F5595AE9AA9CA /* HeatmapView.swift in Sources */,
 				BF4CDBC2F0531E306EC2D0FF /* HomeView.swift in Sources */,
 				BE8487577C6EC8D651FDFC92 /* LoginView.swift in Sources */,
+				05A1B2C3D4E5F607A8B9C0D1 /* MatchDetailView.swift in Sources */,
 				5DAE4A9F895D11577ECFE8D8 /* OnboardingView.swift in Sources */,
 				CE774E22735FC3A1D7455257 /* ProfileView.swift in Sources */,
 				C1A2B3D4E5F60718293A4B5C /* RadarChartView.swift in Sources */,

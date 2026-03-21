@@ -21,7 +21,9 @@ object DatabaseFactory {
                 TeamsTable,
                 TeamMembersTable,
                 BadgesTable,
-                UserBadgesTable
+                UserBadgesTable,
+                MatchesTable,
+                MatchRegistrationsTable
             )
         }
 

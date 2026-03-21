@@ -48,7 +48,7 @@ struct MainTabView: View {
     var body: some View {
         TabView {
             NavigationStack {
-                HomeView(store: store)
+                HomeView(store: store, authManager: authManager)
             }
             .tabItem {
                 Image(systemName: "sportscourt.fill")
