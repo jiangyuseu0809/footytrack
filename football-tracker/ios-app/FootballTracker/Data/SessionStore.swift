@@ -134,9 +134,19 @@ class SessionStore: ObservableObject {
     }
 
     func deleteSession(_ session: FootballSession) {
+        let sessionId = session.id
         context.delete(session)
         try? context.save()
         fetchSessions()
+
+        // Remove from unread notifications
+        var unreadIds = UserDefaults.standard.stringArray(forKey: "unread_session_ids") ?? []
+        if unreadIds.contains(sessionId) {
+            unreadIds.removeAll { $0 == sessionId }
+            UserDefaults.standard.set(unreadIds, forKey: "unread_session_ids")
+            UserDefaults.standard.set(unreadIds.count, forKey: "unread_session_count")
+            NotificationCenter.default.post(name: .sessionRecorded, object: nil)
+        }
     }
 
     func markSynced(session: FootballSession) {
