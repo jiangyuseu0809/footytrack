@@ -141,10 +141,23 @@ class SessionStore: ObservableObject {
 
         // Remove from unread notifications
         var unreadIds = UserDefaults.standard.stringArray(forKey: "unread_session_ids") ?? []
+        var changed = false
         if unreadIds.contains(sessionId) {
             unreadIds.removeAll { $0 == sessionId }
             UserDefaults.standard.set(unreadIds, forKey: "unread_session_ids")
             UserDefaults.standard.set(unreadIds.count, forKey: "unread_session_count")
+            changed = true
+        }
+
+        // Remove from read notifications
+        var readIds = UserDefaults.standard.stringArray(forKey: "read_session_ids") ?? []
+        if readIds.contains(sessionId) {
+            readIds.removeAll { $0 == sessionId }
+            UserDefaults.standard.set(readIds, forKey: "read_session_ids")
+            changed = true
+        }
+
+        if changed {
             NotificationCenter.default.post(name: .sessionRecorded, object: nil)
         }
     }

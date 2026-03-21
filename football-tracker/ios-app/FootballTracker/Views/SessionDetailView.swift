@@ -88,6 +88,26 @@ struct SessionDetailView: View {
         .navigationTitle("比赛详情")
         .navigationBarTitleDisplayMode(.inline)
         .toolbarTitleDisplayMode(.inline)
+        .onAppear {
+            Self.markAsRead(sessionId: session.id)
+        }
+    }
+
+    static func markAsRead(sessionId: String) {
+        let ud = UserDefaults.standard
+        var unreadIds = ud.stringArray(forKey: "unread_session_ids") ?? []
+        guard unreadIds.contains(sessionId) else { return }
+        unreadIds.removeAll { $0 == sessionId }
+        ud.set(unreadIds, forKey: "unread_session_ids")
+        ud.set(unreadIds.count, forKey: "unread_session_count")
+
+        var readIds = ud.stringArray(forKey: "read_session_ids") ?? []
+        if !readIds.contains(sessionId) {
+            readIds.append(sessionId)
+        }
+        ud.set(readIds, forKey: "read_session_ids")
+
+        NotificationCenter.default.post(name: .sessionRecorded, object: nil)
     }
 
     // MARK: - Venue & Time Card

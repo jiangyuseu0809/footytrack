@@ -5,11 +5,13 @@ struct SessionNotificationsView: View {
     @State private var selectedSession: FootballSession?
     @State private var navigateToDetail = false
     @State private var unreadIds: Set<String> = []
+    @State private var readIds: Set<String> = []
 
-    private var unreadSessions: [FootballSession] {
-        guard !unreadIds.isEmpty else { return [] }
+    private var notificationSessions: [FootballSession] {
+        let allIds = unreadIds.union(readIds)
+        guard !allIds.isEmpty else { return [] }
         return store.sessions
-            .filter { unreadIds.contains($0.id) }
+            .filter { allIds.contains($0.id) }
             .sorted { $0.startTime > $1.startTime }
     }
 
@@ -17,7 +19,7 @@ struct SessionNotificationsView: View {
         ZStack {
             AppColors.darkBg.ignoresSafeArea()
 
-            if unreadSessions.isEmpty {
+            if notificationSessions.isEmpty {
                 VStack(spacing: 12) {
                     Image(systemName: "bell.slash")
                         .font(.system(size: 40))
@@ -34,8 +36,8 @@ struct SessionNotificationsView: View {
             } else {
                 ScrollView {
                     VStack(spacing: 12) {
-                        ForEach(unreadSessions) { session in
-                            notificationCard(session: session)
+                        ForEach(notificationSessions) { session in
+                            notificationCard(session: session, isUnread: unreadIds.contains(session.id))
                                 .onTapGesture {
                                     selectedSession = session
                                     navigateToDetail = true
@@ -54,25 +56,21 @@ struct SessionNotificationsView: View {
         .navigationDestination(isPresented: $navigateToDetail) {
             if let session = selectedSession {
                 SessionDetailView(session: session, store: store)
-                    .onAppear {
-                        markAsRead(sessionId: session.id)
-                    }
             }
         }
         .onAppear {
+            let currentUnread = Set(UserDefaults.standard.stringArray(forKey: "unread_session_ids") ?? [])
+            let currentRead = Set(UserDefaults.standard.stringArray(forKey: "read_session_ids") ?? [])
+            unreadIds = currentUnread
+            readIds = currentRead
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .sessionRecorded)) { _ in
             unreadIds = Set(UserDefaults.standard.stringArray(forKey: "unread_session_ids") ?? [])
+            readIds = Set(UserDefaults.standard.stringArray(forKey: "read_session_ids") ?? [])
         }
     }
 
-    private func markAsRead(sessionId: String) {
-        unreadIds.remove(sessionId)
-        let remaining = Array(unreadIds)
-        UserDefaults.standard.set(remaining, forKey: "unread_session_ids")
-        UserDefaults.standard.set(remaining.count, forKey: "unread_session_count")
-        NotificationCenter.default.post(name: .sessionRecorded, object: nil)
-    }
-
-    private func notificationCard(session: FootballSession) -> some View {
+    private func notificationCard(session: FootballSession, isUnread: Bool) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 8) {
                 Circle()
@@ -90,14 +88,16 @@ struct SessionNotificationsView: View {
 
                 Spacer()
 
-                Circle()
-                    .fill(AppColors.neonBlue)
-                    .frame(width: 8, height: 8)
+                if isUnread {
+                    Circle()
+                        .fill(AppColors.neonBlue)
+                        .frame(width: 8, height: 8)
+                }
             }
 
             Text("比赛记录完成")
                 .font(.subheadline.weight(.semibold))
-                .foregroundColor(AppColors.textPrimary)
+                .foregroundColor(isUnread ? AppColors.textPrimary : AppColors.textSecondary)
 
             HStack(spacing: 16) {
                 statPill(icon: "figure.run", value: String(format: "%.1f km", session.totalDistanceMeters / 1000))
@@ -108,13 +108,13 @@ struct SessionNotificationsView: View {
             }
 
             HStack {
-                Text("点击查看详细比赛数据")
+                Text(isUnread ? "点击查看详细比赛数据" : "已查看")
                     .font(.caption)
-                    .foregroundColor(AppColors.neonBlue)
+                    .foregroundColor(isUnread ? AppColors.neonBlue : AppColors.textSecondary)
                 Spacer()
                 Image(systemName: "chevron.right")
                     .font(.caption2.weight(.semibold))
-                    .foregroundColor(AppColors.neonBlue)
+                    .foregroundColor(isUnread ? AppColors.neonBlue : AppColors.textSecondary)
             }
         }
         .padding(14)
@@ -124,6 +124,7 @@ struct SessionNotificationsView: View {
             RoundedRectangle(cornerRadius: 14)
                 .stroke(Color.white.opacity(0.08), lineWidth: 0.5)
         )
+        .opacity(isUnread ? 1.0 : 0.7)
         .contentShape(Rectangle())
     }
 
