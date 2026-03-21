@@ -245,53 +245,95 @@ struct PitchHeatmapCanvas: View {
         let pitchW = size.width - margin * 2
         let pitchH = size.height - margin * 2
 
-        let cellW = pitchW / CGFloat(cols)
-        let cellH = pitchH / CGFloat(rows)
-        // Use square blocks — pick the smaller dimension, then scale up 4×
-        let cellSize = min(cellW, cellH) * 4
-
-        // Clip heat blocks to pitch boundary so they don't overflow the white lines
+        // Clip heat to pitch boundary
         var clippedContext = context
         let pitchRect = CGRect(x: pitchX, y: pitchY, width: pitchW, height: pitchH)
         clippedContext.clip(to: Path(pitchRect))
 
-        for r in 0..<rows {
-            for c in 0..<cols {
-                let intensity = grid[r][c]
-                guard intensity > 0.02 else { continue }
-                let color = heatColor(intensity)
-                // Center the square within each grid cell
-                let cx = pitchX + CGFloat(c) * cellW + cellW / 2
-                let cy = pitchY + CGFloat(rows - 1 - r) * cellH + cellH / 2
-                let rect = CGRect(
-                    x: cx - cellSize / 2,
-                    y: cy - cellSize / 2,
-                    width: cellSize,
-                    height: cellSize
-                )
-                clippedContext.fill(Path(rect), with: .color(color))
+        // Fine-grained sampling with overlapping circles for smooth blending
+        let step: CGFloat = 2
+        let dotRadius: CGFloat = 3.5
+
+        var x = pitchX
+        while x < pitchX + pitchW {
+            var y = pitchY
+            while y < pitchY + pitchH {
+                let gc = Double((x - pitchX) / pitchW) * Double(cols - 1)
+                let gr = Double(rows - 1) - Double((y - pitchY) / pitchH) * Double(rows - 1)
+
+                let raw = bilinearSample(grid: grid, row: gr, col: gc)
+                if raw > 0.03 {
+                    let color = heatColor(raw)
+                    let ellipse = Path(ellipseIn: CGRect(
+                        x: x - dotRadius,
+                        y: y - dotRadius,
+                        width: dotRadius * 2,
+                        height: dotRadius * 2
+                    ))
+                    clippedContext.fill(ellipse, with: .color(color))
+                }
+                y += step
             }
+            x += step
         }
+    }
+
+    private func bilinearSample(grid: [[Double]], row: Double, col: Double) -> Double {
+        let rows = grid.count
+        let cols = grid[0].count
+        let r0 = max(0, min(rows - 1, Int(floor(row))))
+        let r1 = max(0, min(rows - 1, r0 + 1))
+        let c0 = max(0, min(cols - 1, Int(floor(col))))
+        let c1 = max(0, min(cols - 1, c0 + 1))
+        let fr = row - floor(row)
+        let fc = col - floor(col)
+        let v00 = grid[r0][c0]
+        let v01 = grid[r0][c1]
+        let v10 = grid[r1][c0]
+        let v11 = grid[r1][c1]
+        let top = v00 * (1 - fc) + v01 * fc
+        let bot = v10 * (1 - fc) + v11 * fc
+        return top * (1 - fr) + bot * fr
     }
 
     private func heatColor(_ intensity: Double) -> Color {
         let i = max(0, min(1, intensity))
-        switch i {
-        case ..<0.2:
-            let t = i / 0.2
-            return Color(red: 1.0, green: 1.0, blue: 0.3).opacity(0.15 + t * 0.15)
-        case ..<0.4:
-            let t = (i - 0.2) / 0.2
-            return Color(red: 1.0, green: 0.8 - t * 0.2, blue: 0.0).opacity(0.35 + t * 0.1)
-        case ..<0.6:
-            let t = (i - 0.4) / 0.2
-            return Color(red: 1.0, green: 0.5 - t * 0.2, blue: 0.0).opacity(0.45 + t * 0.1)
-        case ..<0.8:
-            let t = (i - 0.6) / 0.2
-            return Color(red: 0.95, green: 0.25 - t * 0.1, blue: 0.0).opacity(0.55 + t * 0.1)
-        default:
-            let t = (i - 0.8) / 0.2
-            return Color(red: 0.85 + t * 0.05, green: 0.1 - t * 0.05, blue: 0.0).opacity(0.65 + t * 0.15)
+        // Continuous color ramp: light yellow -> yellow -> orange -> red -> deep red
+        // Uses smooth interpolation across 7 color stops for rich gradient
+
+        // Color stops: (position, r, g, b, alpha)
+        let stops: [(pos: Double, r: Double, g: Double, b: Double, a: Double)] = [
+            (0.00, 1.00, 0.98, 0.55, 0.04),  // barely visible pale yellow
+            (0.10, 1.00, 0.96, 0.45, 0.10),  // very faint yellow
+            (0.20, 1.00, 0.92, 0.30, 0.20),  // light yellow
+            (0.32, 1.00, 0.82, 0.10, 0.35),  // warm yellow
+            (0.44, 1.00, 0.68, 0.00, 0.46),  // yellow-orange
+            (0.56, 1.00, 0.50, 0.00, 0.56),  // orange
+            (0.68, 1.00, 0.35, 0.00, 0.64),  // dark orange
+            (0.80, 1.00, 0.20, 0.00, 0.72),  // orange-red
+            (0.90, 0.95, 0.10, 0.00, 0.82),  // red
+            (1.00, 0.80, 0.00, 0.00, 0.92),  // deep red
+        ]
+
+        // Find the two stops to interpolate between
+        var lo = stops[0]
+        var hi = stops[stops.count - 1]
+        for idx in 0..<(stops.count - 1) {
+            if i >= stops[idx].pos && i <= stops[idx + 1].pos {
+                lo = stops[idx]
+                hi = stops[idx + 1]
+                break
+            }
         }
+
+        let range = hi.pos - lo.pos
+        let t = range > 0 ? (i - lo.pos) / range : 0
+
+        let r = lo.r + (hi.r - lo.r) * t
+        let g = lo.g + (hi.g - lo.g) * t
+        let b = lo.b + (hi.b - lo.b) * t
+        let alpha = lo.a + (hi.a - lo.a) * t
+
+        return Color(red: r, green: g, blue: b).opacity(alpha)
     }
 }

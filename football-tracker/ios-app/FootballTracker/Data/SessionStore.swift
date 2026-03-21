@@ -195,6 +195,14 @@ class SessionStore: ObservableObject {
         let heatmap = generateHeatmap(points)
         let fatigue = analyzeFatigue(points)
 
+        // Coverage based on heatmap grid (matches visual heat overlay)
+        let heatmapCoverage: Double = {
+            let totalCells = heatmap.count * (heatmap.first?.count ?? 0)
+            guard totalCells > 0 else { return 0 }
+            let activeCells = heatmap.flatMap { $0 }.filter { $0 > 0.03 }.count
+            return Double(activeCells) / Double(totalCells) * 100.0
+        }()
+
         return SessionAnalysisResult(
             totalDistanceMeters: totalDist,
             avgSpeedKmh: avgSpeed,
@@ -206,7 +214,7 @@ class SessionStore: ObservableObject {
             caloriesBurned: calories,
             slackIndex: slack.index,
             slackLabel: slack.label,
-            coveragePercent: slack.coverage,
+            coveragePercent: heatmapCoverage,
             heatmapGrid: heatmap,
             fatigueSegments: fatigue
         )
@@ -357,6 +365,10 @@ class SessionStore: ObservableObject {
             let c = min(cols-1, max(0, Int((p.longitude - minLon) / lonR * Double(cols-1))))
             grid[r][c] += 1
         }
+
+        // Gaussian blur for smooth heatmap
+        grid = gaussianBlur(grid, radius: 3)
+
         // Normalize
         let maxVal = grid.flatMap { $0 }.max() ?? 1.0
         if maxVal > 0 {
@@ -367,6 +379,57 @@ class SessionStore: ObservableObject {
             }
         }
         return grid
+    }
+
+    private func gaussianBlur(_ grid: [[Double]], radius: Int) -> [[Double]] {
+        let rows = grid.count
+        guard rows > 0 else { return grid }
+        let cols = grid[0].count
+        guard cols > 0 else { return grid }
+
+        // Build 1D Gaussian kernel
+        let sigma = Double(radius) / 2.0
+        let size = radius * 2 + 1
+        var kernel = [Double](repeating: 0, count: size)
+        var sum = 0.0
+        for i in 0..<size {
+            let x = Double(i - radius)
+            kernel[i] = exp(-(x * x) / (2.0 * sigma * sigma))
+            sum += kernel[i]
+        }
+        for i in 0..<size { kernel[i] /= sum }
+
+        // Horizontal pass
+        var temp = Array(repeating: Array(repeating: 0.0, count: cols), count: rows)
+        for r in 0..<rows {
+            for c in 0..<cols {
+                var val = 0.0
+                for k in 0..<size {
+                    let cc = c + k - radius
+                    if cc >= 0 && cc < cols {
+                        val += grid[r][cc] * kernel[k]
+                    }
+                }
+                temp[r][c] = val
+            }
+        }
+
+        // Vertical pass
+        var result = Array(repeating: Array(repeating: 0.0, count: cols), count: rows)
+        for r in 0..<rows {
+            for c in 0..<cols {
+                var val = 0.0
+                for k in 0..<size {
+                    let rr = r + k - radius
+                    if rr >= 0 && rr < rows {
+                        val += temp[rr][c] * kernel[k]
+                    }
+                }
+                result[r][c] = val
+            }
+        }
+
+        return result
     }
 
     private func analyzeFatigue(_ points: [TrackPointRecord], segMinutes: Int = 5) -> [FatigueSegmentData] {

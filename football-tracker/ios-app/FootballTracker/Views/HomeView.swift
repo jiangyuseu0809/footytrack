@@ -8,7 +8,7 @@ struct HomeView: View {
     @ObservedObject var authManager: AuthManager
     @ObservedObject private var watchSync = WatchSync.shared
     @State private var showWatchAlert = false
-    @State private var isWeeklyCardFlipped = false
+    @State private var isWeeklyCardFlipped = true
     @State private var navigateToTodayDetail = false
     @State private var navigateToTodayList = false
     @State private var navigateToWeeklyAnalysis = false
