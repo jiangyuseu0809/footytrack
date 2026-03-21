@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		012191B142DC845EEBB29A1B /* AppColors.swift in Sources */ = {isa = PBXBuildFile; fileRef = D30F5CE3D9C9CF74E94B4B90 /* AppColors.swift */; };
+		03F1A2B3C4D5E6F7089920C1 /* CreateMatchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 04F1A2B3C4D5E6F7089920C1 /* CreateMatchView.swift */; };
 		046B0A51704DD3EE532486E2 /* CloudSync.swift in Sources */ = {isa = PBXBuildFile; fileRef = 10A47937B735C6DF31421B3A /* CloudSync.swift */; };
 		1501FB6DD67A8FD84F4C18E1 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 92AD7C951EE82977F1DCB23F /* SettingsView.swift */; };
 		1CCF85B16D0E6E506314C23F /* SessionStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 80B33E38BCB2D01074CF7D98 /* SessionStore.swift */; };
@@ -66,6 +67,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		04F1A2B3C4D5E6F7089920C1 /* CreateMatchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateMatchView.swift; sourceTree = "<group>"; };
 		0121AC136016B27CD7DC492C /* RegisterView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RegisterView.swift; sourceTree = "<group>"; };
 		10A47937B735C6DF31421B3A /* CloudSync.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CloudSync.swift; sourceTree = "<group>"; };
 		16174BC065AFC1C9C5C51525 /* HeatmapView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HeatmapView.swift; sourceTree = "<group>"; };
@@ -171,6 +173,7 @@
 			isa = PBXGroup;
 			children = (
 				7BFC12AFE3EB83DBD7BEE626 /* BadgeWallView.swift */,
+				04F1A2B3C4D5E6F7089920C1 /* CreateMatchView.swift */,
 				16174BC065AFC1C9C5C51525 /* HeatmapView.swift */,
 				1F265F7DD0BE6099A998F644 /* HomeView.swift */,
 				D25D605E8EF09E6663AD799E /* LoginView.swift */,
@@ -349,6 +352,7 @@
 				9F8B5740DA85CA1157C9BBB9 /* AuthManager.swift in Sources */,
 				59E39D321C31DF56A6CE81C5 /* BadgeWallView.swift in Sources */,
 				046B0A51704DD3EE532486E2 /* CloudSync.swift in Sources */,
+				03F1A2B3C4D5E6F7089920C1 /* CreateMatchView.swift in Sources */,
 				DE3F876A06775F463F7EA6C4 /* FootballTrackerApp.swift in Sources */,
 				A4CF37667E3CF10F116E13C3 /* HeatmapOverlay.swift in Sources */,
 				659F7E6C9E1F5595AE9AA9CA /* HeatmapView.swift in Sources */,

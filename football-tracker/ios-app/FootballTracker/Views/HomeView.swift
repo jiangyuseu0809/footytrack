@@ -12,6 +12,7 @@ struct HomeView: View {
     @State private var navigateToTodayList = false
     @State private var navigateToWeeklyAnalysis = false
     @State private var isWatchPulseAnimating = false
+    @State private var navigateToCreateMatch = false
 
     private struct MonthSection: Identifiable {
         let id: String
@@ -229,14 +230,22 @@ struct HomeView: View {
             )
             .frame(maxWidth: .infinity, minHeight: 150, maxHeight: 150)
 
-            TopActionCard(
-                title: "发起比赛",
-                subtitle: "邀请球友参赛",
-                icon: "person.2.fill",
-                iconBg: AppColors.neonBlue.opacity(0.16),
-                iconColor: AppColors.neonBlue
-            )
+            Button {
+                navigateToCreateMatch = true
+            } label: {
+                TopActionCard(
+                    title: "发起比赛",
+                    subtitle: "邀请球友参赛",
+                    icon: "person.2.fill",
+                    iconBg: AppColors.neonBlue.opacity(0.16),
+                    iconColor: AppColors.neonBlue
+                )
+            }
+            .buttonStyle(.plain)
             .frame(maxWidth: .infinity, minHeight: 150, maxHeight: 150)
+            .navigationDestination(isPresented: $navigateToCreateMatch) {
+                CreateMatchView()
+            }
         }
     }
 
