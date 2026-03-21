@@ -4,13 +4,12 @@ struct SessionNotificationsView: View {
     @ObservedObject var store: SessionStore
     @State private var selectedSession: FootballSession?
     @State private var navigateToDetail = false
+    @State private var unreadIds: Set<String> = []
 
     private var unreadSessions: [FootballSession] {
-        let unreadIds = UserDefaults.standard.stringArray(forKey: "unread_session_ids") ?? []
         guard !unreadIds.isEmpty else { return [] }
-        let idSet = Set(unreadIds)
         return store.sessions
-            .filter { idSet.contains($0.id) }
+            .filter { unreadIds.contains($0.id) }
             .sorted { $0.startTime > $1.startTime }
     }
 
@@ -55,18 +54,26 @@ struct SessionNotificationsView: View {
         .navigationDestination(isPresented: $navigateToDetail) {
             if let session = selectedSession {
                 SessionDetailView(session: session, store: store)
+                    .onAppear {
+                        markAsRead(sessionId: session.id)
+                    }
             }
         }
         .onAppear {
-            UserDefaults.standard.set([], forKey: "unread_session_ids")
-            UserDefaults.standard.set(0, forKey: "unread_session_count")
-            NotificationCenter.default.post(name: .sessionRecorded, object: nil)
+            unreadIds = Set(UserDefaults.standard.stringArray(forKey: "unread_session_ids") ?? [])
         }
+    }
+
+    private func markAsRead(sessionId: String) {
+        unreadIds.remove(sessionId)
+        let remaining = Array(unreadIds)
+        UserDefaults.standard.set(remaining, forKey: "unread_session_ids")
+        UserDefaults.standard.set(remaining.count, forKey: "unread_session_count")
+        NotificationCenter.default.post(name: .sessionRecorded, object: nil)
     }
 
     private func notificationCard(session: FootballSession) -> some View {
         VStack(alignment: .leading, spacing: 12) {
-            // Header: icon + time
             HStack(spacing: 8) {
                 Circle()
                     .fill(AppColors.neonBlue.opacity(0.15))
@@ -88,12 +95,10 @@ struct SessionNotificationsView: View {
                     .frame(width: 8, height: 8)
             }
 
-            // Title
             Text("比赛记录完成")
                 .font(.subheadline.weight(.semibold))
                 .foregroundColor(AppColors.textPrimary)
 
-            // Summary stats
             HStack(spacing: 16) {
                 statPill(icon: "figure.run", value: String(format: "%.1f km", session.totalDistanceMeters / 1000))
                 statPill(icon: "clock", value: durationText(session))
@@ -102,7 +107,6 @@ struct SessionNotificationsView: View {
                 }
             }
 
-            // CTA
             HStack {
                 Text("点击查看详细比赛数据")
                     .font(.caption)
