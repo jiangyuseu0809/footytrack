@@ -851,38 +851,106 @@ struct AllMatchesView: View {
     @State private var showCloudDeleteAlert = false
     @State private var selectedSession: FootballSession?
     @State private var navigateToDetail = false
+    @State private var expandedDays: Set<String> = []
+    @State private var initializedExpansion = false
+
+    private struct DaySection: Identifiable {
+        let id: String           // "2026-03-22"
+        let displayDate: String  // "3月22日 周六"
+        let sessions: [FootballSession]
+
+        var totalDistance: Double {
+            sessions.reduce(0) { $0 + $1.totalDistanceMeters }
+        }
+        var totalMinutes: Int {
+            sessions.reduce(0) { total, s in
+                total + Int(s.endTime.timeIntervalSince(s.startTime) / 60)
+            }
+        }
+        var totalSprints: Int {
+            sessions.reduce(0) { $0 + $1.sprintCount }
+        }
+        var maxSpeed: Double {
+            sessions.map(\.maxSpeedKmh).max() ?? 0
+        }
+        var sessionCount: Int { sessions.count }
+    }
+
+    private var daySections: [DaySection] {
+        let calendar = Calendar.current
+        let grouped = Dictionary(grouping: sessions) { session in
+            calendar.startOfDay(for: session.startTime)
+        }
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "zh_CN")
+        formatter.dateFormat = "M月d日 EEE"
+
+        return grouped.map { (day, sessions) in
+            let sortedSessions = sessions.sorted { $0.startTime > $1.startTime }
+            let isoFormatter = DateFormatter()
+            isoFormatter.dateFormat = "yyyy-MM-dd"
+            let dayId = isoFormatter.string(from: day)
+            return DaySection(
+                id: dayId,
+                displayDate: formatter.string(from: day),
+                sessions: sortedSessions
+            )
+        }
+        .sorted { $0.id > $1.id }
+    }
 
     var body: some View {
         ZStack {
             AppColors.darkBg.ignoresSafeArea()
 
             List {
-                ForEach(sessions, id: \.id) { session in
-                    MatchHistoryRow(session: session)
-                        .contentShape(Rectangle())
-                        .onTapGesture {
-                            selectedSession = session
-                            navigateToDetail = true
-                        }
-                        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                            Button(role: .destructive) {
-                                sessionToDelete = session
-                                if session.syncedToCloud {
-                                    showCloudDeleteAlert = true
-                                } else {
-                                    showLocalDeleteAlert = true
-                                }
-                            } label: {
-                                Label("删除", systemImage: "trash")
+                ForEach(daySections) { section in
+                    Section {
+                        // Summary bar
+                        daySummaryBar(section: section)
+                            .listRowBackground(Color.clear)
+                            .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 4, trailing: 16))
+                            .listRowSeparator(.hidden)
+
+                        // Expanded sessions
+                        if expandedDays.contains(section.id) {
+                            ForEach(section.sessions, id: \.id) { session in
+                                MatchHistoryRow(session: session)
+                                    .contentShape(Rectangle())
+                                    .onTapGesture {
+                                        selectedSession = session
+                                        navigateToDetail = true
+                                    }
+                                    .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                                        Button(role: .destructive) {
+                                            sessionToDelete = session
+                                            if session.syncedToCloud {
+                                                showCloudDeleteAlert = true
+                                            } else {
+                                                showLocalDeleteAlert = true
+                                            }
+                                        } label: {
+                                            Label("删除", systemImage: "trash")
+                                        }
+                                    }
+                                    .listRowBackground(Color.clear)
+                                    .listRowInsets(EdgeInsets(top: 5, leading: 16, bottom: 5, trailing: 16))
+                                    .listRowSeparator(.hidden)
                             }
                         }
-                        .listRowBackground(Color.clear)
-                        .listRowInsets(EdgeInsets(top: 5, leading: 16, bottom: 5, trailing: 16))
-                        .listRowSeparator(.hidden)
+                    } header: {
+                        dayHeader(section: section)
+                    }
                 }
             }
             .listStyle(.plain)
             .scrollContentBackground(.hidden)
+        }
+        .onAppear {
+            if !initializedExpansion {
+                expandedDays = Set(daySections.map(\.id))
+                initializedExpansion = true
+            }
         }
         .navigationTitle("全部比赛")
         .navigationBarTitleDisplayMode(.inline)
@@ -904,6 +972,88 @@ struct AllMatchesView: View {
             Button("同时删除云端", role: .destructive) { deleteWithCloud() }
         } message: {
             Text("该记录已同步到云端，是否同时删除云端数据？")
+        }
+    }
+
+    @ViewBuilder
+    private func dayHeader(section: DaySection) -> some View {
+        Button {
+            withAnimation(.easeInOut(duration: 0.25)) {
+                if expandedDays.contains(section.id) {
+                    expandedDays.remove(section.id)
+                } else {
+                    expandedDays.insert(section.id)
+                }
+            }
+        } label: {
+            HStack {
+                Image(systemName: "calendar")
+                    .foregroundColor(AppColors.neonBlue)
+                    .font(.system(size: 14))
+                Text(section.displayDate)
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundColor(AppColors.textPrimary)
+                Spacer()
+                Text("\(section.sessionCount)场")
+                    .font(.system(size: 13))
+                    .foregroundColor(AppColors.textSecondary)
+                Image(systemName: expandedDays.contains(section.id) ? "chevron.up" : "chevron.down")
+                    .font(.system(size: 12))
+                    .foregroundColor(AppColors.textSecondary)
+            }
+            .padding(.vertical, 8)
+        }
+    }
+
+    @ViewBuilder
+    private func daySummaryBar(section: DaySection) -> some View {
+        HStack(spacing: 0) {
+            summaryItem(
+                title: "总距离",
+                value: String(format: "%.1f", section.totalDistance / 1000),
+                unit: "km",
+                color: AppColors.neonBlue
+            )
+            Spacer()
+            summaryItem(
+                title: "总时长",
+                value: "\(section.totalMinutes)",
+                unit: "min",
+                color: AppColors.calorieOrange
+            )
+            Spacer()
+            summaryItem(
+                title: "总冲刺",
+                value: "\(section.totalSprints)",
+                unit: "次",
+                color: AppColors.heartRed
+            )
+            Spacer()
+            summaryItem(
+                title: "最高速",
+                value: String(format: "%.1f", section.maxSpeed),
+                unit: "km/h",
+                color: AppColors.speedGreen
+            )
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(AppColors.cardBg.opacity(0.6))
+        .cornerRadius(8)
+    }
+
+    @ViewBuilder
+    private func summaryItem(title: String, value: String, unit: String, color: Color) -> some View {
+        VStack(spacing: 2) {
+            Text(title)
+                .font(.system(size: 10))
+                .foregroundColor(AppColors.textSecondary)
+            Text(value)
+                .font(.system(size: 14, weight: .bold, design: .rounded))
+                .foregroundColor(color)
+            Text(unit)
+                .font(.system(size: 10))
+                .foregroundColor(AppColors.textSecondary)
         }
     }
 

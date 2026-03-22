@@ -29,7 +29,8 @@ data class SessionDto(
     val caloriesBurned: Double? = null,
     val slackIndex: Int? = null,
     val slackLabel: String? = null,
-    val coveragePercent: Double? = null
+    val coveragePercent: Double? = null,
+    val trackPointsData: String? = null
 )
 
 @Serializable
@@ -74,6 +75,7 @@ fun Route.sessionRoutes(sessionService: SessionService, badgeService: BadgeServi
                     slackIndex = dto.slackIndex,
                     slackLabel = dto.slackLabel,
                     coveragePercent = dto.coveragePercent,
+                    trackPointsData = dto.trackPointsData,
                     syncedAt = System.currentTimeMillis()
                 )
             }
@@ -105,7 +107,8 @@ fun Route.sessionRoutes(sessionService: SessionService, badgeService: BadgeServi
                     caloriesBurned = row.caloriesBurned,
                     slackIndex = row.slackIndex,
                     slackLabel = row.slackLabel,
-                    coveragePercent = row.coveragePercent
+                    coveragePercent = row.coveragePercent,
+                    trackPointsData = row.trackPointsData
                 )
             }
             call.respond(SessionListResponse(sessions = sessions))

@@ -61,6 +61,10 @@ class CloudSync {
                 slackLabel: dto.slackLabel ?? "",
                 coveragePercent: dto.coveragePercent ?? 0
             )
+            if let base64Str = dto.trackPointsData,
+               let data = Data(base64Encoded: base64Str) {
+                session.trackPointsData = data
+            }
             session.syncedToCloud = true
             session.ownerUid = uid
             store.saveSession(session)
@@ -75,7 +79,8 @@ class CloudSync {
 
 extension FootballSession {
     func toDto() -> SessionDto {
-        SessionDto(
+        let trackPointsBase64: String? = trackPointsData.map { $0.base64EncodedString() }
+        return SessionDto(
             id: id,
             startTime: Int64(startTime.timeIntervalSince1970 * 1000),
             endTime: Int64(endTime.timeIntervalSince1970 * 1000),
@@ -91,7 +96,8 @@ extension FootballSession {
             caloriesBurned: caloriesBurned,
             slackIndex: slackIndex,
             slackLabel: slackLabel,
-            coveragePercent: coveragePercent
+            coveragePercent: coveragePercent,
+            trackPointsData: trackPointsBase64
         )
     }
 }

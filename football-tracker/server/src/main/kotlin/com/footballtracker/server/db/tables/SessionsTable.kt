@@ -20,6 +20,7 @@ object SessionsTable : Table("sessions") {
     val slackIndex = integer("slack_index").nullable()
     val slackLabel = varchar("slack_label", 20).nullable()
     val coveragePercent = double("coverage_percent").nullable()
+    val trackPointsData = text("track_points_data").nullable()
     val syncedAt = long("synced_at").default(System.currentTimeMillis())
 
     override val primaryKey = PrimaryKey(id)

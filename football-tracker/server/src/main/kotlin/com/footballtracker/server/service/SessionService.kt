@@ -24,6 +24,7 @@ data class SessionRow(
     val slackIndex: Int?,
     val slackLabel: String?,
     val coveragePercent: Double?,
+    val trackPointsData: String?,
     val syncedAt: Long
 )
 
@@ -56,6 +57,7 @@ class SessionService {
                     it[slackIndex] = session.slackIndex
                     it[slackLabel] = session.slackLabel
                     it[coveragePercent] = session.coveragePercent
+                    it[trackPointsData] = session.trackPointsData
                     it[syncedAt] = System.currentTimeMillis()
                 }
             } else {
@@ -77,6 +79,7 @@ class SessionService {
                     it[slackIndex] = session.slackIndex
                     it[slackLabel] = session.slackLabel
                     it[coveragePercent] = session.coveragePercent
+                    it[trackPointsData] = session.trackPointsData
                     it[syncedAt] = System.currentTimeMillis()
                 }
             }
@@ -107,6 +110,7 @@ class SessionService {
         slackIndex = this[SessionsTable.slackIndex],
         slackLabel = this[SessionsTable.slackLabel],
         coveragePercent = this[SessionsTable.coveragePercent],
+        trackPointsData = this[SessionsTable.trackPointsData],
         syncedAt = this[SessionsTable.syncedAt]
     )
 }
