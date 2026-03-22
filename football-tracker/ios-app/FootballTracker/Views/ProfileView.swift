@@ -37,16 +37,6 @@ struct ProfileView: View {
         return Double(store.sessions.reduce(0) { $0 + $1.slackIndex }) / Double(store.sessions.count)
     }
 
-    private var playerLevel: Int {
-        min(30, max(1, totalMatches / 2 + 1))
-    }
-
-    private var playStyle: String {
-        if avgSlack <= 35 { return "进攻组织" }
-        if avgSlack <= 55 { return "全能中场" }
-        return "稳健控场"
-    }
-
 
     var body: some View {
         ZStack {
@@ -120,10 +110,6 @@ struct ProfileView: View {
                     Text(nickname)
                         .font(.title3.weight(.bold))
                         .foregroundColor(.white)
-
-                    Text("\(playStyle) • 等级 \(playerLevel)")
-                        .font(.subheadline)
-                        .foregroundColor(Color.white.opacity(0.85))
 
                     Text("高级会员")
                         .font(.caption.weight(.semibold))
@@ -384,6 +370,8 @@ struct ProfileView: View {
                             .frame(width: 18, height: 18)
                             .padding(.trailing, 3)
                     }
+            } else if item.action == .watch && watchSync.isWatchConnected {
+                // No chevron when watch is connected
             } else {
                 Image(systemName: "chevron.right")
                     .font(.caption.weight(.semibold))
@@ -454,7 +442,11 @@ struct ProfileView: View {
         case .share:
             return
         case .watch:
-            return
+            if !watchSync.isWatchConnected {
+                if let url = URL(string: "itms-watchs://") {
+                    UIApplication.shared.open(url)
+                }
+            }
         case .privacy:
             return
         case .help:

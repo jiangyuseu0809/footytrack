@@ -92,7 +92,7 @@ struct MessageResponse: Decodable {
 
 // MARK: - Player Analysis
 
-struct PlayerAnalysisResponse: Decodable {
+struct PlayerAnalysisResponse: Codable {
     let type: String
     let description: String
     let strengths: [String]

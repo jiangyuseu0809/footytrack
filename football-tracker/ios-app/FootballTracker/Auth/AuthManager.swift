@@ -42,7 +42,7 @@ class AuthManager: ObservableObject {
         isLoading = true
         errorMessage = nil
         do {
-            let response = try await ApiClient.shared.login(username: username, password: password)
+            let response = try await loginWithRetry(username: username, password: password)
             saveAuth(token: response.token, uid: response.uid)
             await preloadData()
         } catch {
@@ -55,7 +55,7 @@ class AuthManager: ObservableObject {
         isLoading = true
         errorMessage = nil
         do {
-            let response = try await ApiClient.shared.register(username: username, password: password)
+            let response = try await registerWithRetry(username: username, password: password)
             saveAuth(token: response.token, uid: response.uid)
             await preloadData()
             isLoading = false
@@ -64,6 +64,25 @@ class AuthManager: ObservableObject {
             errorMessage = error.localizedDescription
             isLoading = false
             return false
+        }
+    }
+
+    private func loginWithRetry(username: String, password: String) async throws -> AuthResponse {
+        do {
+            return try await ApiClient.shared.login(username: username, password: password)
+        } catch let ApiError.networkError(_) {
+            // First install may fail due to iOS network permission prompt; retry once
+            try await Task.sleep(nanoseconds: 1_500_000_000)
+            return try await ApiClient.shared.login(username: username, password: password)
+        }
+    }
+
+    private func registerWithRetry(username: String, password: String) async throws -> AuthResponse {
+        do {
+            return try await ApiClient.shared.register(username: username, password: password)
+        } catch let ApiError.networkError(_) {
+            try await Task.sleep(nanoseconds: 1_500_000_000)
+            return try await ApiClient.shared.register(username: username, password: password)
         }
     }
 

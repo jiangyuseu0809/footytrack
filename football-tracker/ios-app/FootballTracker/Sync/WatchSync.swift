@@ -33,6 +33,7 @@ class WatchSync: NSObject, ObservableObject, WCSessionDelegate {
     private func updateWatchState() {
         guard WCSession.isSupported() else { return }
         let session = WCSession.default
+        guard session.activationState == .activated else { return }
         let paired = session.isPaired
         let installed = session.isWatchAppInstalled
         let reachable = session.isReachable

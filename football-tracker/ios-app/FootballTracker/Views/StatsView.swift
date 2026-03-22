@@ -8,6 +8,9 @@ struct StatsView: View {
     @State private var playerAnalysis: PlayerAnalysisResponse?
     @State private var isLoadingAnalysis = false
 
+    private static let analysisCacheKey = "cached_player_analysis"
+    private static let analysisCacheCountKey = "cached_player_analysis_session_count"
+
     private var sessions: [FootballSession] {
         store.sessions
     }
@@ -36,16 +39,6 @@ struct StatsView: View {
     private var avgSlack: Double {
         guard !sessions.isEmpty else { return 0 }
         return Double(sessions.map(\.slackIndex).reduce(0, +)) / Double(sessions.count)
-    }
-
-    private var fallbackPlayerStyle: (title: String, description: String) {
-        if avgSprints >= 35 && maxSpeed >= 27 {
-            return ("冲刺先锋", "你擅长高强度冲刺与纵向推进，具备很强的爆发力。")
-        }
-        if avgSlack <= 35 && totalDistanceKm / Double(max(totalSessions, 1)) >= 7.5 {
-            return ("中场发动机", "你的跑动覆盖稳定，攻防两端参与度都很高。")
-        }
-        return ("组织核心", "你的节奏控制稳定，能够在比赛中持续串联进攻。")
     }
 
     private var abilityMetrics: [AbilityMetric] {
@@ -142,12 +135,25 @@ struct StatsView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbarTitleDisplayMode(.inline)
         .task {
-            guard !sessions.isEmpty, playerAnalysis == nil else { return }
+            guard !sessions.isEmpty else { return }
+            loadCachedAnalysis()
+            let cachedCount = UserDefaults.standard.integer(forKey: Self.analysisCacheCountKey)
+            let currentCount = sessions.count
+            // First analysis at 4 sessions, then every 10 sessions
+            let shouldAnalyze: Bool
+            if playerAnalysis == nil {
+                shouldAnalyze = currentCount >= 4
+            } else {
+                shouldAnalyze = currentCount - cachedCount >= 10
+            }
+            guard shouldAnalyze else { return }
             isLoadingAnalysis = true
             do {
-                playerAnalysis = try await ApiClient.shared.getPlayerAnalysis()
+                let result = try await ApiClient.shared.getPlayerAnalysis()
+                playerAnalysis = result
+                saveAnalysisCache(result, sessionCount: currentCount)
             } catch {
-                // Fallback to local logic — playerAnalysis stays nil
+                // Keep cached result if available
             }
             isLoadingAnalysis = false
         }
@@ -168,22 +174,26 @@ struct StatsView: View {
                                 .font(.title2.weight(.bold))
                                 .foregroundColor(.white)
                         }
-                    } else {
-                        Text(playerAnalysis?.type ?? fallbackPlayerStyle.title)
+                    } else if let analysis = playerAnalysis {
+                        Text(analysis.type)
                             .font(.title2.weight(.bold))
                             .foregroundColor(.white)
+                    } else {
+                        Text("待分析")
+                            .font(.title2.weight(.bold))
+                            .foregroundColor(.white.opacity(0.6))
                     }
                 }
 
                 Spacer()
             }
 
-            Text(playerAnalysis?.description ?? fallbackPlayerStyle.description)
-                .font(.subheadline)
-                .foregroundColor(Color.white.opacity(0.92))
-                .fixedSize(horizontal: false, vertical: true)
-
             if let analysis = playerAnalysis {
+                Text(analysis.description)
+                    .font(.subheadline)
+                    .foregroundColor(Color.white.opacity(0.92))
+                    .fixedSize(horizontal: false, vertical: true)
+
                 if !analysis.strengths.isEmpty {
                     VStack(alignment: .leading, spacing: 4) {
                         Text("优势")
@@ -482,6 +492,19 @@ struct StatsView: View {
         let discipline = max(0, 1 - Double(session.slackIndex) / 100)
         let weighted = speed * 0.3 + sprint * 0.25 + distance * 0.25 + discipline * 0.2
         return min(10, max(6, 6 + weighted * 4))
+    }
+
+    private func loadCachedAnalysis() {
+        guard let data = UserDefaults.standard.data(forKey: Self.analysisCacheKey),
+              let cached = try? JSONDecoder().decode(PlayerAnalysisResponse.self, from: data) else { return }
+        playerAnalysis = cached
+    }
+
+    private func saveAnalysisCache(_ analysis: PlayerAnalysisResponse, sessionCount: Int) {
+        if let data = try? JSONEncoder().encode(analysis) {
+            UserDefaults.standard.set(data, forKey: Self.analysisCacheKey)
+            UserDefaults.standard.set(sessionCount, forKey: Self.analysisCacheCountKey)
+        }
     }
 }
 

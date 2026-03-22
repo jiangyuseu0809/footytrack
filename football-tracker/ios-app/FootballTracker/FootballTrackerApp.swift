@@ -100,6 +100,10 @@ struct MainTabView: View {
         .tint(AppColors.neonBlue)
         .task {
             if authManager.isLoggedIn {
+                // First install: pull cloud data if local is empty
+                if store.sessions.isEmpty {
+                    _ = try? await CloudSync.pullFromCloud(store: store, authManager: authManager)
+                }
                 _ = try? await CloudSync.uploadPendingSessions(store: store, authManager: authManager)
             }
             await authManager.preloadData()
