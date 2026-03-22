@@ -1,5 +1,465 @@
 import SwiftUI
 
+// MARK: - DaySection (file-level, shared by historySection & AllMatchesView)
+
+struct DaySection: Identifiable {
+    let id: String           // "2026-03-22"
+    let displayDate: String  // "3月22日 周六"
+    let sessions: [FootballSession]
+
+    var sessionCount: Int { sessions.count }
+
+    var totalDistance: Double {
+        sessions.reduce(0) { $0 + $1.totalDistanceMeters }
+    }
+    var totalMinutes: Int {
+        sessions.reduce(0) { total, s in
+            total + Int(s.endTime.timeIntervalSince(s.startTime) / 60)
+        }
+    }
+    var totalSprints: Int {
+        sessions.reduce(0) { $0 + $1.sprintCount }
+    }
+    var maxSpeed: Double {
+        sessions.map(\.maxSpeedKmh).max() ?? 0
+    }
+    var totalCalories: Double {
+        sessions.reduce(0) { $0 + $1.caloriesBurned }
+    }
+    var avgHeartRate: Int {
+        // Duration-weighted average
+        let pairs = sessions.map { s -> (duration: Double, hr: Int) in
+            let dur = s.endTime.timeIntervalSince(s.startTime)
+            return (dur, s.avgHeartRate)
+        }
+        let totalDur = pairs.reduce(0.0) { $0 + $1.duration }
+        guard totalDur > 0 else { return 0 }
+        let weighted = pairs.reduce(0.0) { $0 + $1.duration * Double($1.hr) }
+        return Int((weighted / totalDur).rounded())
+    }
+    var maxHeartRate: Int {
+        sessions.map(\.maxHeartRate).max() ?? 0
+    }
+    var avgCoverage: Double {
+        guard !sessions.isEmpty else { return 0 }
+        return sessions.map(\.coveragePercent).reduce(0, +) / Double(sessions.count)
+    }
+    var avgScore: Double {
+        guard !sessions.isEmpty else { return 0 }
+        return sessions.map { performanceScore(for: $0) }.reduce(0, +) / Double(sessions.count)
+    }
+    var avgSpeed: Double {
+        guard !sessions.isEmpty else { return 0 }
+        return sessions.map(\.avgSpeedKmh).reduce(0, +) / Double(sessions.count)
+    }
+}
+
+private func performanceScore(for session: FootballSession) -> Double {
+    let speed = min(1, session.maxSpeedKmh / 30)
+    let sprint = min(1, Double(session.sprintCount) / 45)
+    let distance = min(1, session.totalDistanceMeters / 9000)
+    let discipline = max(0, 1 - Double(session.slackIndex) / 100)
+    let weighted = speed * 0.3 + sprint * 0.25 + distance * 0.25 + discipline * 0.2
+    return min(10, max(6, 6 + weighted * 4))
+}
+
+func buildDaySections(from sessions: [FootballSession]) -> [DaySection] {
+    let calendar = Calendar.current
+    let grouped = Dictionary(grouping: sessions) { session in
+        calendar.startOfDay(for: session.startTime)
+    }
+    let formatter = DateFormatter()
+    formatter.locale = Locale(identifier: "zh_CN")
+    formatter.dateFormat = "M月d日 EEE"
+
+    let isoFormatter = DateFormatter()
+    isoFormatter.dateFormat = "yyyy-MM-dd"
+
+    return grouped.map { (day, sessions) in
+        let sortedSessions = sessions.sorted { $0.startTime > $1.startTime }
+        let dayId = isoFormatter.string(from: day)
+        return DaySection(
+            id: dayId,
+            displayDate: formatter.string(from: day),
+            sessions: sortedSessions
+        )
+    }
+    .sorted { $0.id > $1.id }
+}
+
+// MARK: - DayHistoryRow
+
+struct DayHistoryRow: View {
+    let section: DaySection
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .top) {
+                Circle()
+                    .fill(Color(hex: 0x3B82F6).opacity(0.2))
+                    .frame(width: 30, height: 30)
+                    .overlay(
+                        Text("\(section.sessionCount)")
+                            .font(.caption.weight(.bold))
+                            .foregroundColor(Color(hex: 0x3B82F6))
+                    )
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(section.displayDate)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundColor(AppColors.textPrimary)
+
+                    Text("\(section.sessionCount)场比赛 • 总距离\(String(format: "%.1f", section.totalDistance / 1000))km")
+                        .font(.caption2)
+                        .foregroundColor(AppColors.textSecondary)
+                }
+
+                Spacer()
+
+                Text(String(format: "%.1f", section.avgScore))
+                    .font(.caption.weight(.semibold))
+                    .foregroundColor(AppColors.neonBlue)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(AppColors.neonBlue.opacity(0.14))
+                    .cornerRadius(10)
+            }
+
+            HStack(spacing: 8) {
+                miniItem(title: "场次", value: "\(section.sessionCount)")
+                miniItem(title: "总距离", value: String(format: "%.1f", section.totalDistance / 1000))
+                miniItem(title: "总热量", value: String(format: "%.0f", section.totalCalories))
+            }
+        }
+        .padding(12)
+        .background(AppColors.cardBgLight)
+        .cornerRadius(12)
+    }
+
+    private func miniItem(title: String, value: String) -> some View {
+        VStack(spacing: 2) {
+            Text(value)
+                .font(.caption.weight(.bold))
+                .foregroundColor(AppColors.textPrimary)
+            Text(title)
+                .font(.system(size: 10, weight: .medium))
+                .foregroundColor(AppColors.textSecondary)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 8)
+        .background(AppColors.cardBg)
+        .cornerRadius(8)
+    }
+}
+
+// MARK: - DaySummaryDetailView
+
+struct DaySummaryDetailView: View {
+    let section: DaySection
+    @ObservedObject var store: SessionStore
+
+    @State private var sessionToDelete: FootballSession?
+    @State private var showLocalDeleteAlert = false
+    @State private var showCloudDeleteAlert = false
+    @State private var selectedSession: FootballSession?
+    @State private var navigateToDetail = false
+
+    private var allTrackPoints: [TrackPointRecord] {
+        section.sessions
+            .sorted { $0.startTime < $1.startTime }
+            .flatMap { store.getTrackPoints(for: $0) }
+    }
+
+    private var mergedStats: SessionAnalysisResult {
+        store.computeStats(from: allTrackPoints)
+    }
+
+    var body: some View {
+        ZStack {
+            AppColors.darkBg.ignoresSafeArea()
+
+            ScrollView {
+                VStack(spacing: 16) {
+                    topInfoCard
+                    keyStatsSection
+
+                    // Charts from merged track points
+                    if !allTrackPoints.isEmpty {
+                        chartSection(title: "速度", icon: "bolt.fill", iconColor: Color(hex: 0x3B82F6)) {
+                            SpeedChartView(points: allTrackPoints, showHeartRate: false)
+                        }
+                    }
+
+                    if allTrackPoints.contains(where: { $0.heartRate > 0 }) {
+                        chartSection(title: "心率", icon: "heart.fill", iconColor: Color(hex: 0xEF4444)) {
+                            SpeedChartView(points: allTrackPoints, showHeartRate: true)
+                        }
+                    }
+
+                    if !mergedStats.fatigueSegments.isEmpty {
+                        chartSection(title: "体力曲线", icon: "flame.fill", iconColor: Color(hex: 0xF59E0B)) {
+                            FatigueChartView(segments: mergedStats.fatigueSegments)
+                        }
+                    }
+
+                    if !allTrackPoints.isEmpty {
+                        let lats = allTrackPoints.map(\.latitude)
+                        let lons = allTrackPoints.map(\.longitude)
+                        chartSection(title: "活动热图", icon: "map.fill", iconColor: Color(hex: 0x10B981)) {
+                            HeatmapOverlayView(
+                                grid: mergedStats.heatmapGrid,
+                                minLat: lats.min()!,
+                                maxLat: lats.max()!,
+                                minLon: lons.min()!,
+                                maxLon: lons.max()!
+                            )
+                        }
+                    }
+
+                    // Per-session list
+                    sessionsListSection
+                }
+                .padding(.horizontal, 16)
+                .padding(.top, 12)
+                .padding(.bottom, 20)
+            }
+        }
+        .navigationTitle("日汇总")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbarTitleDisplayMode(.inline)
+        .navigationDestination(isPresented: $navigateToDetail) {
+            if let session = selectedSession {
+                SessionDetailView(session: session, store: store)
+            }
+        }
+        .alert("确认删除", isPresented: $showLocalDeleteAlert) {
+            Button("取消", role: .cancel) { sessionToDelete = nil }
+            Button("删除", role: .destructive) { deleteLocalOnly() }
+        } message: {
+            Text("该记录未同步到云端，删除后将无法恢复。")
+        }
+        .alert("确认删除", isPresented: $showCloudDeleteAlert) {
+            Button("取消", role: .cancel) { sessionToDelete = nil }
+            Button("仅删除本地", role: .destructive) { deleteLocalOnly() }
+            Button("同时删除云端", role: .destructive) { deleteWithCloud() }
+        } message: {
+            Text("该记录已同步到云端，是否同时删除云端数据？")
+        }
+    }
+
+    // MARK: - Top Info Card
+
+    private var topInfoCard: some View {
+        VStack(spacing: 12) {
+            HStack(spacing: 12) {
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(LinearGradient(colors: [Color(hex: 0x3B82F6), Color(hex: 0x06B6D4)], startPoint: .topLeading, endPoint: .bottomTrailing))
+                    .frame(width: 32, height: 32)
+                    .overlay(
+                        Image(systemName: "calendar")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundColor(.white)
+                    )
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("日期")
+                        .font(.system(size: 11))
+                        .foregroundColor(AppColors.textSecondary)
+                    Text(section.displayDate)
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundColor(AppColors.textPrimary)
+                }
+                Spacer()
+            }
+
+            HStack(spacing: 12) {
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(LinearGradient(colors: [Color(hex: 0xA855F7), Color(hex: 0xEC4899)], startPoint: .topLeading, endPoint: .bottomTrailing))
+                    .frame(width: 32, height: 32)
+                    .overlay(
+                        Image(systemName: "sportscourt.fill")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundColor(.white)
+                    )
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("场次 / 总时长")
+                        .font(.system(size: 11))
+                        .foregroundColor(AppColors.textSecondary)
+                    Text("\(section.sessionCount)场比赛 • \(section.totalMinutes)分钟")
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundColor(AppColors.textPrimary)
+                }
+                Spacer()
+            }
+        }
+        .padding(16)
+        .background(AppColors.cardBg)
+        .cornerRadius(16)
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(Color.white.opacity(0.08), lineWidth: 0.5)
+        )
+    }
+
+    // MARK: - Key Stats
+
+    private var keyStatsSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("核心数据")
+                .font(.system(size: 20, weight: .semibold))
+                .foregroundColor(AppColors.textPrimary)
+
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 3), spacing: 10) {
+                keyStatCard(icon: "clock.fill", label: "总时长", value: "\(section.totalMinutes)", unit: "min",
+                            gradient: [Color(hex: 0x3B82F6), Color(hex: 0x06B6D4)])
+                keyStatCard(icon: "figure.run", label: "总距离", value: String(format: "%.1f", section.totalDistance / 1000), unit: "km",
+                            gradient: [Color(hex: 0xA855F7), Color(hex: 0xEC4899)])
+                keyStatCard(icon: "bolt.fill", label: "总冲刺", value: "\(section.totalSprints)", unit: "次",
+                            gradient: [Color(hex: 0xF59E0B), Color(hex: 0xF97316)])
+                keyStatCard(icon: "speedometer", label: "最高速度", value: String(format: "%.1f", section.maxSpeed), unit: "km/h",
+                            gradient: [Color(hex: 0xEF4444), Color(hex: 0xF97316)])
+                keyStatCard(icon: "gauge.with.dots.needle.33percent", label: "平均速度", value: String(format: "%.1f", section.avgSpeed), unit: "km/h",
+                            gradient: [Color(hex: 0x10B981), Color(hex: 0x34D399)])
+                keyStatCard(icon: "flame.fill", label: "总卡路里", value: "\(Int(section.totalCalories))", unit: "kcal",
+                            gradient: [Color(hex: 0xF59E0B), Color(hex: 0xEF4444)])
+            }
+
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 3), spacing: 10) {
+                keyStatCard(icon: "heart.fill", label: "平均心率", value: "\(section.avgHeartRate)", unit: "bpm",
+                            gradient: [Color(hex: 0xEF4444), Color(hex: 0xEC4899)])
+                keyStatCard(icon: "heart.circle.fill", label: "最高心率", value: "\(section.maxHeartRate)", unit: "bpm",
+                            gradient: [Color(hex: 0xDC2626), Color(hex: 0xEF4444)])
+                keyStatCard(icon: "circle.hexagongrid.fill", label: "平均覆盖率", value: String(format: "%.0f", section.avgCoverage), unit: "%",
+                            gradient: [Color(hex: 0x8B5CF6), Color(hex: 0xA855F7)])
+            }
+        }
+    }
+
+    private func keyStatCard(icon: String, label: String, value: String, unit: String, gradient: [Color]) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            RoundedRectangle(cornerRadius: 10)
+                .fill(LinearGradient(colors: gradient, startPoint: .topLeading, endPoint: .bottomTrailing))
+                .frame(width: 36, height: 36)
+                .overlay(
+                    Image(systemName: icon)
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(.white)
+                )
+
+            Text(label)
+                .font(.system(size: 10))
+                .foregroundColor(AppColors.textSecondary)
+
+            HStack(alignment: .lastTextBaseline, spacing: 2) {
+                Text(value)
+                    .font(.system(size: 20, weight: .bold))
+                    .foregroundColor(AppColors.textPrimary)
+                Text(unit)
+                    .font(.system(size: 11))
+                    .foregroundColor(AppColors.textSecondary)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(12)
+        .background(AppColors.cardBg)
+        .cornerRadius(14)
+        .overlay(
+            RoundedRectangle(cornerRadius: 14)
+                .stroke(Color.white.opacity(0.08), lineWidth: 0.5)
+        )
+    }
+
+    // MARK: - Chart Section
+
+    private func chartSection<Content: View>(title: String, icon: String, iconColor: Color, @ViewBuilder content: () -> Content) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 8) {
+                Image(systemName: icon)
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundColor(iconColor)
+                Text(title)
+                    .font(.system(size: 20, weight: .semibold))
+                    .foregroundColor(AppColors.textPrimary)
+            }
+
+            content()
+                .padding(16)
+                .background(AppColors.cardBg)
+                .cornerRadius(16)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16)
+                        .stroke(Color.white.opacity(0.08), lineWidth: 0.5)
+                )
+        }
+    }
+
+    // MARK: - Sessions List
+
+    private var sessionsListSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 8) {
+                Image(systemName: "list.bullet")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundColor(AppColors.neonBlue)
+                Text("当日比赛")
+                    .font(.system(size: 20, weight: .semibold))
+                    .foregroundColor(AppColors.textPrimary)
+            }
+
+            List {
+                ForEach(section.sessions, id: \.id) { session in
+                    MatchHistoryRow(session: session)
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            selectedSession = session
+                            navigateToDetail = true
+                        }
+                        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                            Button(role: .destructive) {
+                                sessionToDelete = session
+                                if session.syncedToCloud {
+                                    showCloudDeleteAlert = true
+                                } else {
+                                    showLocalDeleteAlert = true
+                                }
+                            } label: {
+                                Label("删除", systemImage: "trash")
+                            }
+                        }
+                        .listRowBackground(Color.clear)
+                        .listRowInsets(EdgeInsets(top: 5, leading: 0, bottom: 5, trailing: 0))
+                        .listRowSeparator(.hidden)
+                }
+            }
+            .listStyle(.plain)
+            .scrollContentBackground(.hidden)
+            .frame(minHeight: CGFloat(section.sessions.count) * 130)
+        }
+    }
+
+    // MARK: - Delete Actions
+
+    private func deleteLocalOnly() {
+        guard let session = sessionToDelete else { return }
+        store.deleteSession(session)
+        sessionToDelete = nil
+    }
+
+    private func deleteWithCloud() {
+        guard let session = sessionToDelete else { return }
+        let sessionId = session.id
+        store.deleteSession(session)
+        sessionToDelete = nil
+
+        Task {
+            _ = try? await ApiClient.shared.deleteSession(id: sessionId)
+        }
+    }
+}
+
+// MARK: - StatsView
+
 /// Overall statistics screen aggregating data across all sessions.
 struct StatsView: View {
     @ObservedObject var store: SessionStore
@@ -65,8 +525,8 @@ struct StatsView: View {
         }
     }
 
-    private var recentMatches: [FootballSession] {
-        Array(sessions.prefix(3))
+    private var recentDaySections: [DaySection] {
+        Array(buildDaySections(from: sessions).prefix(3))
     }
 
     private var achievementItems: [StatsAchievementItem] {
@@ -374,11 +834,11 @@ struct StatsView: View {
     }
 
     private var historySection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                sectionHeader(title: "比赛记录", icon: "clock.arrow.circlepath", showShare: false)
-                Spacer()
-                NavigationLink(destination: AllMatchesView(sessions: sessions, store: store)) {
+        NavigationLink(destination: AllMatchesView(store: store)) {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    sectionHeader(title: "比赛记录", icon: "clock.arrow.circlepath", showShare: false)
+                    Spacer()
                     HStack(spacing: 4) {
                         Text("查看全部")
                         Image(systemName: "chevron.right")
@@ -387,19 +847,16 @@ struct StatsView: View {
                     .font(.caption.weight(.semibold))
                     .foregroundColor(AppColors.neonBlue)
                 }
-                .buttonStyle(.plain)
-            }
 
-            ForEach(recentMatches, id: \.id) { session in
-                NavigationLink(destination: SessionDetailView(session: session, store: store)) {
-                    MatchHistoryRow(session: session)
+                ForEach(recentDaySections) { section in
+                    DayHistoryRow(section: section)
                 }
-                .buttonStyle(.plain)
             }
+            .padding(14)
+            .background(AppColors.cardBg)
+            .cornerRadius(16)
         }
-        .padding(14)
-        .background(AppColors.cardBg)
-        .cornerRadius(16)
+        .buttonStyle(.plain)
     }
 
     private var emptySection: some View {
@@ -408,7 +865,7 @@ struct StatsView: View {
                 .fill(AppColors.cardBg)
                 .frame(width: 92, height: 92)
                 .overlay(
-                    Image(systemName: "applewatch")
+                    Image(systemName: "sportscourt")
                         .font(.system(size: 42, weight: .medium))
                         .foregroundColor(AppColors.textSecondary)
                 )
@@ -417,7 +874,7 @@ struct StatsView: View {
                 .font(.headline)
                 .foregroundColor(AppColors.textPrimary)
 
-            Text("连接 Apple Watch 并完成一场比赛后，这里会展示你的能力雷达和趋势变化。")
+            Text("完成一场比赛后，这里会展示你的能力雷达和趋势变化。")
                 .font(.subheadline)
                 .foregroundColor(AppColors.textSecondary)
                 .multilineTextAlignment(.center)
@@ -485,15 +942,6 @@ struct StatsView: View {
         }
     }
 
-    private func performanceScore(for session: FootballSession) -> Double {
-        let speed = min(1, session.maxSpeedKmh / 30)
-        let sprint = min(1, Double(session.sprintCount) / 45)
-        let distance = min(1, session.totalDistanceMeters / 9000)
-        let discipline = max(0, 1 - Double(session.slackIndex) / 100)
-        let weighted = speed * 0.3 + sprint * 0.25 + distance * 0.25 + discipline * 0.2
-        return min(10, max(6, 6 + weighted * 4))
-    }
-
     private func loadCachedAnalysis() {
         guard let data = UserDefaults.standard.data(forKey: Self.analysisCacheKey),
               let cached = try? JSONDecoder().decode(PlayerAnalysisResponse.self, from: data) else { return }
@@ -507,6 +955,8 @@ struct StatsView: View {
         }
     }
 }
+
+// MARK: - Supporting Views
 
 private struct StatsMetricCard: View {
     let label: String
@@ -785,12 +1235,7 @@ struct MatchHistoryRow: View {
     }
 
     private var score: Double {
-        let speed = min(1, session.maxSpeedKmh / 30)
-        let sprint = min(1, Double(session.sprintCount) / 45)
-        let distance = min(1, session.totalDistanceMeters / 9000)
-        let discipline = max(0, 1 - Double(session.slackIndex) / 100)
-        let weighted = speed * 0.3 + sprint * 0.25 + distance * 0.25 + discipline * 0.2
-        return min(10, max(6, 6 + weighted * 4))
+        performanceScore(for: session)
     }
 
     private func miniItem(title: String, value: String) -> some View {
@@ -842,235 +1287,119 @@ private struct EmptyPreviewCard: View {
     }
 }
 
+// MARK: - AllMatchesView (day-aggregated)
+
 struct AllMatchesView: View {
-    let sessions: [FootballSession]
     @ObservedObject var store: SessionStore
 
-    @State private var sessionToDelete: FootballSession?
-    @State private var showLocalDeleteAlert = false
+    @State private var sectionToDelete: DaySection?
+    @State private var showDeleteAlert = false
     @State private var showCloudDeleteAlert = false
-    @State private var selectedSession: FootballSession?
+    @State private var selectedSection: DaySection?
     @State private var navigateToDetail = false
-    @State private var expandedDays: Set<String> = []
-    @State private var initializedExpansion = false
-
-    private struct DaySection: Identifiable {
-        let id: String           // "2026-03-22"
-        let displayDate: String  // "3月22日 周六"
-        let sessions: [FootballSession]
-
-        var totalDistance: Double {
-            sessions.reduce(0) { $0 + $1.totalDistanceMeters }
-        }
-        var totalMinutes: Int {
-            sessions.reduce(0) { total, s in
-                total + Int(s.endTime.timeIntervalSince(s.startTime) / 60)
-            }
-        }
-        var totalSprints: Int {
-            sessions.reduce(0) { $0 + $1.sprintCount }
-        }
-        var maxSpeed: Double {
-            sessions.map(\.maxSpeedKmh).max() ?? 0
-        }
-        var sessionCount: Int { sessions.count }
-    }
 
     private var daySections: [DaySection] {
-        let calendar = Calendar.current
-        let grouped = Dictionary(grouping: sessions) { session in
-            calendar.startOfDay(for: session.startTime)
-        }
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "zh_CN")
-        formatter.dateFormat = "M月d日 EEE"
+        buildDaySections(from: store.sessions)
+    }
 
-        return grouped.map { (day, sessions) in
-            let sortedSessions = sessions.sorted { $0.startTime > $1.startTime }
-            let isoFormatter = DateFormatter()
-            isoFormatter.dateFormat = "yyyy-MM-dd"
-            let dayId = isoFormatter.string(from: day)
-            return DaySection(
-                id: dayId,
-                displayDate: formatter.string(from: day),
-                sessions: sortedSessions
-            )
-        }
-        .sorted { $0.id > $1.id }
+    private var hasCloudSession: Bool {
+        sectionToDelete?.sessions.contains(where: \.syncedToCloud) ?? false
     }
 
     var body: some View {
         ZStack {
             AppColors.darkBg.ignoresSafeArea()
 
-            List {
-                ForEach(daySections) { section in
-                    Section {
-                        // Summary bar
-                        daySummaryBar(section: section)
-                            .listRowBackground(Color.clear)
-                            .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 4, trailing: 16))
-                            .listRowSeparator(.hidden)
-
-                        // Expanded sessions
-                        if expandedDays.contains(section.id) {
-                            ForEach(section.sessions, id: \.id) { session in
-                                MatchHistoryRow(session: session)
-                                    .contentShape(Rectangle())
-                                    .onTapGesture {
-                                        selectedSession = session
-                                        navigateToDetail = true
-                                    }
-                                    .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                                        Button(role: .destructive) {
-                                            sessionToDelete = session
-                                            if session.syncedToCloud {
-                                                showCloudDeleteAlert = true
-                                            } else {
-                                                showLocalDeleteAlert = true
-                                            }
-                                        } label: {
-                                            Label("删除", systemImage: "trash")
-                                        }
-                                    }
-                                    .listRowBackground(Color.clear)
-                                    .listRowInsets(EdgeInsets(top: 5, leading: 16, bottom: 5, trailing: 16))
-                                    .listRowSeparator(.hidden)
+            if daySections.isEmpty {
+                VStack(spacing: 12) {
+                    Image(systemName: "sportscourt")
+                        .font(.system(size: 40))
+                        .foregroundColor(AppColors.textSecondary)
+                    Text("暂无比赛记录")
+                        .font(.headline)
+                        .foregroundColor(AppColors.textPrimary)
+                    Text("完成一场比赛后，记录会出现在这里")
+                        .font(.subheadline)
+                        .foregroundColor(AppColors.textSecondary)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else {
+                List {
+                    ForEach(daySections) { section in
+                        DayHistoryRow(section: section)
+                            .contentShape(Rectangle())
+                            .onTapGesture {
+                                selectedSection = section
+                                navigateToDetail = true
                             }
-                        }
-                    } header: {
-                        dayHeader(section: section)
+                            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                                Button(role: .destructive) {
+                                    sectionToDelete = section
+                                    if hasCloudSession {
+                                        showCloudDeleteAlert = true
+                                    } else {
+                                        showDeleteAlert = true
+                                    }
+                                } label: {
+                                    Label("删除", systemImage: "trash")
+                                }
+                            }
+                            .listRowBackground(Color.clear)
+                            .listRowInsets(EdgeInsets(top: 5, leading: 16, bottom: 5, trailing: 16))
+                            .listRowSeparator(.hidden)
                     }
                 }
-            }
-            .listStyle(.plain)
-            .scrollContentBackground(.hidden)
-        }
-        .onAppear {
-            if !initializedExpansion {
-                expandedDays = Set(daySections.map(\.id))
-                initializedExpansion = true
+                .listStyle(.plain)
+                .scrollContentBackground(.hidden)
             }
         }
         .navigationTitle("全部比赛")
         .navigationBarTitleDisplayMode(.inline)
         .toolbarTitleDisplayMode(.inline)
         .navigationDestination(isPresented: $navigateToDetail) {
-            if let session = selectedSession {
-                SessionDetailView(session: session, store: store)
+            if let section = selectedSection {
+                DaySummaryDetailView(section: section, store: store)
             }
         }
-        .alert("确认删除", isPresented: $showLocalDeleteAlert) {
-            Button("取消", role: .cancel) { sessionToDelete = nil }
-            Button("删除", role: .destructive) { deleteLocalOnly() }
+        .alert("确认删除", isPresented: $showDeleteAlert) {
+            Button("取消", role: .cancel) { sectionToDelete = nil }
+            Button("删除", role: .destructive) { deleteAllLocal() }
         } message: {
-            Text("该记录未同步到云端，删除后将无法恢复。")
+            if let section = sectionToDelete {
+                Text("将删除\(section.displayDate)的\(section.sessionCount)场比赛记录，删除后无法恢复。")
+            }
         }
         .alert("确认删除", isPresented: $showCloudDeleteAlert) {
-            Button("取消", role: .cancel) { sessionToDelete = nil }
-            Button("仅删除本地", role: .destructive) { deleteLocalOnly() }
-            Button("同时删除云端", role: .destructive) { deleteWithCloud() }
+            Button("取消", role: .cancel) { sectionToDelete = nil }
+            Button("仅删除本地", role: .destructive) { deleteAllLocal() }
+            Button("同时删除云端", role: .destructive) { deleteAllWithCloud() }
         } message: {
-            Text("该记录已同步到云端，是否同时删除云端数据？")
-        }
-    }
-
-    @ViewBuilder
-    private func dayHeader(section: DaySection) -> some View {
-        Button {
-            withAnimation(.easeInOut(duration: 0.25)) {
-                if expandedDays.contains(section.id) {
-                    expandedDays.remove(section.id)
-                } else {
-                    expandedDays.insert(section.id)
-                }
+            if let section = sectionToDelete {
+                Text("将删除\(section.displayDate)的\(section.sessionCount)场比赛记录，部分已同步到云端，是否同时删除云端数据？")
             }
-        } label: {
-            HStack {
-                Image(systemName: "calendar")
-                    .foregroundColor(AppColors.neonBlue)
-                    .font(.system(size: 14))
-                Text(section.displayDate)
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundColor(AppColors.textPrimary)
-                Spacer()
-                Text("\(section.sessionCount)场")
-                    .font(.system(size: 13))
-                    .foregroundColor(AppColors.textSecondary)
-                Image(systemName: expandedDays.contains(section.id) ? "chevron.up" : "chevron.down")
-                    .font(.system(size: 12))
-                    .foregroundColor(AppColors.textSecondary)
-            }
-            .padding(.vertical, 8)
         }
     }
 
-    @ViewBuilder
-    private func daySummaryBar(section: DaySection) -> some View {
-        HStack(spacing: 0) {
-            summaryItem(
-                title: "总距离",
-                value: String(format: "%.1f", section.totalDistance / 1000),
-                unit: "km",
-                color: AppColors.neonBlue
-            )
-            Spacer()
-            summaryItem(
-                title: "总时长",
-                value: "\(section.totalMinutes)",
-                unit: "min",
-                color: AppColors.calorieOrange
-            )
-            Spacer()
-            summaryItem(
-                title: "总冲刺",
-                value: "\(section.totalSprints)",
-                unit: "次",
-                color: AppColors.heartRed
-            )
-            Spacer()
-            summaryItem(
-                title: "最高速",
-                value: String(format: "%.1f", section.maxSpeed),
-                unit: "km/h",
-                color: AppColors.speedGreen
-            )
+    private func deleteAllLocal() {
+        guard let section = sectionToDelete else { return }
+        for session in section.sessions {
+            store.deleteSession(session)
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
-        .background(AppColors.cardBg.opacity(0.6))
-        .cornerRadius(8)
+        sectionToDelete = nil
     }
 
-    @ViewBuilder
-    private func summaryItem(title: String, value: String, unit: String, color: Color) -> some View {
-        VStack(spacing: 2) {
-            Text(title)
-                .font(.system(size: 10))
-                .foregroundColor(AppColors.textSecondary)
-            Text(value)
-                .font(.system(size: 14, weight: .bold, design: .rounded))
-                .foregroundColor(color)
-            Text(unit)
-                .font(.system(size: 10))
-                .foregroundColor(AppColors.textSecondary)
+    private func deleteAllWithCloud() {
+        guard let section = sectionToDelete else { return }
+        let cloudIds = section.sessions.filter(\.syncedToCloud).map(\.id)
+        for session in section.sessions {
+            store.deleteSession(session)
         }
-    }
-
-    private func deleteLocalOnly() {
-        guard let session = sessionToDelete else { return }
-        store.deleteSession(session)
-        sessionToDelete = nil
-    }
-
-    private func deleteWithCloud() {
-        guard let session = sessionToDelete else { return }
-        let sessionId = session.id
-        store.deleteSession(session)
-        sessionToDelete = nil
+        sectionToDelete = nil
 
         Task {
-            _ = try? await ApiClient.shared.deleteSession(id: sessionId)
+            for id in cloudIds {
+                _ = try? await ApiClient.shared.deleteSession(id: id)
+            }
         }
     }
 }

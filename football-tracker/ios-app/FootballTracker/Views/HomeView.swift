@@ -143,12 +143,8 @@ struct HomeView: View {
                         upcomingMatchCard(nextMatch)
                     }
 
-                    if store.sessions.isEmpty {
-                        emptyStateCard
-                    } else {
-                        keyStatsSection
-                        heatmapSection
-                    }
+                    keyStatsSection
+                    heatmapSection
                 }
                 .padding(.horizontal, 16)
                 .padding(.top, 16)
@@ -485,7 +481,9 @@ struct HomeView: View {
             }
         }
         .navigationDestination(isPresented: $navigateToTodayList) {
-            AllMatchesView(sessions: todaySessions, store: store)
+            if let section = buildDaySections(from: todaySessions).first {
+                DaySummaryDetailView(section: section, store: store)
+            }
         }
     }
 
