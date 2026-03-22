@@ -124,6 +124,8 @@ struct TeamHubView: View {
     @ObservedObject var store: SessionStore
     @State private var teamDetail: TeamDetailResponse?
     @State private var isLoading = true
+    @State private var showLeaveAlert = false
+    @State private var isLeaving = false
 
     private var team: TeamResponse? {
         teamDetail?.team ?? authManager.teams.first
@@ -135,6 +137,10 @@ struct TeamHubView: View {
 
     private var hasTeam: Bool {
         team != nil
+    }
+
+    private var isOwner: Bool {
+        team?.createdBy == authManager.currentUid
     }
 
     private var teamCreatedDateText: String {
@@ -191,6 +197,7 @@ struct TeamHubView: View {
                         teamInfoCard
                         squadSection
                         leaderboardsSection
+                        leaveTeamSection
                     }
                     .padding(.horizontal, 16)
                     .padding(.top, 12)
@@ -208,6 +215,14 @@ struct TeamHubView: View {
         .toolbarTitleDisplayMode(.inline)
         .task {
             await loadTeamData()
+        }
+        .alert(isOwner ? "解散球队" : "退出球队", isPresented: $showLeaveAlert) {
+            Button("取消", role: .cancel) {}
+            Button(isOwner ? "解散" : "退出", role: .destructive) {
+                Task { await performLeaveTeam() }
+            }
+        } message: {
+            Text(isOwner ? "解散后所有成员将被移除，且无法恢复。确定解散球队吗？" : "退出后可通过邀请码重新加入。确定退出球队吗？")
         }
     }
 
@@ -261,10 +276,10 @@ struct TeamHubView: View {
                     .font(.title3.weight(.semibold))
                     .foregroundColor(AppColors.textPrimary)
                 Spacer()
-                NavigationLink(destination: TeamListView(authManager: authManager)) {
+                ShareLink(item: "来加入我的球队「\(team?.name ?? "")」！\n在 FootyTrack App 中输入邀请码：\(team?.inviteCode ?? "")") {
                     HStack(spacing: 4) {
-                        Image(systemName: "plus")
-                        Text("添加")
+                        Image(systemName: "person.badge.plus")
+                        Text("邀请加入")
                     }
                     .font(.subheadline.weight(.medium))
                     .foregroundColor(AppColors.neonBlue)
@@ -329,6 +344,46 @@ struct TeamHubView: View {
                 leaderboardCard(title: "跑动王者", icon: "bolt.fill", colors: [Color(hex: 0xA855F7), Color(hex: 0xEC4899)], items: distanceBoard)
             }
         }
+    }
+
+    private var leaveTeamSection: some View {
+        Button(role: .destructive) {
+            showLeaveAlert = true
+        } label: {
+            HStack {
+                Spacer()
+                if isLeaving {
+                    ProgressView()
+                        .tint(.red)
+                } else {
+                    Text(isOwner ? "解散球队" : "退出球队")
+                        .font(.subheadline.weight(.medium))
+                }
+                Spacer()
+            }
+            .padding(.vertical, 14)
+            .background(AppColors.cardBg)
+            .cornerRadius(12)
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(Color.red.opacity(0.3), lineWidth: 0.5)
+            )
+        }
+        .disabled(isLeaving)
+    }
+
+    private func performLeaveTeam() async {
+        guard let teamId = team?.id else { return }
+        isLeaving = true
+        do {
+            _ = try await ApiClient.shared.leaveTeam(teamId: teamId)
+            authManager.invalidateTeams()
+            authManager.teams = []
+            teamDetail = nil
+        } catch {
+            // leave failed silently
+        }
+        isLeaving = false
     }
 
     private func leaderboardCard(title: String, icon: String, colors: [Color], items: [TeamLeaderItem]) -> some View {
@@ -503,6 +558,14 @@ struct TeamHubView: View {
     }
 
     private func loadTeamData() async {
+        // Show cached data instantly if available
+        if let firstTeam = authManager.teams.first {
+            if let cachedDetail = authManager.getCachedTeamDetail(teamId: firstTeam.id) {
+                teamDetail = cachedDetail
+                isLoading = false
+            }
+        }
+
         await authManager.loadTeamsIfNeeded()
 
         if let firstTeam = authManager.teams.first {
