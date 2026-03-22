@@ -20,6 +20,7 @@ import io.ktor.http.*
 fun main(args: Array<String>): Unit = io.ktor.server.netty.EngineMain.main(args)
 
 fun Application.module() {
+    log.info("FootballTracker server starting — trackPointsData sync enabled")
     val config = loadConfig()
 
     // Initialize database
