@@ -28,13 +28,22 @@ struct FootballTrackerApp: App {
 
     var body: some Scene {
         WindowGroup {
-            Group {
+            ZStack {
                 if authManager.isLoggedIn {
                     MainTabView(store: sessionStore, authManager: authManager)
+                        .transition(.asymmetric(
+                            insertion: .move(edge: .trailing).combined(with: .opacity),
+                            removal: .move(edge: .leading).combined(with: .opacity)
+                        ))
                 } else {
                     AuthFlowView(authManager: authManager, store: sessionStore)
+                        .transition(.asymmetric(
+                            insertion: .move(edge: .leading).combined(with: .opacity),
+                            removal: .move(edge: .trailing).combined(with: .opacity)
+                        ))
                 }
             }
+            .animation(.easeInOut(duration: 0.35), value: authManager.isLoggedIn)
             .preferredColorScheme(.dark)
             .onReceive(NotificationCenter.default.publisher(for: WatchSync.didReceiveDataNotification)) { notification in
                 if let data = notification.userInfo as? [String: Any] {
@@ -61,9 +70,10 @@ struct MainTabView: View {
     @ObservedObject var store: SessionStore
     @ObservedObject var authManager: AuthManager
     @State private var unreadCount = UserDefaults.standard.integer(forKey: "unread_session_count")
+    @State private var selectedTab = 0
 
     var body: some View {
-        TabView {
+        TabView(selection: $selectedTab) {
             NavigationStack {
                 HomeView(store: store, authManager: authManager)
             }
@@ -71,6 +81,7 @@ struct MainTabView: View {
                 Image(systemName: "sportscourt.fill")
                 Text("首页")
             }
+            .tag(0)
 
             NavigationStack {
                 TeamHubView(authManager: authManager, store: store)
@@ -79,6 +90,7 @@ struct MainTabView: View {
                 Image(systemName: "flag.fill")
                 Text("球队")
             }
+            .tag(1)
 
             NavigationStack {
                 StatsView(store: store, authManager: authManager)
@@ -87,6 +99,7 @@ struct MainTabView: View {
                 Image(systemName: "chart.bar.fill")
                 Text("统计")
             }
+            .tag(2)
 
             NavigationStack {
                 ProfileView(store: store, authManager: authManager)
@@ -96,6 +109,7 @@ struct MainTabView: View {
                 Text("我的")
             }
             .badge(unreadCount > 0 ? unreadCount : 0)
+            .tag(3)
         }
         .tint(AppColors.neonBlue)
         .task {

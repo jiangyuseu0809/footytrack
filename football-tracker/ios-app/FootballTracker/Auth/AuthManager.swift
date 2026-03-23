@@ -1,8 +1,11 @@
 import Foundation
+import SwiftUI
 
 private let kTokenKey = "auth_token"
 private let kUidKey = "auth_uid"
 private let kMatchesCacheKey = "cached_upcoming_matches"
+private let kTeamsCacheKey = "cached_teams"
+private let kTeamDetailCacheKey = "cached_team_detail"
 
 @MainActor
 class AuthManager: ObservableObject {
@@ -35,6 +38,15 @@ class AuthManager: ObservableObject {
         if let data = UserDefaults.standard.data(forKey: kMatchesCacheKey),
            let cached = try? JSONDecoder().decode([MatchResponse].self, from: data) {
             upcomingMatches = cached
+        }
+        // Restore cached teams so TeamHubView renders instantly
+        if let data = UserDefaults.standard.data(forKey: kTeamsCacheKey),
+           let cached = try? JSONDecoder().decode([TeamResponse].self, from: data) {
+            teams = cached
+        }
+        if let data = UserDefaults.standard.data(forKey: kTeamDetailCacheKey),
+           let cached = try? JSONDecoder().decode([String: TeamDetailResponse].self, from: data) {
+            teamDetailsById = cached
         }
     }
 
@@ -110,8 +122,12 @@ class AuthManager: ObservableObject {
         matchesLoadedAt = nil
         teamDetailsById = [:]
         teamDetailsLoadedAt = [:]
-        isLoggedIn = false
+        withAnimation(.easeInOut(duration: 0.35)) {
+            isLoggedIn = false
+        }
         UserDefaults.standard.removeObject(forKey: kMatchesCacheKey)
+        UserDefaults.standard.removeObject(forKey: kTeamsCacheKey)
+        UserDefaults.standard.removeObject(forKey: kTeamDetailCacheKey)
     }
 
     func loadProfile() async {
@@ -140,6 +156,7 @@ class AuthManager: ObservableObject {
             let resp = try await ApiClient.shared.getTeams()
             teams = resp.teams.sorted { $0.createdAt > $1.createdAt }
             teamsLoadedAt = Date()
+            persistTeams()
         } catch {
             // Silently handle
         }
@@ -192,6 +209,18 @@ class AuthManager: ObservableObject {
         }
     }
 
+    private func persistTeams() {
+        if let data = try? JSONEncoder().encode(teams) {
+            UserDefaults.standard.set(data, forKey: kTeamsCacheKey)
+        }
+    }
+
+    private func persistTeamDetails() {
+        if let data = try? JSONEncoder().encode(teamDetailsById) {
+            UserDefaults.standard.set(data, forKey: kTeamDetailCacheKey)
+        }
+    }
+
     func loadTeamDetailIfNeeded(teamId: String, forceRefresh: Bool = false) async -> TeamDetailResponse? {
         if !forceRefresh,
            let loadedAt = teamDetailsLoadedAt[teamId],
@@ -204,6 +233,7 @@ class AuthManager: ObservableObject {
             let detail = try await ApiClient.shared.getTeamDetail(teamId: teamId)
             teamDetailsById[teamId] = detail
             teamDetailsLoadedAt[teamId] = Date()
+            persistTeamDetails()
             return detail
         } catch {
             return teamDetailsById[teamId]
@@ -212,6 +242,10 @@ class AuthManager: ObservableObject {
 
     func invalidateTeamDetail(teamId: String) {
         teamDetailsLoadedAt[teamId] = nil
+    }
+
+    func getCachedTeamDetail(teamId: String) -> TeamDetailResponse? {
+        teamDetailsById[teamId]
     }
 
     func invalidateAllTeamDetails() {
@@ -228,6 +262,8 @@ class AuthManager: ObservableObject {
         UserDefaults.standard.set(uid, forKey: kUidKey)
         ApiClient.shared.token = token
         currentUid = uid
-        isLoggedIn = true
+        withAnimation(.easeInOut(duration: 0.35)) {
+            isLoggedIn = true
+        }
     }
 }
