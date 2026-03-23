@@ -1,6 +1,8 @@
 package com.footballtracker.server.routes
 
 import com.footballtracker.server.service.MatchService
+import com.footballtracker.server.service.MatchSummaryService
+import com.footballtracker.server.service.SessionService
 import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.request.*
@@ -17,6 +19,11 @@ data class CreateMatchRequest(
     val groups: Int,
     val playersPerGroup: Int,
     val groupColors: String
+)
+
+@Serializable
+data class RegisterMatchRequest(
+    val groupColor: String = ""
 )
 
 @Serializable
@@ -41,6 +48,7 @@ data class MatchListResponse(val matches: List<MatchResponse>)
 data class MatchRegistrationResponse(
     val userUid: String,
     val nickname: String,
+    val groupColor: String,
     val registeredAt: Long
 )
 
@@ -51,7 +59,30 @@ data class MatchDetailResponse(
     val isRegistered: Boolean
 )
 
-fun Route.matchRoutes(matchService: MatchService) {
+@Serializable
+data class PlayerRankItem(
+    val userUid: String,
+    val nickname: String,
+    val groupColor: String,
+    val value: Double
+)
+
+@Serializable
+data class MatchRankingsResponse(
+    val caloriesRanking: List<PlayerRankItem>,
+    val distanceRanking: List<PlayerRankItem>
+)
+
+@Serializable
+data class MatchSummaryResponse(
+    val summary: String
+)
+
+fun Route.matchRoutes(
+    matchService: MatchService,
+    sessionService: SessionService,
+    matchSummaryService: MatchSummaryService
+) {
     route("/matches") {
         post {
             val uid = UUID.fromString(call.jwtUid())
@@ -88,6 +119,7 @@ fun Route.matchRoutes(matchService: MatchService) {
                 MatchRegistrationResponse(
                     userUid = it.userUid.toString(),
                     nickname = it.nickname,
+                    groupColor = it.groupColor,
                     registeredAt = it.registeredAt
                 )
             }
@@ -103,7 +135,13 @@ fun Route.matchRoutes(matchService: MatchService) {
             val match = matchService.getMatchById(matchId)
                 ?: return@post call.respond(HttpStatusCode.NotFound, mapOf("error" to "比赛不存在"))
 
-            val registered = matchService.register(matchId, uid)
+            val req = try {
+                call.receive<RegisterMatchRequest>()
+            } catch (_: Exception) {
+                RegisterMatchRequest()
+            }
+
+            val registered = matchService.register(matchId, uid, req.groupColor)
             if (registered) {
                 call.respond(mapOf("message" to "报名成功"))
             } else {
@@ -120,6 +158,61 @@ fun Route.matchRoutes(matchService: MatchService) {
                 call.respond(mapOf("message" to "已取消报名"))
             } else {
                 call.respond(HttpStatusCode.NotFound, mapOf("error" to "未报名"))
+            }
+        }
+
+        get("/{matchId}/rankings") {
+            val matchId = UUID.fromString(call.parameters["matchId"])
+            val match = matchService.getMatchById(matchId)
+                ?: return@get call.respond(HttpStatusCode.NotFound, mapOf("error" to "比赛不存在"))
+
+            val registrations = matchService.getMatchRegistrations(matchId)
+
+            data class PlayerStats(
+                val userUid: String,
+                val nickname: String,
+                val groupColor: String,
+                val totalCalories: Double,
+                val totalDistance: Double
+            )
+
+            val stats = registrations.map { reg ->
+                val sessions = sessionService.getSessionsByOwner(reg.userUid)
+                val totalCalories = sessions.mapNotNull { it.caloriesBurned }.sum()
+                val totalDistance = sessions.mapNotNull { it.totalDistanceMeters }.sum()
+                PlayerStats(
+                    userUid = reg.userUid.toString(),
+                    nickname = reg.nickname,
+                    groupColor = reg.groupColor,
+                    totalCalories = totalCalories,
+                    totalDistance = totalDistance
+                )
+            }
+
+            val caloriesRanking = stats
+                .sortedByDescending { it.totalCalories }
+                .map { PlayerRankItem(it.userUid, it.nickname, it.groupColor, it.totalCalories) }
+
+            val distanceRanking = stats
+                .sortedByDescending { it.totalDistance }
+                .map { PlayerRankItem(it.userUid, it.nickname, it.groupColor, it.totalDistance) }
+
+            call.respond(MatchRankingsResponse(caloriesRanking, distanceRanking))
+        }
+
+        get("/{matchId}/summary") {
+            val matchId = UUID.fromString(call.parameters["matchId"])
+            matchService.getMatchById(matchId)
+                ?: return@get call.respond(HttpStatusCode.NotFound, mapOf("error" to "比赛不存在"))
+
+            try {
+                val summary = matchSummaryService.getOrCreateSummary(matchId)
+                call.respond(MatchSummaryResponse(summary))
+            } catch (e: Exception) {
+                call.respond(
+                    HttpStatusCode.InternalServerError,
+                    mapOf("error" to (e.message ?: "生成比赛总结失败"))
+                )
             }
         }
 

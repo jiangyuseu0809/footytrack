@@ -138,7 +138,8 @@ struct HomeView: View {
 
                     if let nextMatch = authManager.upcomingMatches.first(where: { match in
                         let matchDate = Date(timeIntervalSince1970: TimeInterval(match.matchDate) / 1000.0)
-                        return Date().timeIntervalSince(matchDate) < 4 * 3600
+                        let matchEndDate = matchDate.addingTimeInterval(3 * 3600)
+                        return Date() < matchEndDate
                     }) {
                         upcomingMatchCard(nextMatch)
                     }
@@ -222,6 +223,17 @@ struct HomeView: View {
         }
     }
 
+    private func matchStatusInfo(matchDate: Date) -> (text: String, color: Color) {
+        let now = Date()
+        if now < matchDate {
+            return ("即将开赛", Color(hex: 0xFACC15))
+        } else if now < matchDate.addingTimeInterval(3 * 3600) {
+            return ("比赛中", Color(hex: 0x22C55E))
+        } else {
+            return ("比赛结束", Color(hex: 0x6B7280))
+        }
+    }
+
     private func upcomingMatchCard(_ match: MatchResponse) -> some View {
         let matchDate = Date(timeIntervalSince1970: TimeInterval(match.matchDate) / 1000.0)
         let formatter = DateFormatter()
@@ -230,18 +242,19 @@ struct HomeView: View {
         let dateText = formatter.string(from: matchDate)
         let colors = match.groupColors.split(separator: ",").map(String.init)
         let totalPlayers = match.groups * match.playersPerGroup
+        let status = matchStatusInfo(matchDate: matchDate)
 
         return Button {
             navigateToMatchDetail = true
         } label: {
             VStack(alignment: .leading, spacing: 10) {
                 HStack {
-                    Text("即将开赛")
+                    Text(status.text)
                         .font(.caption.weight(.bold))
                         .foregroundColor(.black)
                         .padding(.horizontal, 8)
                         .padding(.vertical, 3)
-                        .background(Color(hex: 0xFACC15))
+                        .background(status.color)
                         .clipShape(RoundedRectangle(cornerRadius: 6))
 
                     Spacer()
@@ -290,7 +303,7 @@ struct HomeView: View {
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 16)
-                    .stroke(Color(hex: 0xFACC15).opacity(0.4), lineWidth: 1)
+                    .stroke(status.color.opacity(0.4), lineWidth: 1)
             )
             .clipShape(RoundedRectangle(cornerRadius: 16))
         }

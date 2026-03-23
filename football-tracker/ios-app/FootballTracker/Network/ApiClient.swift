@@ -319,10 +319,11 @@ final class ApiClient {
         try await request(endpoint: "/api/matches/\(matchId)")
     }
 
-    func registerForMatch(matchId: String) async throws -> MessageResponse {
+    func registerForMatch(matchId: String, groupColor: String = "") async throws -> MessageResponse {
         try await request(
             endpoint: "/api/matches/\(matchId)/register",
-            method: "POST"
+            method: "POST",
+            body: RegisterMatchBody(groupColor: groupColor)
         )
     }
 
@@ -338,5 +339,13 @@ final class ApiClient {
             endpoint: "/api/matches/\(matchId)",
             method: "DELETE"
         )
+    }
+
+    func getMatchRankings(matchId: String) async throws -> MatchRankingsResponse {
+        try await request(endpoint: "/api/matches/\(matchId)/rankings")
+    }
+
+    func getMatchSummary(matchId: String) async throws -> MatchSummaryResponse {
+        try await request(endpoint: "/api/matches/\(matchId)/summary")
     }
 }

@@ -110,7 +110,7 @@ struct JoinTeamRequest: Encodable {
     let inviteCode: String
 }
 
-struct TeamResponse: Decodable {
+struct TeamResponse: Codable {
     let id: String
     let name: String
     let inviteCode: String
@@ -118,11 +118,11 @@ struct TeamResponse: Decodable {
     let createdAt: Int64
 }
 
-struct TeamListResponse: Decodable {
+struct TeamListResponse: Codable {
     let teams: [TeamResponse]
 }
 
-struct TeamMemberResponse: Decodable {
+struct TeamMemberResponse: Codable {
     let userUid: String
     let nickname: String
     let role: String
@@ -131,7 +131,7 @@ struct TeamMemberResponse: Decodable {
     let totalDistanceMeters: Double
 }
 
-struct TeamDetailResponse: Decodable {
+struct TeamDetailResponse: Codable {
     let team: TeamResponse
     let members: [TeamMemberResponse]
 }
@@ -193,6 +193,7 @@ struct MatchListResponse: Decodable {
 struct MatchRegistrationResponse: Decodable, Identifiable {
     let userUid: String
     let nickname: String
+    let groupColor: String
     let registeredAt: Int64
 
     var id: String { userUid }
@@ -202,4 +203,26 @@ struct MatchDetailResponse: Decodable {
     let match: MatchResponse
     let registrations: [MatchRegistrationResponse]
     let isRegistered: Bool
+}
+
+struct RegisterMatchBody: Encodable {
+    let groupColor: String
+}
+
+struct PlayerRankItem: Decodable, Identifiable {
+    let userUid: String
+    let nickname: String
+    let groupColor: String
+    let value: Double
+
+    var id: String { userUid }
+}
+
+struct MatchRankingsResponse: Decodable {
+    let caloriesRanking: [PlayerRankItem]
+    let distanceRanking: [PlayerRankItem]
+}
+
+struct MatchSummaryResponse: Decodable {
+    let summary: String
 }

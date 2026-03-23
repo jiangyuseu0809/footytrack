@@ -23,7 +23,8 @@ object DatabaseFactory {
                 BadgesTable,
                 UserBadgesTable,
                 MatchesTable,
-                MatchRegistrationsTable
+                MatchRegistrationsTable,
+                MatchSummariesTable
             )
         }
 

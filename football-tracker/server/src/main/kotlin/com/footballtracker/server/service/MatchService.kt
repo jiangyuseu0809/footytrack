@@ -24,6 +24,7 @@ data class MatchRow(
 data class MatchRegistrationRow(
     val userUid: UUID,
     val nickname: String,
+    val groupColor: String,
     val registeredAt: Long
 )
 
@@ -63,8 +64,10 @@ class MatchService {
 
     fun getUpcomingMatchesByUser(userUid: UUID): List<MatchRow> = transaction {
         val now = System.currentTimeMillis()
+        val threeHoursAgo = now - 3 * 3600 * 1000L
 
-        // Matches created by this user OR registered by this user, upcoming only
+        // Matches created by this user OR registered by this user
+        // Include upcoming (matchDate >= now) and in-progress (matchDate within last 3h)
         val registeredMatchIds = MatchRegistrationsTable
             .select(MatchRegistrationsTable.matchId)
             .where { MatchRegistrationsTable.userUid eq userUid }
@@ -73,7 +76,7 @@ class MatchService {
         MatchesTable.selectAll()
             .where {
                 (MatchesTable.status eq "upcoming") and
-                (MatchesTable.matchDate greaterEq now) and
+                (MatchesTable.matchDate greaterEq threeHoursAgo) and
                 ((MatchesTable.creatorUid eq userUid) or (MatchesTable.id inList registeredMatchIds))
             }
             .orderBy(MatchesTable.matchDate, SortOrder.ASC)
@@ -94,6 +97,7 @@ class MatchService {
                 MatchRegistrationRow(
                     userUid = row[MatchRegistrationsTable.userUid],
                     nickname = row[UsersTable.nickname],
+                    groupColor = row[MatchRegistrationsTable.groupColor],
                     registeredAt = row[MatchRegistrationsTable.registeredAt]
                 )
             }
@@ -105,7 +109,7 @@ class MatchService {
             .count()
     }
 
-    fun register(matchId: UUID, userUid: UUID): Boolean = transaction {
+    fun register(matchId: UUID, userUid: UUID, groupColor: String = ""): Boolean = transaction {
         val exists = MatchRegistrationsTable.selectAll()
             .where { (MatchRegistrationsTable.matchId eq matchId) and (MatchRegistrationsTable.userUid eq userUid) }
             .count() > 0
@@ -114,6 +118,7 @@ class MatchService {
         MatchRegistrationsTable.insert {
             it[MatchRegistrationsTable.matchId] = matchId
             it[MatchRegistrationsTable.userUid] = userUid
+            it[MatchRegistrationsTable.groupColor] = groupColor
             it[MatchRegistrationsTable.registeredAt] = System.currentTimeMillis()
         }
         true

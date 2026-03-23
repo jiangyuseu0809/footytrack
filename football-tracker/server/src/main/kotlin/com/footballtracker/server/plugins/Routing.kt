@@ -19,6 +19,7 @@ fun Application.configureRouting(
     badgeService: BadgeService,
     matchService: MatchService,
     playerAnalysisService: PlayerAnalysisService,
+    matchSummaryService: MatchSummaryService,
     avatarConfig: com.footballtracker.server.config.AvatarConfig
 ) {
     routing {
@@ -30,7 +31,7 @@ fun Application.configureRouting(
                 sessionRoutes(sessionService, badgeService, playerAnalysisService)
                 teamRoutes(teamService)
                 badgeRoutes(badgeService)
-                matchRoutes(matchService)
+                matchRoutes(matchService, sessionService, matchSummaryService)
             }
         }
 

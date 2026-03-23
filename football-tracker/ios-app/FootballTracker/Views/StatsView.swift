@@ -127,8 +127,8 @@ struct DayHistoryRow: View {
 
             HStack(spacing: 8) {
                 miniItem(title: "场次", value: "\(section.sessionCount)")
-                miniItem(title: "总距离", value: String(format: "%.1f", section.totalDistance / 1000))
-                miniItem(title: "总热量", value: String(format: "%.0f", section.totalCalories))
+                miniItem(title: "总距离", value: String(format: "%.1fkm", section.totalDistance / 1000))
+                miniItem(title: "总热量", value: String(format: "%.0fkcal", section.totalCalories))
             }
         }
         .padding(12)
