@@ -16,9 +16,11 @@ class WatchSync: NSObject, ObservableObject, WCSessionDelegate {
     @Published var isPaired: Bool = false
     @Published var isReachable: Bool = false
 
-    /// True when a Watch is paired to this iPhone and the Watch app is installed.
+    /// True when a Watch is paired to this iPhone.
+    /// We rely on isPaired alone because isWatchAppInstalled returns false
+    /// when the Watch app is installed independently from the Watch App Store.
     var isWatchConnected: Bool {
-        isPaired && isWatchAppInstalled
+        isPaired
     }
 
     override init() {
@@ -31,12 +33,19 @@ class WatchSync: NSObject, ObservableObject, WCSessionDelegate {
     }
 
     private func updateWatchState() {
-        guard WCSession.isSupported() else { return }
+        guard WCSession.isSupported() else {
+            print("[WatchSync] WCSession not supported")
+            return
+        }
         let session = WCSession.default
-        guard session.activationState == .activated else { return }
+        guard session.activationState == .activated else {
+            print("[WatchSync] WCSession not activated yet: \(session.activationState.rawValue)")
+            return
+        }
         let paired = session.isPaired
         let installed = session.isWatchAppInstalled
         let reachable = session.isReachable
+        print("[WatchSync] updateWatchState — paired=\(paired) installed=\(installed) reachable=\(reachable)")
         DispatchQueue.main.async {
             self.isPaired = paired
             self.isWatchAppInstalled = installed
@@ -52,8 +61,9 @@ class WatchSync: NSObject, ObservableObject, WCSessionDelegate {
         error: Error?
     ) {
         if let error = error {
-            print("WCSession activation error: \(error)")
+            print("[WatchSync] WCSession activation error: \(error)")
         }
+        print("[WatchSync] activationDidComplete — state=\(activationState.rawValue)")
         updateWatchState()
     }
 
@@ -63,6 +73,7 @@ class WatchSync: NSObject, ObservableObject, WCSessionDelegate {
     }
 
     func sessionWatchStateDidChange(_ session: WCSession) {
+        print("[WatchSync] sessionWatchStateDidChange")
         updateWatchState()
     }
 
