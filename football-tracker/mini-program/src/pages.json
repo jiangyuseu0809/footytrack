@@ -1,0 +1,33 @@
+{
+  "pages": [
+    { "path": "pages/home/index", "style": { "navigationStyle": "custom" } },
+    { "path": "pages/team/index", "style": { "navigationStyle": "custom" } },
+    { "path": "pages/stats/index", "style": { "navigationStyle": "custom" } },
+    { "path": "pages/profile/index", "style": { "navigationStyle": "custom" } },
+    { "path": "pages/login/index", "style": { "navigationStyle": "custom" } },
+    { "path": "pages/session-detail/index", "style": { "navigationStyle": "custom" } },
+    { "path": "pages/match-detail/index", "style": { "navigationStyle": "custom" } },
+    { "path": "pages/create-match/index", "style": { "navigationStyle": "custom" } },
+    { "path": "pages/team-detail/index", "style": { "navigationStyle": "custom" } }
+  ],
+  "globalStyle": {
+    "navigationBarTextStyle": "white",
+    "navigationBarTitleText": "野球记",
+    "navigationBarBackgroundColor": "#0D1117",
+    "backgroundColor": "#0D1117",
+    "backgroundColorTop": "#0D1117",
+    "backgroundColorBottom": "#0D1117"
+  },
+  "tabBar": {
+    "color": "#8B949E",
+    "selectedColor": "#00E676",
+    "backgroundColor": "#0D1117",
+    "borderStyle": "black",
+    "list": [
+      { "pagePath": "pages/home/index", "text": "首页", "iconPath": "static/tab-home.png", "selectedIconPath": "static/tab-home-active.png" },
+      { "pagePath": "pages/team/index", "text": "球队", "iconPath": "static/tab-team.png", "selectedIconPath": "static/tab-team-active.png" },
+      { "pagePath": "pages/stats/index", "text": "统计", "iconPath": "static/tab-stats.png", "selectedIconPath": "static/tab-stats-active.png" },
+      { "pagePath": "pages/profile/index", "text": "我的", "iconPath": "static/tab-profile.png", "selectedIconPath": "static/tab-profile-active.png" }
+    ]
+  }
+}

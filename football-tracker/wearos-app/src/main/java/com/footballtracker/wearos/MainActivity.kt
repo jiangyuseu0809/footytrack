@@ -12,7 +12,7 @@ import com.footballtracker.core.analysis.CalorieEstimator
 import com.footballtracker.core.analysis.DistanceCalculator
 import com.footballtracker.core.analysis.SlackDetector
 import com.footballtracker.core.model.TrackPoint
-import com.footballtracker.wearos.sync.DataLayerSync
+import com.footballtracker.wearos.sync.ServerSync
 import com.footballtracker.wearos.tracking.GpsTracker
 import com.footballtracker.wearos.tracking.HeartRateTracker
 import com.footballtracker.wearos.ui.SummaryScreen
@@ -24,7 +24,7 @@ import java.util.UUID
 class MainActivity : ComponentActivity() {
 
     private lateinit var heartRateTracker: HeartRateTracker
-    private lateinit var dataLayerSync: DataLayerSync
+    private lateinit var serverSync: ServerSync
 
     private val requiredPermissions = arrayOf(
         Manifest.permission.ACCESS_FINE_LOCATION,
@@ -40,7 +40,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         heartRateTracker = HeartRateTracker(this)
-        dataLayerSync = DataLayerSync(this)
+        serverSync = ServerSync(this)
 
         permissionLauncher.launch(requiredPermissions)
 
@@ -125,9 +125,9 @@ class MainActivity : ComponentActivity() {
                         summaryCalories = CalorieEstimator.estimateCalories(points)
                         summarySlack = SlackDetector.analyze(points).index
 
-                        // Sync to phone
+                        // Sync directly to server
                         lifecycleScope.launch {
-                            dataLayerSync.syncSession(
+                            serverSync.syncSession(
                                 sessionId = UUID.randomUUID().toString(),
                                 startTime = sessionStartTime,
                                 endTime = endTime,

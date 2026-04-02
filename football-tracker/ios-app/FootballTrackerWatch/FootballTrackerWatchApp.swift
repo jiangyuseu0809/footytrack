@@ -4,9 +4,10 @@ import SwiftUI
 @main
 struct FootballTrackerWatchApp: App {
     @StateObject private var trackingManager = TrackingManager()
+    @StateObject private var phoneSync = PhoneSync.shared
 
     init() {
-        // Activate WCSession early so transferUserInfo works reliably
+        // Activate WCSession early so token transfer works reliably
         _ = PhoneSync.shared
     }
 
@@ -15,7 +16,7 @@ struct FootballTrackerWatchApp: App {
             if trackingManager.showSummary {
                 WatchSummaryView(manager: trackingManager)
             } else {
-                WatchTrackingView(manager: trackingManager)
+                WatchTrackingView(manager: trackingManager, isAuthenticated: phoneSync.isAuthenticated)
             }
         }
     }

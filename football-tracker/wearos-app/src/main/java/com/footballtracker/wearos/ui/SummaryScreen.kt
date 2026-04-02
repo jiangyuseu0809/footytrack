@@ -55,7 +55,7 @@ fun SummaryScreen(
             Spacer(modifier = Modifier.height(8.dp))
 
             Text(
-                text = "详情请看手机",
+                text = "详情请看小程序",
                 fontSize = 11.sp,
                 color = Color.Gray,
                 textAlign = TextAlign.Center

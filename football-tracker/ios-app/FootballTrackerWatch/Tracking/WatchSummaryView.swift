@@ -16,9 +16,15 @@ struct WatchSummaryView: View {
                 SummaryRow(label: "卡路里", value: "\(Int(manager.summaryCalories))")
                 SummaryRow(label: "摸鱼", value: "\(manager.summarySlackIndex)%")
 
-                Text("详情请看手机")
-                    .font(.system(size: 11))
-                    .foregroundColor(.gray)
+                if WatchApiClient.shared.isAuthenticated {
+                    Text("数据已上传到云端")
+                        .font(.system(size: 11))
+                        .foregroundColor(.gray)
+                } else {
+                    Text("数据已缓存，登录后自动上传")
+                        .font(.system(size: 11))
+                        .foregroundColor(.orange)
+                }
 
                 Button("完成") {
                     manager.dismissSummary()

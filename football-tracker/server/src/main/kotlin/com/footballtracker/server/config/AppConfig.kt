@@ -40,7 +40,9 @@ data class TencentConfig(
 
 data class WeChatConfig(
     val appId: String,
-    val appSecret: String
+    val appSecret: String,
+    val mpAppId: String,
+    val mpAppSecret: String
 )
 
 data class AvatarConfig(
@@ -75,7 +77,9 @@ fun Application.loadConfig(): AppConfig {
         ),
         wechat = WeChatConfig(
             appId = env("APP_WECHAT_APP_ID", "app.wechat.appId"),
-            appSecret = env("APP_WECHAT_APP_SECRET", "app.wechat.appSecret")
+            appSecret = env("APP_WECHAT_APP_SECRET", "app.wechat.appSecret"),
+            mpAppId = env("APP_WECHAT_MP_APP_ID", "app.wechat.mpAppId"),
+            mpAppSecret = env("APP_WECHAT_MP_APP_SECRET", "app.wechat.mpAppSecret")
         ),
         avatar = AvatarConfig(
             baseDir = env("APP_AVATAR_BASE_DIR", "app.avatar.baseDir"),

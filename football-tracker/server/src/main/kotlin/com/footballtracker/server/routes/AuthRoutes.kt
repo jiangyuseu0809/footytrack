@@ -83,6 +83,18 @@ fun Route.authRoutes(
             call.respond(AuthResponse(token = token, uid = user.uid.toString(), isNewUser = isNewUser))
         }
 
+        post("/wechat-mp") {
+            val req = call.receive<WeChatAuthRequest>()
+            val openId = weChatService.exchangeCodeForMpOpenId(req.code)
+
+            val existing = userService.findByWeChatOpenId(openId)
+            val isNewUser = existing == null
+            val user = existing ?: userService.createWeChatUser(openId, "微信用户")
+
+            val token = jwtService.generateToken(user.uid.toString())
+            call.respond(AuthResponse(token = token, uid = user.uid.toString(), isNewUser = isNewUser))
+        }
+
         post("/register") {
             val req = call.receive<UsernamePasswordRequest>()
             val username = req.username.trim()

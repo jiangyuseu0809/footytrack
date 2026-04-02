@@ -1,0 +1,24 @@
+{
+    "name": "野球记",
+    "appid": "",
+    "description": "足球运动追踪与分析小程序",
+    "versionName": "1.0.0",
+    "versionCode": "100",
+    "transformPx": false,
+    "mp-weixin": {
+        "appid": "wx0c2fc37f7c59e99c",
+        "setting": {
+            "urlCheck": false,
+            "es6": true,
+            "postcss": true,
+            "minified": true
+        },
+        "usingComponents": true,
+        "permission": {
+            "scope.userLocation": {
+                "desc": "用于记录您的运动轨迹"
+            }
+        }
+    },
+    "vueVersion": "3"
+}

@@ -48,4 +48,26 @@ class WeChatService(private val config: WeChatConfig) {
 
         return WeChatUserInfo(openId = openId, nickname = nickname)
     }
+
+    /**
+     * Mini-program login: exchange js_code for openid via jscode2session
+     */
+    suspend fun exchangeCodeForMpOpenId(code: String): String {
+        val resp = client.get(
+            "https://api.weixin.qq.com/sns/jscode2session" +
+                    "?appid=${config.mpAppId}" +
+                    "&secret=${config.mpAppSecret}" +
+                    "&js_code=$code" +
+                    "&grant_type=authorization_code"
+        )
+
+        val json = Json.parseToJsonElement(resp.bodyAsText()).jsonObject
+        val errcode = json["errcode"]?.jsonPrimitive?.int ?: 0
+        if (errcode != 0) {
+            val errMsg = json["errmsg"]?.jsonPrimitive?.content ?: "unknown"
+            throw IllegalArgumentException("小程序登录失败: $errMsg")
+        }
+
+        return json["openid"]!!.jsonPrimitive.content
+    }
 }

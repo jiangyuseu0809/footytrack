@@ -128,6 +128,8 @@ class AuthManager: ObservableObject {
         UserDefaults.standard.removeObject(forKey: kMatchesCacheKey)
         UserDefaults.standard.removeObject(forKey: kTeamsCacheKey)
         UserDefaults.standard.removeObject(forKey: kTeamDetailCacheKey)
+        // Clear auth token on Apple Watch
+        WatchSync.shared.clearWatchAuthToken()
     }
 
     func loadProfile() async {
@@ -265,5 +267,7 @@ class AuthManager: ObservableObject {
         withAnimation(.easeInOut(duration: 0.35)) {
             isLoggedIn = true
         }
+        // Push auth token to Apple Watch for direct server uploads
+        WatchSync.shared.sendAuthTokenToWatch(token: token, uid: uid)
     }
 }
