@@ -163,7 +163,8 @@
           <text class="create-btn-text">创建比赛</text>
         </view>
         <view class="share-btn">
-          <text class="share-btn-text">📤 分享给好友</text>
+          <image src="/static/icons/share.svg" class="share-btn-svg" />
+          <text class="share-btn-text">分享给好友</text>
         </view>
       </view>
 
@@ -724,7 +725,13 @@ $textMuted: #666;
   display: flex;
   align-items: center;
   justify-content: center;
+  gap: 12rpx;
   border: $border;
+}
+
+.share-btn-svg {
+  width: 32rpx;
+  height: 32rpx;
 }
 
 .share-btn-text {

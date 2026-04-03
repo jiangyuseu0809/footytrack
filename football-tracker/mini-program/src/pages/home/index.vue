@@ -168,15 +168,46 @@
       <!-- Share Button -->
       <view class="section section--last">
         <view class="share-btn" @tap="handleShare">
-          <text class="share-btn-text">📤 分享{{ timeRange === 'week' ? '本周' : '今日' }}踢球数据</text>
+          <view class="share-btn-icon">
+            <image src="/static/icons/share.svg" class="share-btn-svg" />
+          </view>
+          <text class="share-btn-text">分享{{ timeRange === 'week' ? '本周' : '今日' }}踢球数据</text>
         </view>
       </view>
     </scroll-view>
 
+    <!-- Share Dialog (Bottom Sheet) -->
+    <view v-if="showSharePopup" class="share-overlay" @tap="showSharePopup = false">
+      <view class="share-sheet" @tap.stop>
+        <!-- Sheet Header -->
+        <view class="share-sheet-header">
+          <text class="share-sheet-title">分享运动数据</text>
+          <view class="share-sheet-close" @tap="showSharePopup = false">
+            <text class="share-sheet-close-text">✕</text>
+          </view>
+        </view>
+
+        <!-- Share Card Preview -->
+        <scroll-view scroll-y class="share-card-scroll">
+          <view class="share-card-preview">
+            <image v-if="shareImage" :src="shareImage" class="share-card-image" mode="widthFix" />
+          </view>
+        </scroll-view>
+
+        <!-- Share Actions -->
+        <view class="share-actions">
+          <view class="share-action-btn-primary" @tap="saveShareImage">
+            <text class="share-action-btn-text">{{ shareSuccess ? '✓ 已保存到相册' : '保存到相册' }}</text>
+          </view>
+          <text class="share-action-hint">分享给好友，一起记录运动数据</text>
+        </view>
+      </view>
+    </view>
+
     <!-- Hidden canvas for radar chart rendering -->
     <canvas canvas-id="radarCanvas" id="radarCanvas" class="offscreen-canvas" />
     <canvas canvas-id="heatmapCanvas" id="heatmapCanvas" class="offscreen-canvas offscreen-canvas--heatmap" />
-    <canvas canvas-id="shareCanvas" id="shareCanvas" class="offscreen-canvas offscreen-canvas--share" />
+    <canvas canvas-id="shareCanvas" id="shareCanvas" class="offscreen-canvas" :style="{ width: '375px', height: shareCanvasHeight + 'px' }" />
   </view>
 </template>
 
@@ -192,6 +223,10 @@ const upcomingMatches = ref<Match[]>([])
 const isWatchConnected = ref(false)
 const radarImage = ref('')
 const heatmapImage = ref('')
+const showSharePopup = ref(false)
+const shareImage = ref('')
+const shareSuccess = ref(false)
+const shareCanvasHeight = ref(960)
 
 const weekSessions = computed(() => {
   const now = new Date()
@@ -291,256 +326,565 @@ function goBindWatch() {
 
 function handleShare() {
   uni.showLoading({ title: '生成中...' })
-  drawShareCard(() => {
-    uni.canvasToTempFilePath({
-      canvasId: 'shareCanvas',
-      success: (res) => {
-        uni.hideLoading()
-        uni.previewImage({ urls: [res.tempFilePath], current: res.tempFilePath })
-      },
-      fail: () => {
-        uni.hideLoading()
-        uni.showToast({ title: '生成失败', icon: 'none' })
-      },
-    })
+  // Pre-calculate the same totalH as drawShareCard
+  const canvasH = calcShareCardHeight()
+  shareCanvasHeight.value = canvasH
+  nextTick(() => {
+    setTimeout(() => {
+      drawShareCard(() => {
+        uni.canvasToTempFilePath({
+          canvasId: 'shareCanvas',
+          width: 375,
+          height: canvasH,
+          destWidth: 750,
+          destHeight: canvasH * 2,
+          success: (res) => {
+            uni.hideLoading()
+            shareImage.value = res.tempFilePath
+            showSharePopup.value = true
+          },
+          fail: () => {
+            uni.hideLoading()
+            uni.showToast({ title: '生成失败', icon: 'none' })
+          },
+        })
+      })
+    }, 100)
+  })
+}
+
+function calcShareCardHeight(): number {
+  const pad = 24
+  const contentW = 375 - pad * 2
+  const gap = 20 // uniform gap between all sections
+  let yOffset = 200 // hero
+
+  // Stats: 2 rows
+  const statsTop = yOffset + gap
+  const statCellH = 90
+  const statsH = statCellH * 2 + 18
+  yOffset = statsTop + statsH + gap
+
+  // Heart rate (today)
+  if (timeRange.value === 'today') {
+    yOffset += 180 + gap
+  }
+
+  // Radar
+  const radarCardH = 32 + 100 + 70 + 30 // title + space + radarR + bottom padding
+  yOffset += radarCardH + gap
+
+  // Heatmap (today)
+  if (timeRange.value === 'today') {
+    const hmH = Math.round(contentW * 3 / 4)
+    yOffset += hmH + 40 + gap // hmH + title area + gap
+  }
+
+  // Footer
+  yOffset += 48 + gap
+
+  return yOffset
+}
+
+function saveShareImage() {
+  if (!shareImage.value || shareSuccess.value) return
+  uni.saveImageToPhotosAlbum({
+    filePath: shareImage.value,
+    success: () => {
+      shareSuccess.value = true
+      setTimeout(() => {
+        shareSuccess.value = false
+        showSharePopup.value = false
+      }, 1500)
+    },
+    fail: () => {
+      uni.showToast({ title: '保存失败', icon: 'none' })
+    },
   })
 }
 
 function drawShareCard(callback: () => void) {
   const ctx = uni.createCanvasContext('shareCanvas')
   const W = 375
-  const H = 960
-  const pad = 20
+  const pad = 24
   const contentW = W - pad * 2
   const green = '#07c160'
+  const cardRadius = 12
+  const gap = 20 // uniform gap between all sections
 
-  // Background
-  ctx.setFillStyle('#0a0a0a')
-  ctx.fillRect(0, 0, W, H)
+  // We'll compute total height dynamically
+  let yOffset = 0
 
-  // --- Header ---
-  ctx.setFillStyle(green)
-  ctx.fillRect(0, 0, W, 80)
-  ctx.setFontSize(18)
-  ctx.setTextAlign('center')
-  ctx.setTextBaseline('middle')
-  ctx.setFillStyle('#FFFFFF')
-  const headerText = timeRange.value === 'week' ? '本周踢球数据' : '今日踢球数据'
-  ctx.fillText(`FootyTrack · ${headerText}`, W / 2, 40)
+  // --- Hero Section ---
+  const heroH = 200
+  yOffset = heroH
 
-  // --- Date line ---
-  ctx.setFontSize(12)
-  ctx.setFillStyle('#999999')
-  ctx.setTextAlign('center')
-  const now = new Date()
-  const dateStr = `${now.getFullYear()}年${now.getMonth() + 1}月${now.getDate()}日`
-  ctx.fillText(dateStr, W / 2, 100)
+  // --- Stats Section ---
+  const statsTop = yOffset + gap
+  const statCellW = Math.floor((contentW - 12) / 3)  // 3 cols, 6px gap each
+  const statCellH = 90
+  const statsH = statCellH * 2 + 18  // 2 rows + gap
+  yOffset = statsTop + statsH + gap
 
-  // --- Stats Grid (2x3) ---
-  const stats = currentStats.value
-  const statsData = [
-    { label: '踢球次数', value: `${stats.matches}`, unit: '场' },
-    { label: '热量消耗', value: `${stats.calories}`, unit: 'kcal' },
-    { label: '跑动距离', value: `${stats.distance}`, unit: 'km' },
-    { label: '冲刺次数', value: `${stats.sprints}`, unit: '次' },
-    { label: '运动时间', value: `${stats.duration}`, unit: '分钟' },
-    { label: '最高心率', value: `${stats.maxHeartRate}`, unit: 'bpm' },
-  ]
-
-  const gridTop = 120
-  const cellW = contentW / 3
-  const cellH = 70
-
-  for (let i = 0; i < statsData.length; i++) {
-    const col = i % 3
-    const row = Math.floor(i / 3)
-    const cx = pad + col * cellW + cellW / 2
-    const cy = gridTop + row * cellH
-
-    // Card bg
-    ctx.setFillStyle('#1a1a1a')
-    const cardW = cellW - 8
-    const cardH = cellH - 8
-    roundRect(ctx, cx - cardW / 2, cy - 4, cardW, cardH, 8)
-    ctx.fill()
-
-    // Value
-    ctx.setFontSize(20)
-    ctx.setFillStyle('#FFFFFF')
-    ctx.setTextAlign('center')
-    ctx.fillText(statsData[i].value, cx, cy + 18)
-
-    // Label + unit
-    ctx.setFontSize(10)
-    ctx.setFillStyle('#999999')
-    ctx.fillText(`${statsData[i].label}(${statsData[i].unit})`, cx, cy + 40)
+  // --- Heart Rate chart (today only) ---
+  let heartRateTop = 0
+  const showHeartRate = timeRange.value === 'today'
+  if (showHeartRate) {
+    heartRateTop = yOffset
+    yOffset += 180 + gap // chart area + gap
   }
 
-  // --- Ability Radar ---
-  const radarTop = gridTop + cellH * 2 + 20
+  // --- Radar Section ---
+  const radarSectionTop = yOffset
+  const radarCardH = 32 + 100 + 70 + 30 // title + space + radarR + bottom padding
+  const radarCenterY = radarSectionTop + 32 + 100
+  const radarR = 70
+  yOffset = radarSectionTop + radarCardH + gap
+
+  // --- Heatmap Section (today only) ---
+  let hmSectionTop = 0
+  const showHeatmap = timeRange.value === 'today'
+  if (showHeatmap) {
+    hmSectionTop = yOffset
+    const hmH = Math.round(contentW * 3 / 4)
+    yOffset = hmSectionTop + hmH + 40 + gap // hmH + title area + gap
+  }
+
+  // --- Footer ---
+  const footerTop = yOffset
+  yOffset = footerTop + 48
+
+  const totalH = yOffset + gap
+
+  // Now draw everything
+  // Background
+  ctx.setFillStyle('#000000')
+  ctx.fillRect(0, 0, W, totalH)
+
+  // === Hero Section: background image with dark overlay ===
+  // Draw hero background image first (will be loaded)
+  try {
+    ctx.drawImage('/static/share-hero-bg.png', 0, 0, W, heroH)
+  } catch (e) {
+    // fallback: dark fill
+    ctx.setFillStyle('#111111')
+    ctx.fillRect(0, 0, W, heroH)
+  }
+
+  // Heavy dark gradient overlay to simulate blur/darken effect
+  const heroGrd = ctx.createLinearGradient(0, 0, 0, heroH)
+  heroGrd.addColorStop(0, 'rgba(0,0,0,0.65)')
+  heroGrd.addColorStop(0.4, 'rgba(0,0,0,0.7)')
+  heroGrd.addColorStop(0.7, 'rgba(0,0,0,0.85)')
+  heroGrd.addColorStop(1, 'rgba(0,0,0,1)')
+  ctx.setFillStyle(heroGrd)
+  ctx.fillRect(0, 0, W, heroH)
+
+  // Header: "FootyTrack" + subtitle
+  ctx.setFontSize(24)
+  ctx.setTextAlign('left')
+  ctx.setFillStyle('#FFFFFF')
+  ctx.fillText('FootyTrack', pad, 50)
+
+  const title = timeRange.value === 'week' ? '本周运动数据' : '今日运动数据'
   ctx.setFontSize(13)
+  ctx.setFillStyle(green)
+  ctx.fillText(title, pad, 72)
+
+  // Green icon box (top right)
+  const iconBoxSize = 48
+  const iconBoxX = W - pad - iconBoxSize
+  const iconBoxY = 30
+  ctx.setFillStyle(green)
+  roundRect(ctx, iconBoxX, iconBoxY, iconBoxSize, iconBoxSize, 14)
+  ctx.fill()
+  // Share icon (three dots connected by lines)
+  const icx = iconBoxX + iconBoxSize / 2
+  const icy = iconBoxY + iconBoxSize / 2
+  ctx.setStrokeStyle('#FFFFFF')
+  ctx.setFillStyle('#FFFFFF')
+  ctx.setLineWidth(1.5)
+  // Three dots
+  const dots = [
+    { x: icx + 8, y: icy - 10 },  // top-right
+    { x: icx - 10, y: icy },       // middle-left
+    { x: icx + 8, y: icy + 10 },   // bottom-right
+  ]
+  for (const d of dots) {
+    ctx.beginPath()
+    ctx.arc(d.x, d.y, 3, 0, Math.PI * 2)
+    ctx.fill()
+  }
+  // Lines connecting dots
+  ctx.beginPath()
+  ctx.moveTo(dots[1].x, dots[1].y)
+  ctx.lineTo(dots[0].x, dots[0].y)
+  ctx.stroke()
+  ctx.beginPath()
+  ctx.moveTo(dots[1].x, dots[1].y)
+  ctx.lineTo(dots[2].x, dots[2].y)
+  ctx.stroke()
+
+  // Date badge
+  const now = new Date()
+  const dateStr = `${now.getFullYear()}年${now.getMonth() + 1}月${now.getDate()}日`
+  ctx.setFontSize(11)
+  const dateW = ctx.measureText(dateStr).width + 24
+  const dateBadgeX = pad
+  const dateBadgeY = heroH - 40
+  ctx.setFillStyle('rgba(255,255,255,0.1)')
+  roundRect(ctx, dateBadgeX, dateBadgeY, dateW, 28, 14)
+  ctx.fill()
+  ctx.setStrokeStyle('rgba(255,255,255,0.2)')
+  roundRect(ctx, dateBadgeX, dateBadgeY, dateW, 28, 14)
+  ctx.stroke()
+  ctx.setFontSize(11)
+  ctx.setTextAlign('center')
+  ctx.setFillStyle('#FFFFFF')
+  ctx.fillText(dateStr, dateBadgeX + dateW / 2, dateBadgeY + 18)
+
+  // === Stats Grid (3x2) ===
+  const stats = currentStats.value
+  const borderColors = [
+    { border: 'rgba(7,193,96,0.2)', accent: green },         // matches - green
+    { border: 'rgba(249,115,22,0.2)', accent: '#f97316' },   // calories - orange
+    { border: 'rgba(59,130,246,0.2)', accent: '#3b82f6' },   // distance - blue
+    { border: 'rgba(234,179,8,0.2)', accent: '#eab308' },    // sprints - yellow
+    { border: 'rgba(168,85,247,0.2)', accent: '#a855f7' },   // duration - purple
+    { border: 'rgba(239,68,68,0.2)', accent: '#ef4444' },    // heart rate - red
+  ]
+  const dateText = timeRange.value === 'week' ? '本周' : '今日'
+  const statsData = [
+    { label: `${dateText}踢球`, value: `${stats.matches}`, unit: '场' },
+    { label: '热量', value: `${stats.calories}`, unit: 'kcal' },
+    { label: '距离', value: `${stats.distance}`, unit: 'km' },
+    { label: '冲刺', value: `${stats.sprints}`, unit: '次' },
+    { label: '时间', value: `${stats.duration}`, unit: '分钟' },
+    { label: '心率', value: `${stats.maxHeartRate}`, unit: 'bpm' },
+  ]
+
+  for (let i = 0; i < 6; i++) {
+    const col = i % 3
+    const row = Math.floor(i / 3)
+    const gap = 6
+    const cx = pad + col * (statCellW + gap)
+    const cy = statsTop + row * (statCellH + gap + 6)
+
+    // Card bg with gradient
+    const grd = ctx.createLinearGradient(cx, cy, cx + statCellW, cy + statCellH)
+    grd.addColorStop(0, '#1a1a1a')
+    grd.addColorStop(1, '#2a2a2a')
+    ctx.setFillStyle(grd)
+    roundRect(ctx, cx, cy, statCellW, statCellH, 10)
+    ctx.fill()
+
+    // Accent border
+    ctx.setStrokeStyle(borderColors[i].border)
+    ctx.setLineWidth(1)
+    roundRect(ctx, cx, cy, statCellW, statCellH, 10)
+    ctx.stroke()
+
+    // Label
+    ctx.setFontSize(10)
+    ctx.setTextAlign('left')
+    ctx.setFillStyle('#999999')
+    ctx.fillText(statsData[i].label, cx + 12, cy + 22)
+
+    // Value
+    ctx.setFontSize(26)
+    ctx.setFillStyle('#FFFFFF')
+    ctx.fillText(statsData[i].value, cx + 12, cy + 56)
+
+    // Unit
+    ctx.setFontSize(10)
+    ctx.setFillStyle(borderColors[i].accent)
+    ctx.fillText(statsData[i].unit, cx + 12, cy + 76)
+  }
+
+  // === Heart Rate Curve (today only) ===
+  if (showHeartRate) {
+    const hrX = pad
+    const hrY = heartRateTop
+    const hrW = contentW
+    const hrH = 170
+
+    // Card bg
+    const hrGrd = ctx.createLinearGradient(hrX, hrY, hrX + hrW, hrY + hrH)
+    hrGrd.addColorStop(0, '#1a1a1a')
+    hrGrd.addColorStop(1, '#2a2a2a')
+    ctx.setFillStyle(hrGrd)
+    roundRect(ctx, hrX, hrY, hrW, hrH, 14)
+    ctx.fill()
+    ctx.setStrokeStyle('rgba(7,193,96,0.2)')
+    ctx.setLineWidth(1)
+    roundRect(ctx, hrX, hrY, hrW, hrH, 14)
+    ctx.stroke()
+
+    // Title
+    ctx.setFontSize(12)
+    ctx.setTextAlign('left')
+    ctx.setFillStyle('#FFFFFF')
+    ctx.fillText('今日心率曲线', hrX + 16, hrY + 28)
+
+    // Draw a simple heart rate curve from session data
+    const chartX = hrX + 16
+    const chartY = hrY + 44
+    const chartW = hrW - 32
+    const chartH = hrH - 60
+    const hrMin = Math.max(stats.avgHeartRate - 30, 60)
+    const hrMax = stats.maxHeartRate + 10
+
+    // Generate sample data points
+    const todayList = todaySessions.value
+    if (todayList.length > 0 && hrMax > hrMin) {
+      // Draw grid lines
+      ctx.setStrokeStyle('rgba(255,255,255,0.1)')
+      ctx.setLineWidth(0.5)
+      for (let g = 0; g <= 3; g++) {
+        const gy = chartY + (chartH / 3) * g
+        ctx.beginPath()
+        ctx.moveTo(chartX, gy)
+        ctx.lineTo(chartX + chartW, gy)
+        ctx.stroke()
+      }
+
+      // Simple curve using avg and max HR
+      const hrPoints = [
+        stats.avgHeartRate,
+        stats.avgHeartRate + 10,
+        stats.maxHeartRate - 5,
+        stats.maxHeartRate,
+        stats.maxHeartRate - 15,
+        stats.avgHeartRate + 5,
+        stats.avgHeartRate
+      ]
+
+      ctx.beginPath()
+      for (let p = 0; p < hrPoints.length; p++) {
+        const px = chartX + (chartW / (hrPoints.length - 1)) * p
+        const py = chartY + chartH - ((hrPoints[p] - hrMin) / (hrMax - hrMin)) * chartH
+        if (p === 0) ctx.moveTo(px, py)
+        else ctx.lineTo(px, py)
+      }
+      ctx.setStrokeStyle(green)
+      ctx.setLineWidth(2.5)
+      ctx.stroke()
+
+      // Fill under curve
+      ctx.lineTo(chartX + chartW, chartY + chartH)
+      ctx.lineTo(chartX, chartY + chartH)
+      ctx.closePath()
+      ctx.setFillStyle('rgba(7,193,96,0.1)')
+      ctx.fill()
+    }
+  }
+
+  // === Radar Chart ===
+  ctx.setFontSize(12)
   ctx.setFillStyle('#FFFFFF')
   ctx.setTextAlign('left')
-  ctx.fillText('能力分析', pad, radarTop)
+  const radarTitle = timeRange.value === 'week' ? '本周能力分析' : '今日能力分析'
+
+  // Radar card bg
+  const radarCardX = pad
+  const radarCardY = radarSectionTop
+  const radarCardW = contentW
+  const radarCardGrd = ctx.createLinearGradient(radarCardX, radarCardY, radarCardX + radarCardW, radarCardY + radarCardH)
+  radarCardGrd.addColorStop(0, '#1a1a1a')
+  radarCardGrd.addColorStop(1, '#2a2a2a')
+  ctx.setFillStyle(radarCardGrd)
+  roundRect(ctx, radarCardX, radarCardY, radarCardW, radarCardH, 14)
+  ctx.fill()
+  ctx.setStrokeStyle('rgba(7,193,96,0.2)')
+  ctx.setLineWidth(1)
+  roundRect(ctx, radarCardX, radarCardY, radarCardW, radarCardH, 14)
+  ctx.stroke()
+
+  ctx.setFontSize(12)
+  ctx.setFillStyle('#FFFFFF')
+  ctx.setTextAlign('left')
+  ctx.fillText(radarTitle, radarCardX + 16, radarCardY + 26)
 
   const radarCx = W / 2
-  const radarCy = radarTop + 110
-  const radarR = 70
   const data = abilityData.value
   const count = data.length
   const angleStep = (Math.PI * 2) / count
   const startAngle = -Math.PI / 2
 
-  // Grid
+  // Grid rings
   for (let lv = 1; lv <= 4; lv++) {
     const r = (radarR / 4) * lv
     ctx.beginPath()
     for (let i = 0; i <= count; i++) {
       const angle = startAngle + angleStep * (i % count)
       const x = radarCx + r * Math.cos(angle)
-      const y = radarCy + r * Math.sin(angle)
+      const y = radarCenterY + r * Math.sin(angle)
       if (i === 0) ctx.moveTo(x, y)
       else ctx.lineTo(x, y)
     }
     ctx.closePath()
-    ctx.setStrokeStyle('rgba(255,255,255,0.1)')
+    ctx.setStrokeStyle('rgba(255,255,255,0.2)')
     ctx.setLineWidth(0.5)
     ctx.stroke()
   }
 
-  // Data area
+  // Data polygon
   ctx.beginPath()
   for (let i = 0; i <= count; i++) {
     const idx = i % count
     const angle = startAngle + angleStep * idx
     const r = (data[idx].value / 100) * radarR
     const x = radarCx + r * Math.cos(angle)
-    const y = radarCy + r * Math.sin(angle)
+    const y = radarCenterY + r * Math.sin(angle)
     if (i === 0) ctx.moveTo(x, y)
     else ctx.lineTo(x, y)
   }
   ctx.closePath()
-  ctx.setFillStyle('rgba(7,193,96,0.35)')
+  ctx.setFillStyle('rgba(7,193,96,0.6)')
   ctx.fill()
   ctx.setStrokeStyle(green)
-  ctx.setLineWidth(1.5)
+  ctx.setLineWidth(2)
   ctx.stroke()
 
   // Labels
-  ctx.setFontSize(10)
+  ctx.setFontSize(11)
   ctx.setTextAlign('center')
-  ctx.setFillStyle('#CCCCCC')
+  ctx.setFillStyle('rgba(255,255,255,0.9)')
   for (let i = 0; i < count; i++) {
     const angle = startAngle + angleStep * i
-    const lx = radarCx + (radarR + 16) * Math.cos(angle)
-    const ly = radarCy + (radarR + 16) * Math.sin(angle)
-    ctx.fillText(data[i].ability, lx, ly + 3)
+    const lx = radarCx + (radarR + 18) * Math.cos(angle)
+    const ly = radarCenterY + (radarR + 18) * Math.sin(angle)
+    ctx.fillText(data[i].ability, lx, ly + 4)
   }
 
-  // --- Heatmap ---
-  const hmTop = radarCy + radarR + 40
-  ctx.setFontSize(13)
-  ctx.setFillStyle('#FFFFFF')
-  ctx.setTextAlign('left')
-  ctx.fillText('跑动热力图', pad, hmTop)
+  // === Heatmap (today only) ===
+  if (showHeatmap) {
+    const hmX = pad
+    const hmY = hmSectionTop
+    const hmW = contentW
+    const hmH = Math.round(contentW * 3 / 4)
+    const hmCardH = hmH + 40
 
-  const hmBoxTop = hmTop + 12
-  const hmW = contentW
-  const hmH = Math.round(contentW * 3 / 4)
+    // Card bg
+    const hmGrd = ctx.createLinearGradient(hmX, hmY, hmX + hmW, hmY + hmCardH)
+    hmGrd.addColorStop(0, '#1a1a1a')
+    hmGrd.addColorStop(1, '#2a2a2a')
+    ctx.setFillStyle(hmGrd)
+    roundRect(ctx, hmX, hmY, hmW, hmCardH, 14)
+    ctx.fill()
+    ctx.setStrokeStyle('rgba(7,193,96,0.2)')
+    ctx.setLineWidth(1)
+    roundRect(ctx, hmX, hmY, hmW, hmCardH, 14)
+    ctx.stroke()
 
-  // Field background
-  ctx.setFillStyle('#0a2a0f')
-  roundRect(ctx, pad, hmBoxTop, hmW, hmH, 8)
-  ctx.fill()
+    // Title
+    ctx.setFontSize(12)
+    ctx.setFillStyle('#FFFFFF')
+    ctx.setTextAlign('left')
+    ctx.fillText('今日跑动热区', hmX + 16, hmY + 26)
 
-  // Field lines
-  ctx.setStrokeStyle('rgba(255,255,255,0.15)')
-  ctx.setLineWidth(1)
-  ctx.strokeRect(pad + 10, hmBoxTop + 10, hmW - 20, hmH - 20)
-  // Center line
-  ctx.beginPath()
-  ctx.moveTo(pad + 10, hmBoxTop + hmH / 2)
-  ctx.lineTo(pad + hmW - 10, hmBoxTop + hmH / 2)
-  ctx.stroke()
-  // Center circle
-  ctx.beginPath()
-  ctx.arc(pad + hmW / 2, hmBoxTop + hmH / 2, 25, 0, Math.PI * 2)
-  ctx.stroke()
+    // Field area
+    const fieldX = hmX + 12
+    const fieldY = hmY + 36
+    const fieldW = hmW - 24
+    const fieldH = hmH - 16
 
-  // Draw heat points
-  const points = parseTrackPoints(todaySessions.value)
-  if (points.length > 0) {
-    let minLat = Infinity, maxLat = -Infinity, minLng = Infinity, maxLng = -Infinity
-    for (const p of points) {
-      if (p.latitude < minLat) minLat = p.latitude
-      if (p.latitude > maxLat) maxLat = p.latitude
-      if (p.longitude < minLng) minLng = p.longitude
-      if (p.longitude > maxLng) maxLng = p.longitude
-    }
-    const latPad2 = Math.max((maxLat - minLat) * 0.1, 0.0002)
-    const lngPad2 = Math.max((maxLng - minLng) * 0.1, 0.0002)
-    minLat -= latPad2; maxLat += latPad2
-    minLng -= lngPad2; maxLng += lngPad2
-    const latRange = maxLat - minLat || 0.001
-    const lngRange = maxLng - minLng || 0.001
-    const maxSpd = Math.max(...points.map(p => p.speed), 1)
+    // Field background
+    ctx.setFillStyle('#0a2a0f')
+    roundRect(ctx, fieldX, fieldY, fieldW, fieldH, 10)
+    ctx.fill()
+    ctx.setStrokeStyle('rgba(7,193,96,0.1)')
+    roundRect(ctx, fieldX, fieldY, fieldW, fieldH, 10)
+    ctx.stroke()
 
-    for (const p of points) {
-      const px = pad + 10 + ((p.longitude - minLng) / lngRange) * (hmW - 20)
-      const py = hmBoxTop + 10 + (1 - (p.latitude - minLat) / latRange) * (hmH - 20)
-      const intensity = Math.min(p.speed / maxSpd, 1)
-      const radius = 4 + intensity * 5
-      let cr: number, cg: number, cb: number
-      if (intensity < 0.5) {
-        const t = intensity * 2
-        cr = Math.round(22 + t * 212); cg = Math.round(163 + t * 16); cb = Math.round(74 - t * 74)
-      } else {
-        const t = (intensity - 0.5) * 2
-        cr = Math.round(234 + t * 5); cg = Math.round(179 - t * 111); cb = Math.round(t * 68)
+    // Field lines
+    ctx.setStrokeStyle('rgba(7,193,96,0.3)')
+    ctx.setLineWidth(1)
+    // Outer border
+    ctx.strokeRect(fieldX + 8, fieldY + 8, fieldW - 16, fieldH - 16)
+    // Center line
+    ctx.beginPath()
+    ctx.moveTo(fieldX + 8, fieldY + fieldH / 2)
+    ctx.lineTo(fieldX + fieldW - 8, fieldY + fieldH / 2)
+    ctx.stroke()
+    // Center circle
+    ctx.beginPath()
+    ctx.arc(fieldX + fieldW / 2, fieldY + fieldH / 2, 20, 0, Math.PI * 2)
+    ctx.stroke()
+
+    // Draw heat points
+    const points = parseTrackPoints(todaySessions.value)
+    if (points.length > 0) {
+      let minLat = Infinity, maxLat = -Infinity, minLng = Infinity, maxLng = -Infinity
+      for (const p of points) {
+        if (p.latitude < minLat) minLat = p.latitude
+        if (p.latitude > maxLat) maxLat = p.latitude
+        if (p.longitude < minLng) minLng = p.longitude
+        if (p.longitude > maxLng) maxLng = p.longitude
       }
+      const latPad2 = Math.max((maxLat - minLat) * 0.1, 0.0002)
+      const lngPad2 = Math.max((maxLng - minLng) * 0.1, 0.0002)
+      minLat -= latPad2; maxLat += latPad2
+      minLng -= lngPad2; maxLng += lngPad2
+      const latRange = maxLat - minLat || 0.001
+      const lngRange = maxLng - minLng || 0.001
+      const maxSpd = Math.max(...points.map(p => p.speed), 1)
+
+      for (const p of points) {
+        const px = fieldX + 8 + ((p.longitude - minLng) / lngRange) * (fieldW - 16)
+        const py = fieldY + 8 + (1 - (p.latitude - minLat) / latRange) * (fieldH - 16)
+        const intensity = Math.min(p.speed / maxSpd, 1)
+        const radius = 6 + intensity * 8
+        let cr: number, cg: number, cb: number
+        if (intensity < 0.5) {
+          const t = intensity * 2
+          cr = Math.round(22 + t * 212); cg = Math.round(163 + t * 16); cb = Math.round(74 - t * 74)
+        } else {
+          const t = (intensity - 0.5) * 2
+          cr = Math.round(234 + t * 5); cg = Math.round(179 - t * 111); cb = Math.round(t * 68)
+        }
+        ctx.beginPath()
+        ctx.arc(px, py, radius, 0, Math.PI * 2)
+        ctx.setFillStyle(`rgba(${cr},${cg},${cb},${0.5 + intensity * 0.3})`)
+        ctx.fill()
+      }
+    } else {
+      // Placeholder heat blobs
       ctx.beginPath()
-      ctx.arc(px, py, radius, 0, Math.PI * 2)
-      ctx.setFillStyle(`rgba(${cr},${cg},${cb},${0.4 + intensity * 0.3})`)
+      ctx.arc(fieldX + fieldW * 0.3, fieldY + fieldH * 0.35, 24, 0, Math.PI * 2)
+      ctx.setFillStyle('rgba(239,68,68,0.6)')
+      ctx.fill()
+      ctx.beginPath()
+      ctx.arc(fieldX + fieldW * 0.5, fieldY + fieldH * 0.5, 28, 0, Math.PI * 2)
+      ctx.setFillStyle('rgba(249,115,22,0.7)')
+      ctx.fill()
+      ctx.beginPath()
+      ctx.arc(fieldX + fieldW * 0.7, fieldY + fieldH * 0.65, 24, 0, Math.PI * 2)
+      ctx.setFillStyle('rgba(234,179,8,0.6)')
       ctx.fill()
     }
   }
 
-  // --- Footer branding ---
-  const footerTop = hmBoxTop + hmH + 30
-  // Divider
-  ctx.setStrokeStyle('rgba(255,255,255,0.1)')
-  ctx.setLineWidth(0.5)
-  ctx.beginPath()
-  ctx.moveTo(pad, footerTop)
-  ctx.lineTo(W - pad, footerTop)
-  ctx.stroke()
-
-  // App name
-  ctx.setFontSize(16)
-  ctx.setFillStyle(green)
-  ctx.setTextAlign('center')
-  ctx.fillText('FootyTrack', W / 2, footerTop + 28)
-
-  // Slogan
-  ctx.setFontSize(11)
-  ctx.setFillStyle('#999999')
-  ctx.fillText('记录你的每一场球', W / 2, footerTop + 50)
-
-  // QR hint
-  ctx.setFillStyle('#1a1a1a')
-  roundRect(ctx, W / 2 - 35, footerTop + 62, 70, 70, 6)
+  // === Footer ===
+  // Footer card bg
+  const footerX = pad
+  const footerW = contentW
+  const footerH = 48
+  const footerGrd = ctx.createLinearGradient(footerX, footerTop, footerX + footerW, footerTop + footerH)
+  footerGrd.addColorStop(0, 'rgba(7,193,96,0.1)')
+  footerGrd.addColorStop(1, 'rgba(5,168,80,0.1)')
+  ctx.setFillStyle(footerGrd)
+  roundRect(ctx, footerX, footerTop, footerW, footerH, 10)
   ctx.fill()
-  ctx.setStrokeStyle('rgba(255,255,255,0.15)')
-  roundRect(ctx, W / 2 - 35, footerTop + 62, 70, 70, 6)
+  ctx.setStrokeStyle('rgba(7,193,96,0.2)')
+  ctx.setLineWidth(1)
+  roundRect(ctx, footerX, footerTop, footerW, footerH, 10)
   ctx.stroke()
 
-  ctx.setFontSize(9)
-  ctx.setFillStyle('#666666')
-  ctx.fillText('小程序码', W / 2, footerTop + 100)
-
-  ctx.setFontSize(10)
-  ctx.setFillStyle('#666666')
-  ctx.fillText('微信扫码体验', W / 2, footerTop + 148)
+  ctx.setFontSize(11)
+  ctx.setTextAlign('center')
+  ctx.setFillStyle('#999999')
+  ctx.fillText('来自 FootyTrack · 记录你的每一场精彩', W / 2, footerTop + 30)
 
   ctx.draw(false, () => {
     setTimeout(() => callback(), 300)
@@ -1208,11 +1552,6 @@ $textMuted: #666;
   height: 263px;
 }
 
-.offscreen-canvas--share {
-  width: 375px;
-  height: 960px;
-}
-
 .heatmap-legend {
   display: flex;
   align-items: center;
@@ -1239,17 +1578,128 @@ $textMuted: #666;
 // ============================================================
 .share-btn {
   background: linear-gradient(135deg, $green, $greenDark);
-  border-radius: 32rpx;
-  padding: 28rpx;
+  border-radius: 100rpx;
+  padding: 24rpx 40rpx;
   display: flex;
   align-items: center;
   justify-content: center;
+  gap: 14rpx;
   box-shadow: 0 8rpx 32rpx rgba(7, 193, 96, 0.3);
+}
+
+.share-btn-icon {
+  width: 36rpx;
+  height: 36rpx;
+  flex-shrink: 0;
+}
+
+.share-btn-svg {
+  width: 36rpx;
+  height: 36rpx;
 }
 
 .share-btn-text {
   font-size: 30rpx;
   font-weight: 500;
   color: $textPrimary;
+}
+
+// ============================================================
+// Share Dialog (Bottom Sheet)
+// ============================================================
+.share-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 100;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(8rpx);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.share-sheet {
+  width: 100%;
+  background: $pageBg;
+  border-radius: 48rpx 48rpx 0 0;
+  overflow: hidden;
+  box-shadow: 0 -8rpx 48rpx rgba(0, 0, 0, 0.5);
+}
+
+.share-sheet-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 32rpx;
+  border-bottom: $border;
+}
+
+.share-sheet-title {
+  font-size: 34rpx;
+  font-weight: 600;
+  color: $textPrimary;
+}
+
+.share-sheet-close {
+  width: 64rpx;
+  height: 64rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+}
+
+.share-sheet-close-text {
+  font-size: 32rpx;
+  color: #999;
+}
+
+.share-card-scroll {
+  // header ~100rpx, actions ~160rpx, safe area ~68rpx => ~328rpx overhead
+  height: calc(90vh - 328rpx);
+}
+
+.share-card-preview {
+  padding: 24rpx 32rpx;
+}
+
+.share-card-image {
+  width: 100%;
+  border-radius: 24rpx;
+  box-shadow: 0 8rpx 32rpx rgba(0, 0, 0, 0.5);
+}
+
+.share-actions {
+  padding: 24rpx 32rpx;
+  padding-bottom: calc(24rpx + env(safe-area-inset-bottom));
+  border-top: $border;
+}
+
+.share-action-btn-primary {
+  width: 100%;
+  padding: 24rpx 0;
+  background: $green;
+  border-radius: 100rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s;
+}
+
+.share-action-btn-text {
+  font-size: 30rpx;
+  font-weight: 500;
+  color: $textPrimary;
+}
+
+.share-action-hint {
+  display: block;
+  text-align: center;
+  font-size: 22rpx;
+  color: $textMuted;
+  margin-top: 16rpx;
 }
 </style>

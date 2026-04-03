@@ -83,6 +83,7 @@
         </view>
         <view v-else class="action-row">
           <button class="btn-share" open-type="share">
+            <image src="/static/icons/share.svg" class="btn-share-svg" />
             <text class="btn-share-text">分享比赛</text>
           </button>
           <view class="btn-cancel" @tap="handleCancel">
@@ -509,6 +510,7 @@ $textMuted: #666;
   display: flex;
   align-items: center;
   justify-content: center;
+  gap: 12rpx;
   box-shadow: 0 8rpx 24rpx rgba(7, 193, 96, 0.3);
   padding: 0;
   margin: 0;
@@ -518,6 +520,11 @@ $textMuted: #666;
   &::after {
     border: none;
   }
+}
+
+.btn-share-svg {
+  width: 32rpx;
+  height: 32rpx;
 }
 
 .btn-share-text {
