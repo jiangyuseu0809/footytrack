@@ -1,77 +1,89 @@
 <template>
   <view class="page">
-    <!-- Nav Bar -->
-    <view class="nav-bar">
-      <text class="back" @tap="goBack">‹</text>
-      <text class="nav-title">{{ detail?.team.name || '球队详情' }}</text>
+    <!-- Header -->
+    <view class="header">
+      <view class="header-nav">
+        <view class="back-row" @tap="goBack">
+          <text class="back-arrow">‹</text>
+          <text class="back-text">返回</text>
+        </view>
+        <text class="nav-title">{{ detail?.team.name || '球队详情' }}</text>
+        <view class="nav-right" />
+      </view>
     </view>
 
-    <view v-if="detail" class="content">
+    <scroll-view v-if="detail" scroll-y class="scroll-area">
       <!-- Hero Card -->
-      <view class="hero-card">
-        <text class="hero-team-name">{{ detail.team.name }}</text>
-        <view class="hero-stats-row">
-          <view class="hero-stat">
-            <text class="hero-stat-value">{{ detail.members.length }}</text>
-            <text class="hero-stat-label">队员</text>
+      <view class="section">
+        <view class="hero-card">
+          <text class="hero-team-name">{{ detail.team.name }}</text>
+          <view class="hero-stats-row">
+            <view class="hero-stat">
+              <text class="hero-stat-value">{{ detail.members.length }}</text>
+              <text class="hero-stat-label">队员</text>
+            </view>
+            <view class="hero-stat-divider" />
+            <view class="hero-stat">
+              <text class="hero-stat-value">{{ avgDistance }}</text>
+              <text class="hero-stat-label">平均距离(km)</text>
+            </view>
+            <view class="hero-stat-divider" />
+            <view class="hero-stat">
+              <text class="hero-stat-value">{{ totalSessions }}</text>
+              <text class="hero-stat-label">总场次</text>
+            </view>
           </view>
-          <view class="hero-stat-divider" />
-          <view class="hero-stat">
-            <text class="hero-stat-value">{{ avgDistance }}</text>
-            <text class="hero-stat-label">平均距离(km)</text>
-          </view>
-          <view class="hero-stat-divider" />
-          <view class="hero-stat">
-            <text class="hero-stat-value">{{ totalSessions }}</text>
-            <text class="hero-stat-label">总场次</text>
-          </view>
-        </view>
-        <view class="hero-invite-row" @tap="copyInviteCode">
-          <text class="hero-invite-label">邀请码</text>
-          <view class="hero-invite-code-box">
-            <text class="hero-invite-code">{{ detail.team.inviteCode }}</text>
-            <text class="hero-invite-copy">复制</text>
+          <view class="hero-invite-row" @tap="copyInviteCode">
+            <text class="hero-invite-label">邀请码</text>
+            <view class="hero-invite-code-box">
+              <text class="hero-invite-code">{{ detail.team.inviteCode }}</text>
+              <text class="hero-invite-copy">复制</text>
+            </view>
           </view>
         </view>
       </view>
 
       <!-- Squad Section -->
-      <view class="section-header">
-        <view class="section-icon-box">
-          <text class="section-icon-text">👥</text>
-        </view>
-        <text class="section-title">球队阵容</text>
-      </view>
-
-      <view class="member-list">
-        <view v-for="m in detail.members" :key="m.userUid" class="member-card">
-          <view class="member-avatar">
-            <text class="member-avatar-text">{{ m.nickname[0] }}</text>
+      <view class="section">
+        <view class="section-header-row">
+          <view class="section-icon-box">
+            <text class="section-icon-text">👥</text>
           </view>
-          <view class="member-info">
-            <view class="member-name-row">
-              <text class="member-name">{{ m.nickname }}</text>
-              <view v-if="m.role === 'creator'" class="role-badge">
-                <text class="role-badge-text">队长</text>
-              </view>
-              <view v-else class="role-badge role-badge-member">
-                <text class="role-badge-text role-badge-text-member">队员</text>
-              </view>
+          <text class="section-title">球队阵容</text>
+        </view>
+
+        <view class="member-list">
+          <view v-for="m in detail.members" :key="m.userUid" class="member-card">
+            <view class="member-avatar">
+              <text class="member-avatar-text">{{ m.nickname[0] }}</text>
             </view>
-            <view class="member-stats-row">
-              <text class="member-stat">{{ m.sessionCount }} 场训练</text>
-              <text class="member-stat-dot">·</text>
-              <text class="member-stat">{{ (m.totalDistanceMeters / 1000).toFixed(1) }} km</text>
+            <view class="member-info">
+              <view class="member-name-row">
+                <text class="member-name">{{ m.nickname }}</text>
+                <view v-if="m.role === 'creator'" class="role-badge role-badge-creator">
+                  <text class="role-badge-text role-badge-text-creator">队长</text>
+                </view>
+                <view v-else class="role-badge role-badge-member">
+                  <text class="role-badge-text role-badge-text-member">队员</text>
+                </view>
+              </view>
+              <view class="member-stats-row">
+                <text class="member-stat">{{ m.sessionCount }} 场训练</text>
+                <text class="member-stat-dot">·</text>
+                <text class="member-stat">{{ (m.totalDistanceMeters / 1000).toFixed(1) }} km</text>
+              </view>
             </view>
           </view>
         </view>
       </view>
 
       <!-- Leave Button -->
-      <view class="leave-btn" @tap="handleLeave">
-        <text class="leave-btn-text">离开球队</text>
+      <view class="section section--last">
+        <view class="leave-btn" @tap="handleLeave">
+          <text class="leave-btn-text">离开球队</text>
+        </view>
       </view>
-    </view>
+    </scroll-view>
   </view>
 </template>
 
@@ -132,47 +144,122 @@ onLoad(async (options) => {
 </script>
 
 <style lang="scss" scoped>
+$pageBg: #0a0a0a;
+$cardBg: #1a1a1a;
+$border: 1rpx solid #2a2a2a;
+$green: #07c160;
+$greenDark: #05a850;
+$textPrimary: #FFFFFF;
+$textSecondary: #999;
+$textMuted: #666;
+
 .page {
   min-height: 100vh;
-  background: #0D1117;
+  background: $pageBg;
 }
 
-.nav-bar {
-  padding: 100rpx 32rpx 28rpx;
+.scroll-area {
+  height: calc(100vh - 240rpx);
+}
+
+// ============================================================
+// Header
+// ============================================================
+.header {
+  background: linear-gradient(135deg, $green, $greenDark);
+  padding: 100rpx 32rpx 36rpx;
+  box-shadow: 0 8rpx 32rpx rgba(7, 193, 96, 0.2);
+}
+
+.header-nav {
   display: flex;
   align-items: center;
-
-  .back {
-    font-size: 52rpx;
-    color: #00E676;
-    margin-right: 12rpx;
-    font-weight: 300;
-    line-height: 1;
-  }
-
-  .nav-title {
-    font-size: 36rpx;
-    font-weight: 600;
-    color: #FFFFFF;
-  }
+  justify-content: space-between;
 }
 
-.content {
-  padding: 0 32rpx 60rpx;
+.back-row {
+  display: flex;
+  align-items: center;
+  min-width: 120rpx;
 }
 
-/* ---- Hero Card ---- */
+.back-arrow {
+  font-size: 48rpx;
+  color: $textPrimary;
+  margin-right: 4rpx;
+  font-weight: 300;
+  line-height: 1;
+}
+
+.back-text {
+  font-size: 28rpx;
+  color: $textPrimary;
+}
+
+.nav-title {
+  font-size: 36rpx;
+  font-weight: 700;
+  color: $textPrimary;
+  text-align: center;
+  flex: 1;
+}
+
+.nav-right {
+  min-width: 120rpx;
+}
+
+// ============================================================
+// Sections
+// ============================================================
+.section {
+  padding: 24rpx 32rpx 0;
+}
+
+.section--last {
+  padding-bottom: 120rpx;
+}
+
+.section-header-row {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  margin-bottom: 20rpx;
+}
+
+.section-icon-box {
+  width: 52rpx;
+  height: 52rpx;
+  border-radius: 16rpx;
+  background: rgba(7, 193, 96, 0.16);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.section-icon-text {
+  font-size: 24rpx;
+}
+
+.section-title {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: $textPrimary;
+}
+
+// ============================================================
+// Hero Card
+// ============================================================
 .hero-card {
-  background: linear-gradient(135deg, #3B82F6, #4F46E5);
-  border-radius: 36rpx;
+  background: linear-gradient(135deg, $green, $greenDark);
+  border-radius: 32rpx;
   padding: 32rpx;
-  margin-bottom: 32rpx;
+  box-shadow: 0 8rpx 32rpx rgba(7, 193, 96, 0.2);
 }
 
 .hero-team-name {
   font-size: 40rpx;
   font-weight: 700;
-  color: #FFFFFF;
+  color: $textPrimary;
   display: block;
   margin-bottom: 24rpx;
 }
@@ -180,7 +267,7 @@ onLoad(async (options) => {
 .hero-stats-row {
   display: flex;
   align-items: center;
-  background: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.15);
   border-radius: 24rpx;
   padding: 20rpx 0;
   margin-bottom: 24rpx;
@@ -196,12 +283,12 @@ onLoad(async (options) => {
 .hero-stat-value {
   font-size: 36rpx;
   font-weight: 700;
-  color: #FFFFFF;
+  color: $textPrimary;
 }
 
 .hero-stat-label {
   font-size: 20rpx;
-  color: rgba(255, 255, 255, 0.65);
+  color: rgba(255, 255, 255, 0.75);
   margin-top: 4rpx;
 }
 
@@ -219,7 +306,7 @@ onLoad(async (options) => {
 
 .hero-invite-label {
   font-size: 24rpx;
-  color: rgba(255, 255, 255, 0.65);
+  color: rgba(255, 255, 255, 0.75);
 }
 
 .hero-invite-code-box {
@@ -234,7 +321,7 @@ onLoad(async (options) => {
 .hero-invite-code {
   font-size: 28rpx;
   font-weight: 600;
-  color: #FFFFFF;
+  color: $textPrimary;
   font-family: monospace;
   letter-spacing: 2rpx;
 }
@@ -244,35 +331,9 @@ onLoad(async (options) => {
   color: rgba(255, 255, 255, 0.7);
 }
 
-/* ---- Section Header ---- */
-.section-header {
-  display: flex;
-  align-items: center;
-  gap: 16rpx;
-  margin-bottom: 20rpx;
-}
-
-.section-icon-box {
-  width: 52rpx;
-  height: 52rpx;
-  border-radius: 16rpx;
-  background: rgba(0, 230, 118, 0.16);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.section-icon-text {
-  font-size: 24rpx;
-}
-
-.section-title {
-  font-size: 30rpx;
-  font-weight: 600;
-  color: #FFFFFF;
-}
-
-/* ---- Member List ---- */
+// ============================================================
+// Member List
+// ============================================================
 .member-list {
   display: flex;
   flex-direction: column;
@@ -280,20 +341,21 @@ onLoad(async (options) => {
 }
 
 .member-card {
-  background: #1C2333;
+  background: $cardBg;
   border-radius: 32rpx;
   padding: 24rpx;
   display: flex;
   align-items: center;
   gap: 20rpx;
-  border: 1rpx solid rgba(255, 255, 255, 0.08);
+  border: $border;
+  box-shadow: 0 4rpx 24rpx rgba(0, 0, 0, 0.3);
 }
 
 .member-avatar {
   width: 88rpx;
   height: 88rpx;
   border-radius: 50%;
-  background: #242D3D;
+  background: #252525;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -302,7 +364,7 @@ onLoad(async (options) => {
 
 .member-avatar-text {
   font-size: 32rpx;
-  color: #00E676;
+  color: $green;
   font-weight: 600;
 }
 
@@ -322,27 +384,33 @@ onLoad(async (options) => {
 .member-name {
   font-size: 28rpx;
   font-weight: 600;
-  color: #FFFFFF;
+  color: $textPrimary;
 }
 
 .role-badge {
-  background: rgba(0, 230, 118, 0.16);
   padding: 4rpx 14rpx;
   border-radius: 10rpx;
 }
 
+.role-badge-creator {
+  background: rgba(7, 193, 96, 0.16);
+}
+
 .role-badge-member {
-  background: rgba(139, 148, 158, 0.16);
+  background: rgba(153, 153, 153, 0.16);
 }
 
 .role-badge-text {
   font-size: 20rpx;
   font-weight: 600;
-  color: #00E676;
+}
+
+.role-badge-text-creator {
+  color: $green;
 }
 
 .role-badge-text-member {
-  color: #8B949E;
+  color: $textSecondary;
 }
 
 .member-stats-row {
@@ -353,19 +421,20 @@ onLoad(async (options) => {
 
 .member-stat {
   font-size: 22rpx;
-  color: #8B949E;
+  color: $textSecondary;
 }
 
 .member-stat-dot {
   font-size: 22rpx;
-  color: #30363D;
+  color: #2a2a2a;
 }
 
-/* ---- Leave Button ---- */
+// ============================================================
+// Leave Button
+// ============================================================
 .leave-btn {
-  margin-top: 40rpx;
   border: 2rpx solid #FF4757;
-  border-radius: 24rpx;
+  border-radius: 100rpx;
   height: 96rpx;
   display: flex;
   align-items: center;

@@ -54,9 +54,17 @@ async function handleWxLogin() {
 </script>
 
 <style lang="scss" scoped>
+$pageBg: #0a0a0a;
+$cardBg: #1a1a1a;
+$green: #07c160;
+$greenDark: #05a850;
+$textPrimary: #FFFFFF;
+$textSecondary: #999;
+$textMuted: #666;
+
 .page {
   min-height: 100vh;
-  background: #0D1117;
+  background: $pageBg;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -75,36 +83,37 @@ async function handleWxLogin() {
   flex-direction: column;
   align-items: center;
   padding-bottom: 100rpx;
+}
 
-  .logo-icon-container {
-    width: 160rpx;
-    height: 160rpx;
-    border-radius: 40rpx;
-    background: linear-gradient(135deg, #00E676, #00BFA5);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin-bottom: 32rpx;
-  }
+.logo-icon-container {
+  width: 160rpx;
+  height: 160rpx;
+  border-radius: 40rpx;
+  background: linear-gradient(135deg, $green, $greenDark);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 32rpx;
+  box-shadow: 0 8rpx 32rpx rgba(7, 193, 96, 0.3);
+}
 
-  .logo-emoji {
-    font-size: 120rpx;
-    line-height: 1;
-  }
+.logo-emoji {
+  font-size: 120rpx;
+  line-height: 1;
+}
 
-  .app-name {
-    font-size: 64rpx;
-    font-weight: 700;
-    color: #FFFFFF;
-    display: block;
-    margin-bottom: 16rpx;
-  }
+.app-name {
+  font-size: 64rpx;
+  font-weight: 700;
+  color: $textPrimary;
+  display: block;
+  margin-bottom: 16rpx;
+}
 
-  .app-desc {
-    font-size: 28rpx;
-    color: #8B949E;
-    display: block;
-  }
+.app-desc {
+  font-size: 28rpx;
+  color: $textSecondary;
+  display: block;
 }
 
 .form-area {
@@ -114,25 +123,26 @@ async function handleWxLogin() {
 .login-btn {
   width: 100%;
   height: 100rpx;
-  background: linear-gradient(135deg, #00E676, #00BFA5) !important;
+  background: linear-gradient(90deg, $green, $greenDark) !important;
   border: none;
-  border-radius: 24rpx;
+  border-radius: 100rpx;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 0;
   margin: 0;
   line-height: 100rpx;
+  box-shadow: 0 8rpx 24rpx rgba(7, 193, 96, 0.3);
 
   &::after {
     border: none;
   }
+}
 
-  .login-btn-text {
-    font-size: 32rpx;
-    font-weight: 700;
-    color: #FFFFFF;
-  }
+.login-btn-text {
+  font-size: 32rpx;
+  font-weight: 700;
+  color: $textPrimary;
 }
 
 .error {
@@ -149,16 +159,16 @@ async function handleWxLogin() {
   justify-content: center;
   margin-top: 80rpx;
   flex-wrap: wrap;
+}
 
-  .footer-text {
-    font-size: 22rpx;
-    color: #8B949E;
-  }
+.footer-text {
+  font-size: 22rpx;
+  color: $textSecondary;
+}
 
-  .footer-link {
-    font-size: 22rpx;
-    color: #00E676;
-    margin: 0 4rpx;
-  }
+.footer-link {
+  font-size: 22rpx;
+  color: $green;
+  margin: 0 4rpx;
 }
 </style>

@@ -1,51 +1,55 @@
 <template>
   <view class="page">
-    <!-- Nav Bar -->
-    <view class="nav-bar">
-      <text class="nav-title">球队</text>
+    <!-- Header -->
+    <view class="header">
+      <text class="header-title">球队</text>
     </view>
 
     <!-- No Team State: Hero + CTA -->
-    <view v-if="teams.length === 0" class="content">
-      <view class="hero-card">
-        <view class="hero-icon-row">
-          <text class="hero-icon">⚽</text>
-        </view>
-        <text class="hero-title">加入或创建球队</text>
-        <text class="hero-subtitle">组建你的球队，一起追踪训练数据，互相比拼提升</text>
-      </view>
-
-      <view class="feature-list">
-        <view class="feature-row">
-          <view class="feature-icon-box feature-icon-1">
-            <text class="feature-icon-text">📊</text>
+    <scroll-view v-if="teams.length === 0" scroll-y class="scroll-area">
+      <view class="section">
+        <view class="hero-card">
+          <view class="hero-icon-row">
+            <text class="hero-icon">⚽</text>
           </view>
-          <view class="feature-text-col">
-            <text class="feature-title">数据共享</text>
-            <text class="feature-desc">查看队友的训练数据和排行榜</text>
-          </view>
-        </view>
-        <view class="feature-row">
-          <view class="feature-icon-box feature-icon-2">
-            <text class="feature-icon-text">🏆</text>
-          </view>
-          <view class="feature-text-col">
-            <text class="feature-title">队内排行</text>
-            <text class="feature-desc">距离、速度、卡路里等多维度排名</text>
-          </view>
-        </view>
-        <view class="feature-row">
-          <view class="feature-icon-box feature-icon-3">
-            <text class="feature-icon-text">📅</text>
-          </view>
-          <view class="feature-text-col">
-            <text class="feature-title">比赛组织</text>
-            <text class="feature-desc">快速创建比赛、分组和报名管理</text>
-          </view>
+          <text class="hero-title">加入或创建球队</text>
+          <text class="hero-subtitle">组建你的球队，一起追踪训练数据，互相比拼提升</text>
         </view>
       </view>
 
-      <view class="cta-buttons">
+      <view class="section">
+        <view class="feature-list">
+          <view class="feature-row">
+            <view class="feature-icon-box feature-icon-1">
+              <text class="feature-icon-text">📊</text>
+            </view>
+            <view class="feature-text-col">
+              <text class="feature-title">数据共享</text>
+              <text class="feature-desc">查看队友的训练数据和排行榜</text>
+            </view>
+          </view>
+          <view class="feature-row">
+            <view class="feature-icon-box feature-icon-2">
+              <text class="feature-icon-text">🏆</text>
+            </view>
+            <view class="feature-text-col">
+              <text class="feature-title">队内排行</text>
+              <text class="feature-desc">距离、速度、卡路里等多维度排名</text>
+            </view>
+          </view>
+          <view class="feature-row">
+            <view class="feature-icon-box feature-icon-3">
+              <text class="feature-icon-text">📅</text>
+            </view>
+            <view class="feature-text-col">
+              <text class="feature-title">比赛组织</text>
+              <text class="feature-desc">快速创建比赛、分组和报名管理</text>
+            </view>
+          </view>
+        </view>
+      </view>
+
+      <view class="section section--last">
         <view class="btn-create" @tap="showCreateModal = true">
           <text class="btn-create-text">创建球队</text>
         </view>
@@ -53,22 +57,24 @@
           <text class="btn-join-text">加入球队</text>
         </view>
       </view>
-    </view>
+    </scroll-view>
 
     <!-- Has Teams State -->
-    <view v-else class="content">
-      <view v-for="team in teams" :key="team.id" class="team-card" @tap="goTeamDetail(team.id)">
-        <view class="team-avatar">
-          <text class="team-avatar-text">⚽</text>
+    <scroll-view v-else scroll-y class="scroll-area">
+      <view class="section">
+        <view v-for="team in teams" :key="team.id" class="team-card" @tap="goTeamDetail(team.id)">
+          <view class="team-avatar">
+            <text class="team-avatar-text">⚽</text>
+          </view>
+          <view class="team-info">
+            <text class="team-name">{{ team.name }}</text>
+            <text class="team-code">邀请码: {{ team.inviteCode }}</text>
+          </view>
+          <text class="chevron">›</text>
         </view>
-        <view class="team-info">
-          <text class="team-name">{{ team.name }}</text>
-          <text class="team-code">邀请码: {{ team.inviteCode }}</text>
-        </view>
-        <text class="chevron">›</text>
       </view>
 
-      <view class="cta-buttons">
+      <view class="section section--last">
         <view class="btn-create" @tap="showCreateModal = true">
           <text class="btn-create-text">创建球队</text>
         </view>
@@ -76,7 +82,7 @@
           <text class="btn-join-text">加入球队</text>
         </view>
       </view>
-    </view>
+    </scroll-view>
 
     <!-- Create Modal -->
     <view v-if="showCreateModal" class="modal-mask" @tap="showCreateModal = false">
@@ -169,36 +175,66 @@ onShow(() => { loadData() })
 </script>
 
 <style lang="scss" scoped>
+$pageBg: #0a0a0a;
+$cardBg: #1a1a1a;
+$border: 1rpx solid #2a2a2a;
+$green: #07c160;
+$greenDark: #05a850;
+$textPrimary: #FFFFFF;
+$textSecondary: #999;
+$textMuted: #666;
+
 .page {
   min-height: 100vh;
-  background: #0D1117;
-  padding-bottom: 120rpx;
+  background: $pageBg;
+  display: flex;
+  flex-direction: column;
 }
 
-.nav-bar {
-  padding: 100rpx 32rpx 28rpx;
-
-  .nav-title {
-    font-size: 42rpx;
-    font-weight: 700;
-    color: #FFFFFF;
-  }
+.scroll-area {
+  flex: 1;
+  height: calc(100vh - 170rpx);
 }
 
-.content {
-  padding: 0 32rpx;
+// ============================================================
+// Header
+// ============================================================
+.header {
+  background: $cardBg;
+  padding: 100rpx 32rpx 24rpx;
+  border-bottom: $border;
 }
 
-/* ---- Hero Card (No Team State) ---- */
+.header-title {
+  font-size: 40rpx;
+  font-weight: 700;
+  color: $textPrimary;
+  text-align: center;
+}
+
+// ============================================================
+// Sections
+// ============================================================
+.section {
+  padding: 24rpx 32rpx 0;
+}
+
+.section--last {
+  padding-bottom: 160rpx;
+}
+
+// ============================================================
+// Hero Card (No Team State)
+// ============================================================
 .hero-card {
-  background: linear-gradient(135deg, #3B82F6, #4F46E5);
-  border-radius: 36rpx;
+  background: linear-gradient(135deg, $green, $greenDark);
+  border-radius: 32rpx;
   padding: 40rpx 32rpx;
-  margin-bottom: 32rpx;
   display: flex;
   flex-direction: column;
   align-items: center;
   text-align: center;
+  box-shadow: 0 8rpx 32rpx rgba(7, 193, 96, 0.2);
 }
 
 .hero-icon-row {
@@ -212,33 +248,35 @@ onShow(() => { loadData() })
 .hero-title {
   font-size: 36rpx;
   font-weight: 700;
-  color: #FFFFFF;
+  color: $textPrimary;
   display: block;
   margin-bottom: 12rpx;
 }
 
 .hero-subtitle {
   font-size: 26rpx;
-  color: rgba(255, 255, 255, 0.75);
+  color: rgba(255, 255, 255, 0.85);
   line-height: 1.5;
 }
 
-/* ---- Feature List ---- */
+// ============================================================
+// Feature List
+// ============================================================
 .feature-list {
   display: flex;
   flex-direction: column;
-  gap: 20rpx;
-  margin-bottom: 40rpx;
+  gap: 16rpx;
 }
 
 .feature-row {
   display: flex;
   align-items: center;
   gap: 20rpx;
-  background: #1C2333;
+  background: $cardBg;
   border-radius: 32rpx;
   padding: 24rpx;
-  border: 1rpx solid rgba(255, 255, 255, 0.08);
+  border: $border;
+  box-shadow: 0 4rpx 24rpx rgba(0, 0, 0, 0.3);
 }
 
 .feature-icon-box {
@@ -249,19 +287,12 @@ onShow(() => { loadData() })
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.2);
 }
 
-.feature-icon-1 {
-  background: rgba(59, 130, 246, 0.16);
-}
-
-.feature-icon-2 {
-  background: rgba(255, 165, 2, 0.16);
-}
-
-.feature-icon-3 {
-  background: rgba(0, 230, 118, 0.16);
-}
+.feature-icon-1 { background: linear-gradient(135deg, #60a5fa, #3b82f6); }
+.feature-icon-2 { background: linear-gradient(135deg, #facc15, #f97316); }
+.feature-icon-3 { background: linear-gradient(135deg, $green, $greenDark); }
 
 .feature-icon-text {
   font-size: 28rpx;
@@ -276,42 +307,39 @@ onShow(() => { loadData() })
 .feature-title {
   font-size: 28rpx;
   font-weight: 600;
-  color: #FFFFFF;
+  color: $textPrimary;
 }
 
 .feature-desc {
   font-size: 22rpx;
-  color: #8B949E;
+  color: $textSecondary;
   margin-top: 4rpx;
 }
 
-/* ---- CTA Buttons ---- */
-.cta-buttons {
-  display: flex;
-  flex-direction: column;
-  gap: 16rpx;
-  margin-top: 8rpx;
-}
-
+// ============================================================
+// CTA Buttons
+// ============================================================
 .btn-create {
-  background: linear-gradient(135deg, #00E676, #00BFA5);
-  border-radius: 24rpx;
+  background: linear-gradient(90deg, $green, $greenDark);
+  border-radius: 100rpx;
   height: 96rpx;
   display: flex;
   align-items: center;
   justify-content: center;
+  box-shadow: 0 8rpx 24rpx rgba(7, 193, 96, 0.3);
 }
 
 .btn-create-text {
   font-size: 30rpx;
   font-weight: 600;
-  color: #0D1117;
+  color: $textPrimary;
 }
 
 .btn-join {
-  background: transparent;
-  border: 2rpx solid #00E676;
-  border-radius: 24rpx;
+  margin-top: 16rpx;
+  background: $cardBg;
+  border: 2rpx solid $green;
+  border-radius: 100rpx;
   height: 96rpx;
   display: flex;
   align-items: center;
@@ -321,25 +349,28 @@ onShow(() => { loadData() })
 .btn-join-text {
   font-size: 30rpx;
   font-weight: 600;
-  color: #00E676;
+  color: $green;
 }
 
-/* ---- Team Cards (Has Team State) ---- */
+// ============================================================
+// Team Cards (Has Team State)
+// ============================================================
 .team-card {
-  background: #1C2333;
+  background: $cardBg;
   border-radius: 32rpx;
   padding: 24rpx 28rpx;
   margin-bottom: 16rpx;
   display: flex;
   align-items: center;
-  border: 1rpx solid rgba(255, 255, 255, 0.08);
+  border: $border;
+  box-shadow: 0 4rpx 24rpx rgba(0, 0, 0, 0.3);
 }
 
 .team-avatar {
   width: 88rpx;
   height: 88rpx;
   border-radius: 50%;
-  background: #242D3D;
+  background: #252525;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -353,28 +384,31 @@ onShow(() => { loadData() })
 
 .team-info {
   flex: 1;
+}
 
-  .team-name {
-    font-size: 30rpx;
-    font-weight: 600;
-    color: #FFFFFF;
-    display: block;
-  }
+.team-name {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: $textPrimary;
+  display: block;
+}
 
-  .team-code {
-    font-size: 24rpx;
-    color: #8B949E;
-    display: block;
-    margin-top: 6rpx;
-  }
+.team-code {
+  font-size: 24rpx;
+  color: $textSecondary;
+  display: block;
+  margin-top: 6rpx;
 }
 
 .chevron {
   font-size: 40rpx;
-  color: #30363D;
+  color: $textMuted;
+  font-weight: 300;
 }
 
-/* ---- Modal ---- */
+// ============================================================
+// Modal
+// ============================================================
 .modal-mask {
   position: fixed;
   top: 0;
@@ -390,35 +424,35 @@ onShow(() => { loadData() })
 
 .modal {
   width: 80%;
-  background: #1C2333;
+  background: $cardBg;
   border-radius: 32rpx;
   padding: 40rpx;
-  border: 1rpx solid rgba(255, 255, 255, 0.08);
+  border: $border;
 }
 
 .modal-title {
   font-size: 34rpx;
   font-weight: 700;
-  color: #FFFFFF;
+  color: $textPrimary;
   display: block;
   margin-bottom: 8rpx;
 }
 
 .modal-desc {
   font-size: 24rpx;
-  color: #8B949E;
+  color: $textSecondary;
   display: block;
   margin-bottom: 28rpx;
 }
 
 .modal-input {
-  background: #0D1117;
-  border-radius: 24rpx;
+  background: #252525;
+  border-radius: 20rpx;
   padding: 24rpx 28rpx;
   font-size: 28rpx;
-  color: #FFFFFF;
+  color: $textPrimary;
   margin-bottom: 28rpx;
-  border: 1rpx solid rgba(255, 255, 255, 0.08);
+  border: 1rpx solid #333;
 }
 
 .modal-actions {
@@ -429,8 +463,8 @@ onShow(() => { loadData() })
 .modal-btn-cancel {
   flex: 1;
   height: 80rpx;
-  border-radius: 24rpx;
-  background: #242D3D;
+  border-radius: 100rpx;
+  background: #252525;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -439,26 +473,27 @@ onShow(() => { loadData() })
 .modal-btn-cancel-text {
   font-size: 28rpx;
   font-weight: 600;
-  color: #8B949E;
+  color: $textSecondary;
 }
 
 .modal-btn-confirm {
   flex: 1;
   height: 80rpx;
-  border-radius: 24rpx;
-  background: linear-gradient(135deg, #00E676, #00BFA5);
+  border-radius: 100rpx;
+  background: linear-gradient(90deg, $green, $greenDark);
   display: flex;
   align-items: center;
   justify-content: center;
+  box-shadow: 0 4rpx 16rpx rgba(7, 193, 96, 0.3);
 }
 
 .modal-btn-confirm-text {
   font-size: 28rpx;
   font-weight: 600;
-  color: #0D1117;
+  color: $textPrimary;
 }
 
 .placeholder {
-  color: #545d68;
+  color: $textMuted;
 }
 </style>

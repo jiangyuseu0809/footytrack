@@ -1,158 +1,150 @@
 <template>
   <view class="page">
-    <!-- Nav Bar -->
-    <view class="nav-bar">
-      <text class="nav-title">野球记</text>
+    <!-- Header -->
+    <view class="header">
+      <text class="header-title">FootyTrack</text>
+      <view v-if="isWatchConnected" class="watch-badge connected">
+        <text class="watch-badge-text">⌚ 已连接</text>
+      </view>
+      <view v-else class="watch-badge disconnected" @tap="goBindWatch">
+        <text class="watch-badge-text">⌚ 连接 Watch</text>
+      </view>
     </view>
 
     <scroll-view scroll-y class="scroll-content">
-      <!-- Two Action Cards -->
+      <!-- Time Range Toggle -->
       <view class="section">
-        <view class="action-row">
-          <!-- 本周比赛 card: blue-indigo gradient -->
-          <view class="action-card action-card--match" @tap="goMatchDetail(nextMatch?.id || '')">
-            <view class="action-icon-box action-icon-box--blue">
-              <text class="action-icon-emoji">⚽</text>
-            </view>
-            <view class="action-card-body">
-              <text class="action-card-title">本周比赛</text>
-              <text class="action-card-sub" v-if="weeklyMatchCount > 0">{{ weeklyMatchCount }} 场比赛</text>
-              <text class="action-card-sub" v-else>暂无比赛</text>
-            </view>
+        <view class="toggle-bar">
+          <view
+            class="toggle-item"
+            :class="{ active: timeRange === 'week' }"
+            @tap="timeRange = 'week'"
+          >
+            <text class="toggle-text" :class="{ active: timeRange === 'week' }">本周数据</text>
           </view>
-
-          <!-- 发起比赛 card: dark card with neon green accent -->
-          <view class="action-card action-card--create" @tap="goCreateMatch">
-            <view class="action-icon-box action-icon-box--green">
-              <text class="action-icon-emoji">➕</text>
-            </view>
-            <view class="action-card-body">
-              <text class="action-card-title">发起比赛</text>
-              <text class="action-card-sub">创建新比赛</text>
-            </view>
+          <view
+            class="toggle-item"
+            :class="{ active: timeRange === 'today' }"
+            @tap="timeRange = 'today'"
+          >
+            <text class="toggle-text" :class="{ active: timeRange === 'today' }">今日数据</text>
           </view>
         </view>
       </view>
 
-      <!-- Upcoming Match Card -->
-      <view v-if="nextMatch" class="section">
-        <view class="upcoming-card" @tap="goMatchDetail(nextMatch.id)">
-          <view class="upcoming-top">
-            <view class="upcoming-title-row">
-              <text class="upcoming-title">{{ nextMatch.title }}</text>
-              <view class="status-badge" :class="statusBadgeClass(nextMatch.status)">
-                <text class="status-badge-text">{{ statusLabel(nextMatch.status) }}</text>
-              </view>
-            </view>
-          </view>
-          <view class="upcoming-divider"></view>
-          <view class="upcoming-details">
-            <view class="upcoming-detail-row">
-              <text class="upcoming-detail-icon">📍</text>
-              <text class="upcoming-detail-text">{{ nextMatch.location }}</text>
-            </view>
-            <view class="upcoming-detail-row">
-              <text class="upcoming-detail-icon">📅</text>
-              <text class="upcoming-detail-text">{{ formatDateTime(nextMatch.matchDate) }}</text>
-            </view>
-            <view class="upcoming-detail-row">
-              <text class="upcoming-detail-icon">👤</text>
-              <text class="upcoming-detail-text">{{ nextMatch.registrationCount }} 人已报名</text>
-            </view>
-          </view>
-        </view>
-      </view>
-
-      <!-- Stats Section: 关键数据 -->
+      <!-- Matches Count -->
       <view class="section">
-        <view class="section-header">
-          <view class="section-header-icon">
-            <text class="section-header-icon-text">📊</text>
+        <view class="match-count-card">
+          <view class="match-count-left">
+            <text class="match-count-label">{{ timeRange === 'week' ? '本周' : '今日' }}踢球次数</text>
+            <text class="match-count-value">{{ currentStats.matches }}</text>
           </view>
-          <text class="section-header-title">关键数据</text>
+          <view class="match-count-icon">
+            <text class="match-count-emoji">📅</text>
+          </view>
         </view>
-        <view class="stats-card">
-          <view class="stats-grid">
-            <!-- 距离 -->
-            <view class="stat-item">
-              <view class="stat-icon-box stat-icon-box--green">
-                <text class="stat-icon-emoji">🏃</text>
-              </view>
-              <text class="stat-label">距离</text>
-              <text class="stat-value stat-value--green">{{ monthlyStats.distance }}</text>
+      </view>
+
+      <!-- Core Stats Grid -->
+      <view class="section">
+        <view class="stats-grid">
+          <view class="stats-card">
+            <view class="stats-icon-box orange-red">
+              <text class="stats-icon">🔥</text>
             </view>
-            <!-- 卡路里 -->
-            <view class="stat-item">
-              <view class="stat-icon-box stat-icon-box--orange">
-                <text class="stat-icon-emoji">🔥</text>
-              </view>
-              <text class="stat-label">卡路里</text>
-              <text class="stat-value stat-value--orange">{{ monthlyStats.calories }}</text>
+            <text class="stats-label">热量消耗</text>
+            <text class="stats-value">{{ currentStats.calories }}</text>
+            <text class="stats-unit">kcal</text>
+          </view>
+          <view class="stats-card">
+            <view class="stats-icon-box blue">
+              <text class="stats-icon">📍</text>
             </view>
-            <!-- 场次 -->
-            <view class="stat-item">
-              <view class="stat-icon-box stat-icon-box--blue">
-                <text class="stat-icon-emoji">⚽</text>
-              </view>
-              <text class="stat-label">场次</text>
-              <text class="stat-value stat-value--blue">{{ monthlyStats.sessions }}</text>
+            <text class="stats-label">跑动距离</text>
+            <text class="stats-value">{{ currentStats.distance }}</text>
+            <text class="stats-unit">km</text>
+          </view>
+          <view class="stats-card">
+            <view class="stats-icon-box yellow-orange">
+              <text class="stats-icon">⚡</text>
             </view>
-            <!-- 冲刺 -->
-            <view class="stat-item">
-              <view class="stat-icon-box stat-icon-box--red">
-                <text class="stat-icon-emoji">⚡</text>
+            <text class="stats-label">冲刺次数</text>
+            <text class="stats-value">{{ currentStats.sprints }}</text>
+            <text class="stats-unit">次</text>
+          </view>
+          <view class="stats-card">
+            <view class="stats-icon-box purple">
+              <text class="stats-icon">⏱️</text>
+            </view>
+            <text class="stats-label">运动时间</text>
+            <text class="stats-value">{{ currentStats.duration }}</text>
+            <text class="stats-unit">分钟</text>
+          </view>
+          <view class="stats-card">
+            <view class="stats-icon-box pink-red">
+              <text class="stats-icon">❤️</text>
+            </view>
+            <text class="stats-label">最高心率</text>
+            <text class="stats-value">{{ currentStats.maxHeartRate }}</text>
+            <text class="stats-unit">bpm</text>
+          </view>
+          <view class="stats-card">
+            <view class="stats-icon-box green-teal">
+              <text class="stats-icon">❤️</text>
+            </view>
+            <text class="stats-label">平均心率</text>
+            <text class="stats-value">{{ currentStats.avgHeartRate }}</text>
+            <text class="stats-unit">bpm</text>
+          </view>
+        </view>
+      </view>
+
+      <!-- Ability Radar Placeholder -->
+      <view class="section">
+        <view class="chart-card">
+          <view class="chart-header">
+            <text class="chart-header-icon">🎯</text>
+            <text class="chart-header-title">{{ timeRange === 'week' ? '本周能力分析' : '今日能力分析' }}</text>
+          </view>
+          <view class="radar-placeholder">
+            <view class="radar-grid">
+              <view v-for="item in abilityData" :key="item.ability" class="radar-item">
+                <text class="radar-label">{{ item.ability }}</text>
+                <view class="radar-bar-track">
+                  <view class="radar-bar-fill" :style="{ width: item.value + '%' }" />
+                </view>
+                <text class="radar-bar-value">{{ item.value }}</text>
               </view>
-              <text class="stat-label">冲刺</text>
-              <text class="stat-value stat-value--red">{{ monthlyStats.sprints }}</text>
             </view>
           </view>
         </view>
       </view>
 
-      <!-- Recent Sessions: 最近记录 -->
+      <!-- Heat Map (today only) -->
+      <view v-if="timeRange === 'today'" class="section">
+        <view class="chart-card">
+          <text class="chart-card-title">今日跑动热力图</text>
+          <view class="heatmap-box">
+            <view class="field-outline">
+              <view class="field-center-line" />
+              <view class="field-center-circle" />
+            </view>
+            <view class="heat-point heat-1" />
+            <view class="heat-point heat-2" />
+            <view class="heat-point heat-3" />
+          </view>
+          <view class="heatmap-legend">
+            <text class="legend-text">低活跃度</text>
+            <view class="legend-bar" />
+            <text class="legend-text">高活跃度</text>
+          </view>
+        </view>
+      </view>
+
+      <!-- Share Button -->
       <view class="section section--last">
-        <view class="section-header">
-          <view class="section-header-icon">
-            <text class="section-header-icon-text">📋</text>
-          </view>
-          <text class="section-header-title">最近记录</text>
-        </view>
-
-        <view v-if="recentSessions.length === 0" class="empty-state">
-          <text class="empty-icon">📭</text>
-          <text class="empty-text">暂无训练数据</text>
-          <text class="empty-sub">在手表上开始追踪后数据将显示在这里</text>
-        </view>
-
-        <view
-          v-for="session in recentSessions"
-          :key="session.id"
-          class="session-card"
-          @tap="goSessionDetail(session.id)"
-        >
-          <view class="session-top">
-            <view class="session-date-badge">
-              <text class="session-date-text">{{ formatRelativeDate(session.startTime) }}</text>
-            </view>
-            <text class="session-duration">{{ formatDuration(session.endTime - session.startTime) }}</text>
-          </view>
-          <view class="session-divider"></view>
-          <view class="session-stats-row">
-            <view class="session-stat-item">
-              <text class="session-stat-label">距离</text>
-              <text class="session-stat-value session-stat-value--green">{{ formatDistance(session.totalDistanceMeters) }}</text>
-            </view>
-            <view class="session-stat-divider"></view>
-            <view class="session-stat-item">
-              <text class="session-stat-label">卡路里</text>
-              <text class="session-stat-value session-stat-value--orange">{{ Math.round(session.caloriesBurned || 0) }}</text>
-            </view>
-            <view class="session-stat-divider"></view>
-            <view class="session-stat-item">
-              <text class="session-stat-label">最高速度</text>
-              <text class="session-stat-value session-stat-value--blue">{{ (session.maxSpeedKmh || 0).toFixed(1) }} km/h</text>
-            </view>
-          </view>
+        <view class="share-btn" @tap="handleShare">
+          <text class="share-btn-text">📤 分享{{ timeRange === 'week' ? '本周' : '今日' }}运动数据</text>
         </view>
       </view>
     </scroll-view>
@@ -162,110 +154,102 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
-import { getSessions, getMatches, isLoggedIn, type SessionDto, type Match } from '../../utils/api'
-import { formatDuration, formatDistance, formatDateTime, formatRelativeDate } from '../../utils/format'
+import { getSessions, isLoggedIn, type SessionDto } from '../../utils/api'
 
+const timeRange = ref<'week' | 'today'>('week')
 const sessions = ref<SessionDto[]>([])
-const matches = ref<Match[]>([])
+const isWatchConnected = ref(false)
 
-const recentSessions = computed(() => {
-  return [...sessions.value]
-    .sort((a, b) => b.startTime - a.startTime)
-    .slice(0, 10)
-})
-
-const nextMatch = computed(() => {
-  const now = Date.now()
-  return matches.value.find(m => m.matchDate > now - 3600000 && m.status === 'upcoming') || null
-})
-
-const weeklyMatchCount = computed(() => {
+const weekSessions = computed(() => {
   const now = new Date()
   const weekStart = new Date(now)
   weekStart.setDate(now.getDate() - now.getDay())
   weekStart.setHours(0, 0, 0, 0)
-  const weekEnd = new Date(weekStart)
-  weekEnd.setDate(weekStart.getDate() + 7)
-  return matches.value.filter(m => m.matchDate >= weekStart.getTime() && m.matchDate < weekEnd.getTime()).length
+  return sessions.value.filter(s => s.startTime >= weekStart.getTime())
 })
 
-const monthlyStats = computed(() => {
+const todaySessions = computed(() => {
   const now = new Date()
-  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).getTime()
-  const monthly = sessions.value.filter(s => s.startTime >= monthStart)
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime()
+  return sessions.value.filter(s => s.startTime >= todayStart)
+})
+
+const currentStats = computed(() => {
+  const list = timeRange.value === 'week' ? weekSessions.value : todaySessions.value
+  const totalDistance = list.reduce((sum, s) => sum + (s.totalDistanceMeters || 0), 0)
+  const totalCalories = Math.round(list.reduce((sum, s) => sum + (s.caloriesBurned || 0), 0))
+  const totalSprints = list.reduce((sum, s) => sum + (s.sprintCount || 0), 0)
+  const totalDuration = Math.round(list.reduce((sum, s) => sum + ((s.endTime - s.startTime) / 60000), 0))
+  const maxHR = list.length ? Math.max(...list.map(s => s.maxHeartRate || 0)) : 0
+  const avgHR = list.length ? Math.round(list.reduce((sum, s) => sum + (s.avgHeartRate || 0), 0) / list.length) : 0
   return {
-    distance: formatDistance(monthly.reduce((sum, s) => sum + (s.totalDistanceMeters || 0), 0)),
-    calories: Math.round(monthly.reduce((sum, s) => sum + (s.caloriesBurned || 0), 0)),
-    sessions: monthly.length,
-    sprints: monthly.reduce((sum, s) => sum + (s.sprintCount || 0), 0),
+    matches: list.length,
+    calories: totalCalories,
+    distance: (totalDistance / 1000).toFixed(1),
+    sprints: totalSprints,
+    duration: totalDuration,
+    maxHeartRate: maxHR,
+    avgHeartRate: avgHR,
   }
 })
 
-function statusLabel(status: string): string {
-  if (status === 'upcoming') return '报名中'
-  if (status === 'live') return '进行中'
-  return '已结束'
-}
-
-function statusBadgeClass(status: string): string {
-  if (status === 'upcoming') return 'status-badge--upcoming'
-  if (status === 'live') return 'status-badge--live'
-  return 'status-badge--ended'
-}
+const abilityData = computed(() => {
+  const list = timeRange.value === 'week' ? weekSessions.value : todaySessions.value
+  if (list.length === 0) {
+    return [
+      { ability: '速度', value: 0 },
+      { ability: '耐力', value: 0 },
+      { ability: '爆发力', value: 0 },
+      { ability: '灵活性', value: 0 },
+      { ability: '体能', value: 0 },
+      { ability: '持久力', value: 0 },
+    ]
+  }
+  const avgSpeed = list.reduce((s, v) => s + (v.avgSpeedKmh || 0), 0) / list.length
+  const maxSpeed = Math.max(...list.map(s => s.maxSpeedKmh || 0))
+  const avgDist = list.reduce((s, v) => s + (v.totalDistanceMeters || 0), 0) / list.length / 1000
+  const totalSprints = list.reduce((s, v) => s + (v.sprintCount || 0), 0)
+  return [
+    { ability: '速度', value: Math.min(100, Math.round(maxSpeed * 4)) },
+    { ability: '耐力', value: Math.min(100, Math.round(avgDist * 15)) },
+    { ability: '爆发力', value: Math.min(100, Math.round(totalSprints * 5)) },
+    { ability: '灵活性', value: Math.min(100, Math.round(avgSpeed * 8)) },
+    { ability: '体能', value: Math.min(100, Math.round((avgDist + avgSpeed) * 6)) },
+    { ability: '持久力', value: Math.min(100, Math.round(avgDist * 12)) },
+  ]
+})
 
 async function loadData() {
   if (!isLoggedIn()) return
   try {
-    const [sessRes, matchRes] = await Promise.all([getSessions(), getMatches()])
-    sessions.value = sessRes.sessions
-    matches.value = matchRes.matches
+    const res = await getSessions()
+    sessions.value = res.sessions
   } catch (e) {
     console.error('Failed to load home data', e)
   }
 }
 
-function requireLogin() {
-  if (!isLoggedIn()) {
-    uni.navigateTo({ url: '/pages/login/index' })
-    return true
-  }
-  return false
+function goBindWatch() {
+  uni.navigateTo({ url: '/pages/bind-watch/index' })
 }
 
-function goCreateMatch() {
-  if (requireLogin()) return
-  uni.navigateTo({ url: '/pages/create-match/index' })
-}
-function goTeam() {
-  uni.switchTab({ url: '/pages/team/index' })
-}
-function goMatchDetail(id: string) {
-  uni.navigateTo({ url: `/pages/match-detail/index?id=${id}` })
-}
-function goSessionDetail(id: string) {
-  uni.navigateTo({ url: `/pages/session-detail/index?id=${id}` })
+function handleShare() {
+  // WeChat share placeholder
 }
 
 onShow(() => { loadData() })
 </script>
 
 <style lang="scss" scoped>
-// ============================================================
-// Design tokens (matching iOS exactly)
-// ============================================================
-$pageBg: #0D1117;
-$cardBg: #1C2333;
-$cardElevated: #242D3D;
-$border: 1rpx solid rgba(255, 255, 255, 0.08);
-$divider: #30363D;
-$neonGreen: #00E676;
-$teal: #00BFA5;
+$pageBg: #0a0a0a;
+$cardBg: #1a1a1a;
+$border: 1rpx solid #2a2a2a;
+$green: #07c160;
+$greenDark: #05a850;
 $textPrimary: #FFFFFF;
-$textSecondary: #8B949E;
+$textSecondary: #999;
+$textMuted: #666;
 
-// ============================================================
-// Page
-// ============================================================
 .page {
   min-height: 100vh;
   background: $pageBg;
@@ -275,416 +259,404 @@ $textSecondary: #8B949E;
 
 .scroll-content {
   flex: 1;
-  height: calc(100vh - 180rpx);
+  height: calc(100vh - 260rpx);
 }
 
 // ============================================================
-// Nav Bar
+// Header
 // ============================================================
-.nav-bar {
-  padding: 100rpx 32rpx 24rpx;
-  background: $pageBg;
+.header {
+  background: linear-gradient(135deg, $green, $greenDark);
+  padding: 100rpx 32rpx 48rpx;
+  box-shadow: 0 8rpx 32rpx rgba(7, 193, 96, 0.2);
+}
 
-  .nav-title {
-    font-size: 48rpx;
-    font-weight: 700;
-    color: $textPrimary;
-  }
+.header-title {
+  font-size: 44rpx;
+  font-weight: 700;
+  color: $textPrimary;
+  display: block;
+  margin-bottom: 20rpx;
+}
+
+.watch-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 10rpx 20rpx;
+  border-radius: 100rpx;
+}
+
+.watch-badge.connected {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.watch-badge.disconnected {
+  background: #FFFFFF;
+}
+
+.watch-badge-text {
+  font-size: 24rpx;
+  font-weight: 500;
+}
+
+.watch-badge.connected .watch-badge-text {
+  color: $textPrimary;
+}
+
+.watch-badge.disconnected .watch-badge-text {
+  color: $green;
 }
 
 // ============================================================
 // Sections
 // ============================================================
 .section {
-  padding: 0 32rpx 32rpx;
+  padding: 0 32rpx 24rpx;
+  &:first-child {
+    padding-top: 24rpx;
+  }
 }
 
 .section--last {
   padding-bottom: 160rpx;
 }
 
-// Section header (icon box + title)
-.section-header {
+// ============================================================
+// Toggle Bar
+// ============================================================
+.toggle-bar {
+  display: flex;
+  background: $cardBg;
+  border-radius: 100rpx;
+  padding: 4rpx;
+  border: $border;
+}
+
+.toggle-item {
+  flex: 1;
+  padding: 16rpx 0;
+  border-radius: 100rpx;
   display: flex;
   align-items: center;
-  margin-bottom: 20rpx;
+  justify-content: center;
+  transition: all 0.3s;
 
-  .section-header-icon {
-    width: 52rpx;
-    height: 52rpx;
-    border-radius: 16rpx;
-    background: rgba(0, 230, 118, 0.16);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin-right: 16rpx;
-
-    .section-header-icon-text {
-      font-size: 28rpx;
-      line-height: 1;
-    }
+  &.active {
+    background: $green;
+    box-shadow: 0 4rpx 16rpx rgba(7, 193, 96, 0.5);
   }
+}
 
-  .section-header-title {
-    font-size: 30rpx;
-    font-weight: 600;
+.toggle-text {
+  font-size: 28rpx;
+  font-weight: 500;
+  color: $textMuted;
+
+  &.active {
     color: $textPrimary;
   }
 }
 
 // ============================================================
-// Action Cards (two side by side)
+// Match Count Card
 // ============================================================
-.action-row {
+.match-count-card {
+  background: $cardBg;
+  border-radius: 32rpx;
+  padding: 36rpx 32rpx;
   display: flex;
-  gap: 20rpx;
+  align-items: center;
+  justify-content: space-between;
+  border: $border;
+  box-shadow: 0 4rpx 24rpx rgba(0, 0, 0, 0.3);
 }
 
-.action-card {
-  flex: 1;
-  height: 200rpx;
+.match-count-left {
+  display: flex;
+  flex-direction: column;
+}
+
+.match-count-label {
+  font-size: 28rpx;
+  color: #ccc;
+  margin-bottom: 8rpx;
+}
+
+.match-count-value {
+  font-size: 72rpx;
+  font-weight: 700;
+  color: $green;
+  line-height: 1;
+}
+
+.match-count-icon {
+  width: 112rpx;
+  height: 112rpx;
+  border-radius: 32rpx;
+  background: linear-gradient(135deg, $green, $greenDark);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8rpx 24rpx rgba(7, 193, 96, 0.3);
+}
+
+.match-count-emoji {
+  font-size: 56rpx;
+}
+
+// ============================================================
+// Stats Grid
+// ============================================================
+.stats-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16rpx;
+}
+
+.stats-card {
+  background: $cardBg;
   border-radius: 32rpx;
   padding: 24rpx;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
-  overflow: hidden;
-  position: relative;
-}
-
-.action-card--match {
-  background: linear-gradient(135deg, #3B82F6, #4F46E5);
-}
-
-.action-card--create {
-  background: $cardBg;
   border: $border;
-  box-shadow: inset 0 0 0 1rpx rgba(0, 230, 118, 0.12);
+  box-shadow: 0 4rpx 24rpx rgba(0, 0, 0, 0.3);
 }
 
-.action-icon-box {
-  width: 64rpx;
-  height: 64rpx;
-  border-radius: 16rpx;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.action-icon-box--blue {
-  background: rgba(255, 255, 255, 0.2);
-}
-
-.action-icon-box--green {
-  background: rgba(0, 230, 118, 0.16);
-}
-
-.action-icon-emoji {
-  font-size: 32rpx;
-  line-height: 1;
-}
-
-.action-card-body {
-  display: flex;
-  flex-direction: column;
-}
-
-.action-card-title {
-  font-size: 30rpx;
-  font-weight: 600;
-  color: $textPrimary;
-}
-
-.action-card-sub {
-  font-size: 22rpx;
-  color: rgba(255, 255, 255, 0.7);
-  margin-top: 4rpx;
-}
-
-.action-card--create {
-  .action-card-sub {
-    color: $textSecondary;
-  }
-}
-
-// ============================================================
-// Upcoming Match Card
-// ============================================================
-.upcoming-card {
-  background: linear-gradient(135deg, #16803B, #166534);
-  border-radius: 36rpx;
-  padding: 28rpx 32rpx;
-}
-
-.upcoming-top {
-  margin-bottom: 20rpx;
-}
-
-.upcoming-title-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.upcoming-title {
-  font-size: 32rpx;
-  font-weight: 700;
-  color: $textPrimary;
-  flex: 1;
-  margin-right: 16rpx;
-}
-
-// Status badge
-.status-badge {
-  padding: 6rpx 20rpx;
+.stats-icon-box {
+  width: 72rpx;
+  height: 72rpx;
   border-radius: 20rpx;
   display: flex;
   align-items: center;
   justify-content: center;
+  margin-bottom: 16rpx;
+  box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.2);
 }
 
-.status-badge--upcoming {
-  background: #FACC15;
+.orange-red { background: linear-gradient(135deg, #fb923c, #ef4444); }
+.blue { background: linear-gradient(135deg, #60a5fa, #3b82f6); }
+.yellow-orange { background: linear-gradient(135deg, #facc15, #f97316); }
+.purple { background: linear-gradient(135deg, #a78bfa, #7c3aed); }
+.pink-red { background: linear-gradient(135deg, #f472b6, #ef4444); }
+.green-teal { background: linear-gradient(135deg, #4ade80, #14b8a6); }
 
-  .status-badge-text {
-    color: #000000;
-  }
+.stats-icon {
+  font-size: 36rpx;
 }
 
-.status-badge--live {
-  background: $neonGreen;
-
-  .status-badge-text {
-    color: #000000;
-  }
+.stats-label {
+  font-size: 24rpx;
+  color: $textSecondary;
+  margin-bottom: 8rpx;
 }
 
-.status-badge--ended {
-  background: rgba(255, 255, 255, 0.2);
-
-  .status-badge-text {
-    color: $textSecondary;
-  }
+.stats-value {
+  font-size: 44rpx;
+  font-weight: 700;
+  color: $textPrimary;
+  line-height: 1.1;
 }
 
-.status-badge-text {
+.stats-unit {
   font-size: 22rpx;
-  font-weight: 600;
-}
-
-.upcoming-divider {
-  height: 1rpx;
-  background: rgba(255, 255, 255, 0.15);
-  margin-bottom: 20rpx;
-}
-
-.upcoming-details {
-  display: flex;
-  flex-direction: column;
-  gap: 12rpx;
-}
-
-.upcoming-detail-row {
-  display: flex;
-  align-items: center;
-  gap: 12rpx;
-
-  .upcoming-detail-icon {
-    font-size: 24rpx;
-    line-height: 1;
-  }
-
-  .upcoming-detail-text {
-    font-size: 26rpx;
-    color: rgba(255, 255, 255, 0.85);
-  }
+  color: $textMuted;
+  margin-top: 4rpx;
 }
 
 // ============================================================
-// Stats Card (2x2 grid inside single card)
+// Chart Card
 // ============================================================
-.stats-card {
+.chart-card {
   background: $cardBg;
   border-radius: 32rpx;
+  padding: 28rpx 32rpx;
   border: $border;
-  padding: 28rpx 24rpx;
+  box-shadow: 0 4rpx 24rpx rgba(0, 0, 0, 0.3);
 }
 
-.stats-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 28rpx 24rpx;
+.chart-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 24rpx;
 }
 
-.stat-item {
+.chart-header-icon {
+  font-size: 32rpx;
+  margin-right: 12rpx;
+}
+
+.chart-header-title {
+  font-size: 30rpx;
+  font-weight: 500;
+  color: $textPrimary;
+}
+
+.chart-card-title {
+  font-size: 30rpx;
+  font-weight: 500;
+  color: $textPrimary;
+  display: block;
+  margin-bottom: 24rpx;
+}
+
+// ============================================================
+// Radar as Bar Chart (mini-program doesn't support recharts)
+// ============================================================
+.radar-placeholder {
+  padding: 0;
+}
+
+.radar-grid {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
+  gap: 20rpx;
 }
 
-.stat-icon-box {
-  width: 64rpx;
-  height: 64rpx;
-  border-radius: 16rpx;
+.radar-item {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+}
+
+.radar-label {
+  font-size: 24rpx;
+  color: $textSecondary;
+  width: 80rpx;
+  flex-shrink: 0;
+}
+
+.radar-bar-track {
+  flex: 1;
+  height: 16rpx;
+  background: #2a2a2a;
+  border-radius: 8rpx;
+  overflow: hidden;
+}
+
+.radar-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, $green, $greenDark);
+  border-radius: 8rpx;
+  transition: width 0.5s;
+}
+
+.radar-bar-value {
+  font-size: 24rpx;
+  font-weight: 600;
+  color: $textPrimary;
+  width: 60rpx;
+  text-align: right;
+}
+
+// ============================================================
+// Heat Map
+// ============================================================
+.heatmap-box {
+  aspect-ratio: 4/3;
+  border-radius: 20rpx;
+  position: relative;
+  overflow: hidden;
+  border: $border;
+  background: linear-gradient(135deg, #0a2a0f, #2a2a0a, #2a0a0a);
+}
+
+.field-outline {
+  position: absolute;
+  top: 24rpx;
+  left: 24rpx;
+  right: 24rpx;
+  bottom: 24rpx;
+  border: 2rpx solid rgba(255, 255, 255, 0.15);
+}
+
+.field-center-line {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 1rpx;
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.field-center-circle {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 100rpx;
+  height: 100rpx;
+  border: 2rpx solid rgba(255, 255, 255, 0.15);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.heat-point {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(20rpx);
+}
+
+.heat-1 {
+  top: 30%;
+  left: 22%;
+  width: 120rpx;
+  height: 120rpx;
+  background: rgba(239, 68, 68, 0.5);
+}
+
+.heat-2 {
+  top: 45%;
+  left: 45%;
+  width: 160rpx;
+  height: 160rpx;
+  background: rgba(249, 115, 22, 0.5);
+}
+
+.heat-3 {
+  top: 60%;
+  right: 22%;
+  width: 120rpx;
+  height: 120rpx;
+  background: rgba(234, 179, 8, 0.5);
+}
+
+.heatmap-legend {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 16rpx;
+  padding: 0 8rpx;
+}
+
+.legend-text {
+  font-size: 22rpx;
+  color: $textMuted;
+}
+
+.legend-bar {
+  flex: 1;
+  height: 12rpx;
+  margin: 0 24rpx;
+  background: linear-gradient(90deg, #16a34a, #eab308, #ef4444);
+  border-radius: 6rpx;
+}
+
+// ============================================================
+// Share Button
+// ============================================================
+.share-btn {
+  background: linear-gradient(135deg, $green, $greenDark);
+  border-radius: 32rpx;
+  padding: 28rpx;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 12rpx;
+  box-shadow: 0 8rpx 32rpx rgba(7, 193, 96, 0.3);
 }
 
-.stat-icon-box--green {
-  background: linear-gradient(135deg, rgba(0, 230, 118, 0.25), rgba(0, 191, 165, 0.25));
-}
-
-.stat-icon-box--orange {
-  background: linear-gradient(135deg, rgba(255, 165, 2, 0.25), rgba(255, 107, 0, 0.25));
-}
-
-.stat-icon-box--blue {
-  background: linear-gradient(135deg, rgba(59, 130, 246, 0.25), rgba(79, 70, 229, 0.25));
-}
-
-.stat-icon-box--red {
-  background: linear-gradient(135deg, rgba(255, 71, 87, 0.25), rgba(234, 32, 39, 0.25));
-}
-
-.stat-icon-emoji {
+.share-btn-text {
   font-size: 30rpx;
-  line-height: 1;
-}
-
-.stat-label {
-  font-size: 24rpx;
-  color: $textSecondary;
-  margin-bottom: 4rpx;
-}
-
-.stat-value {
-  font-size: 36rpx;
-  font-weight: 700;
-}
-
-.stat-value--green {
-  color: $neonGreen;
-}
-
-.stat-value--orange {
-  color: #FFA502;
-}
-
-.stat-value--blue {
-  color: #3B82F6;
-}
-
-.stat-value--red {
-  color: #FF4757;
-}
-
-// ============================================================
-// Empty State
-// ============================================================
-.empty-state {
-  text-align: center;
-  padding: 60rpx 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-
-  .empty-icon {
-    font-size: 64rpx;
-    margin-bottom: 16rpx;
-  }
-
-  .empty-text {
-    font-size: 28rpx;
-    color: $textSecondary;
-    display: block;
-  }
-
-  .empty-sub {
-    font-size: 24rpx;
-    color: #545D68;
-    display: block;
-    margin-top: 8rpx;
-  }
-}
-
-// ============================================================
-// Session Cards
-// ============================================================
-.session-card {
-  background: $cardBg;
-  border-radius: 28rpx;
-  border: $border;
-  padding: 24rpx 28rpx;
-  margin-bottom: 16rpx;
-}
-
-.session-top {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 16rpx;
-}
-
-.session-date-badge {
-  .session-date-text {
-    font-size: 28rpx;
-    font-weight: 600;
-    color: $textPrimary;
-  }
-}
-
-.session-duration {
-  font-size: 24rpx;
-  color: $textSecondary;
-}
-
-.session-divider {
-  height: 1rpx;
-  background: $divider;
-  margin-bottom: 16rpx;
-}
-
-.session-stats-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.session-stat-item {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-
-.session-stat-label {
-  font-size: 20rpx;
-  color: $textSecondary;
-  margin-bottom: 4rpx;
-}
-
-.session-stat-value {
-  font-size: 26rpx;
-  font-weight: 600;
-}
-
-.session-stat-value--green {
-  color: $neonGreen;
-}
-
-.session-stat-value--orange {
-  color: #FFA502;
-}
-
-.session-stat-value--blue {
-  color: #3B82F6;
-}
-
-.session-stat-divider {
-  width: 1rpx;
-  height: 48rpx;
-  background: $divider;
+  font-weight: 500;
+  color: $textPrimary;
 }
 </style>

@@ -1,68 +1,78 @@
 <template>
   <view class="page">
-    <!-- Nav Bar -->
-    <view class="nav-bar">
-      <text class="back" @tap="goBack">‹</text>
-      <text class="nav-title">{{ detail?.match.title || '比赛详情' }}</text>
+    <!-- Header -->
+    <view class="header">
+      <view class="header-nav">
+        <view class="back-row" @tap="goBack">
+          <text class="back-arrow">‹</text>
+          <text class="back-text">返回</text>
+        </view>
+        <text class="nav-title">{{ detail?.match.title || '比赛详情' }}</text>
+        <view class="nav-right" />
+      </view>
     </view>
 
-    <view v-if="detail" class="content">
+    <scroll-view v-if="detail" scroll-y class="scroll-area">
       <!-- Match Info Hero -->
-      <view class="match-hero">
-        <text class="hero-title">{{ detail.match.title }}</text>
-        <view class="status-badge" :class="'status-' + detail.match.status">
-          <text class="status-text">{{ statusText }}</text>
-        </view>
-        <view class="hero-info-rows">
-          <view class="hero-info-row">
-            <text class="hero-info-emoji">📍</text>
-            <text class="hero-info-text">{{ detail.match.location }}</text>
+      <view class="section">
+        <view class="match-hero">
+          <text class="hero-title">{{ detail.match.title }}</text>
+          <view class="status-badge" :class="'status-' + detail.match.status">
+            <text class="status-text">{{ statusText }}</text>
           </view>
-          <view class="hero-info-row">
-            <text class="hero-info-emoji">📅</text>
-            <text class="hero-info-text">{{ formatDateTime(detail.match.matchDate) }}</text>
-          </view>
-          <view class="hero-info-row">
-            <text class="hero-info-emoji">👥</text>
-            <text class="hero-info-text">{{ detail.registrations.length }}/{{ detail.match.groups * detail.match.playersPerGroup }} 人已报名</text>
+          <view class="hero-info-rows">
+            <view class="hero-info-row">
+              <text class="hero-info-emoji">📍</text>
+              <text class="hero-info-text">{{ detail.match.location }}</text>
+            </view>
+            <view class="hero-info-row">
+              <text class="hero-info-emoji">📅</text>
+              <text class="hero-info-text">{{ formatDateTime(detail.match.matchDate) }}</text>
+            </view>
+            <view class="hero-info-row">
+              <text class="hero-info-emoji">👥</text>
+              <text class="hero-info-text">{{ detail.registrations.length }}/{{ detail.match.groups * detail.match.playersPerGroup }} 人已报名</text>
+            </view>
           </view>
         </view>
       </view>
 
       <!-- Groups Section -->
-      <view class="section-header">
-        <view class="section-icon-box">
-          <text class="section-icon-text">👥</text>
+      <view class="section">
+        <view class="section-header-row">
+          <view class="section-icon-box green-icon">
+            <text class="section-icon-text">👥</text>
+          </view>
+          <text class="section-title">分组报名</text>
         </view>
-        <text class="section-title">分组报名</text>
-      </view>
 
-      <view class="groups-list">
-        <view v-for="(group, idx) in groupsList" :key="idx" class="group-card">
-          <view class="group-color-border" :style="{ backgroundColor: group.color }" />
-          <view class="group-content">
-            <view class="group-top">
-              <text class="group-name">{{ group.color }}队</text>
-              <text class="group-count">{{ group.members.length }}/{{ detail.match.playersPerGroup }}</text>
-            </view>
-            <view v-for="m in group.members" :key="m.userUid" class="member-row">
-              <view class="member-avatar">
-                <text class="member-avatar-text">{{ m.nickname[0] }}</text>
+        <view class="groups-list">
+          <view v-for="(group, idx) in groupsList" :key="idx" class="group-card">
+            <view class="group-color-border" :style="{ backgroundColor: group.color }" />
+            <view class="group-content">
+              <view class="group-top">
+                <text class="group-name">{{ group.color }}队</text>
+                <text class="group-count">{{ group.members.length }}/{{ detail.match.playersPerGroup }}</text>
               </view>
-              <view class="member-info">
-                <text class="member-name">{{ m.nickname }}</text>
-                <text class="member-time">{{ formatDateTime(m.registeredAt) }}</text>
+              <view v-for="m in group.members" :key="m.userUid" class="member-row">
+                <view class="member-avatar">
+                  <text class="member-avatar-text">{{ m.nickname[0] }}</text>
+                </view>
+                <view class="member-info">
+                  <text class="member-name">{{ m.nickname }}</text>
+                  <text class="member-time">{{ formatDateTime(m.registeredAt) }}</text>
+                </view>
               </view>
-            </view>
-            <view v-if="group.members.length === 0" class="group-empty">
-              <text class="group-empty-text">暂无队员</text>
+              <view v-if="group.members.length === 0" class="group-empty">
+                <text class="group-empty-text">暂无队员</text>
+              </view>
             </view>
           </view>
         </view>
       </view>
 
       <!-- Action Buttons -->
-      <view v-if="detail.match.status === 'upcoming'" class="action-area">
+      <view v-if="detail.match.status === 'upcoming'" class="section">
         <view v-if="!detail.isRegistered" class="btn-register" @tap="handleRegister">
           <text class="btn-register-text">报名参加</text>
         </view>
@@ -71,10 +81,10 @@
         </view>
       </view>
 
-      <!-- Rankings -->
-      <view v-if="rankings && rankings.distanceRanking && rankings.distanceRanking.length > 0" class="rankings-section">
-        <view class="section-header">
-          <view class="section-icon-box section-icon-rank">
+      <!-- Rankings: Distance -->
+      <view v-if="rankings && rankings.distanceRanking && rankings.distanceRanking.length > 0" class="section">
+        <view class="section-header-row">
+          <view class="section-icon-box orange-icon">
             <text class="section-icon-text">🏆</text>
           </view>
           <text class="section-title">距离排行</text>
@@ -86,7 +96,7 @@
           <view class="rank-list">
             <view v-for="(r, i) in rankings.distanceRanking" :key="r.userUid" class="rank-item">
               <view class="rank-medal-box">
-                <text v-if="i < 3" class="rank-medal" :class="'medal-' + i">{{ ['🥇','🥈','🥉'][i] }}</text>
+                <text v-if="i < 3" class="rank-medal">{{ ['🥇','🥈','🥉'][i] }}</text>
                 <text v-else class="rank-number">{{ i + 1 }}</text>
               </view>
               <text class="rank-name">{{ r.nickname }}</text>
@@ -96,8 +106,8 @@
         </view>
       </view>
 
-      <!-- Calories Rankings -->
-      <view v-if="rankings && rankings.caloriesRanking && rankings.caloriesRanking.length > 0" class="rankings-section">
+      <!-- Rankings: Calories -->
+      <view v-if="rankings && rankings.caloriesRanking && rankings.caloriesRanking.length > 0" class="section">
         <view class="rank-card">
           <view class="rank-card-header rank-card-header-orange">
             <text class="rank-card-header-text">🔥 卡路里排行榜</text>
@@ -105,7 +115,7 @@
           <view class="rank-list">
             <view v-for="(r, i) in rankings.caloriesRanking" :key="r.userUid" class="rank-item">
               <view class="rank-medal-box">
-                <text v-if="i < 3" class="rank-medal" :class="'medal-' + i">{{ ['🥇','🥈','🥉'][i] }}</text>
+                <text v-if="i < 3" class="rank-medal">{{ ['🥇','🥈','🥉'][i] }}</text>
                 <text v-else class="rank-number">{{ i + 1 }}</text>
               </view>
               <text class="rank-name">{{ r.nickname }}</text>
@@ -116,14 +126,16 @@
       </view>
 
       <!-- AI Summary -->
-      <view v-if="summary" class="ai-summary-card">
-        <view class="ai-summary-header">
-          <text class="ai-summary-icon">🤖</text>
-          <text class="ai-summary-title">AI 比赛总结</text>
+      <view v-if="summary" class="section section--last">
+        <view class="ai-summary-card">
+          <view class="ai-summary-header">
+            <text class="ai-summary-icon">🤖</text>
+            <text class="ai-summary-title">AI 比赛总结</text>
+          </view>
+          <text class="ai-summary-text">{{ summary }}</text>
         </view>
-        <text class="ai-summary-text">{{ summary }}</text>
       </view>
-    </view>
+    </scroll-view>
   </view>
 </template>
 
@@ -145,11 +157,6 @@ const statusText = computed(() => {
   if (!detail.value) return ''
   const s = detail.value.match.status
   return s === 'upcoming' ? '报名中' : s === 'completed' ? '已结束' : '已取消'
-})
-const statusColor = computed(() => {
-  if (!detail.value) return '#6B7280'
-  const s = detail.value.match.status
-  return s === 'upcoming' ? '#FACC15' : s === 'completed' ? '#6B7280' : '#EF4444'
 })
 
 const groupsList = computed(() => {
@@ -195,47 +202,124 @@ onLoad(async (options) => {
 </script>
 
 <style lang="scss" scoped>
+$pageBg: #0a0a0a;
+$cardBg: #1a1a1a;
+$border: 1rpx solid #2a2a2a;
+$green: #07c160;
+$greenDark: #05a850;
+$textPrimary: #FFFFFF;
+$textSecondary: #999;
+$textMuted: #666;
+
 .page {
   min-height: 100vh;
-  background: #0D1117;
+  background: $pageBg;
 }
 
-.nav-bar {
-  padding: 100rpx 32rpx 28rpx;
+.scroll-area {
+  height: calc(100vh - 240rpx);
+}
+
+// ============================================================
+// Header
+// ============================================================
+.header {
+  background: linear-gradient(135deg, $green, $greenDark);
+  padding: 100rpx 32rpx 36rpx;
+  box-shadow: 0 8rpx 32rpx rgba(7, 193, 96, 0.2);
+}
+
+.header-nav {
   display: flex;
   align-items: center;
-
-  .back {
-    font-size: 52rpx;
-    color: #00E676;
-    margin-right: 12rpx;
-    font-weight: 300;
-    line-height: 1;
-  }
-
-  .nav-title {
-    font-size: 36rpx;
-    font-weight: 600;
-    color: #FFFFFF;
-  }
+  justify-content: space-between;
 }
 
-.content {
-  padding: 0 32rpx 60rpx;
+.back-row {
+  display: flex;
+  align-items: center;
+  min-width: 120rpx;
 }
 
-/* ---- Match Hero ---- */
+.back-arrow {
+  font-size: 48rpx;
+  color: $textPrimary;
+  margin-right: 4rpx;
+  font-weight: 300;
+  line-height: 1;
+}
+
+.back-text {
+  font-size: 28rpx;
+  color: $textPrimary;
+}
+
+.nav-title {
+  font-size: 36rpx;
+  font-weight: 700;
+  color: $textPrimary;
+  text-align: center;
+  flex: 1;
+}
+
+.nav-right {
+  min-width: 120rpx;
+}
+
+// ============================================================
+// Sections
+// ============================================================
+.section {
+  padding: 24rpx 32rpx 0;
+}
+
+.section--last {
+  padding-bottom: 120rpx;
+}
+
+.section-header-row {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  margin-bottom: 20rpx;
+}
+
+.section-icon-box {
+  width: 52rpx;
+  height: 52rpx;
+  border-radius: 16rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.green-icon { background: rgba(7, 193, 96, 0.16); }
+.orange-icon { background: rgba(255, 165, 2, 0.16); }
+
+.section-icon-text {
+  font-size: 24rpx;
+}
+
+.section-title {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: $textPrimary;
+}
+
+// ============================================================
+// Match Hero
+// ============================================================
 .match-hero {
-  background: linear-gradient(135deg, #16803B, #166534);
-  border-radius: 36rpx;
+  background: linear-gradient(135deg, $green, $greenDark);
+  border-radius: 32rpx;
   padding: 32rpx;
-  margin-bottom: 32rpx;
+  box-shadow: 0 8rpx 32rpx rgba(7, 193, 96, 0.2);
 }
 
 .hero-title {
   font-size: 36rpx;
   font-weight: 700;
-  color: #FFFFFF;
+  color: $textPrimary;
   display: block;
   margin-bottom: 16rpx;
 }
@@ -244,31 +328,25 @@ onLoad(async (options) => {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 6rpx 16rpx;
-  border-radius: 12rpx;
+  padding: 6rpx 20rpx;
+  border-radius: 16rpx;
   margin-bottom: 20rpx;
 }
 
-.status-upcoming {
-  background: #FACC15;
-}
-
-.status-live {
-  background: #22C55E;
-}
-
-.status-completed {
-  background: #6B7280;
-}
-
-.status-cancelled {
-  background: #6B7280;
-}
+.status-upcoming { background: #FACC15; }
+.status-live { background: #22C55E; }
+.status-completed { background: rgba(255, 255, 255, 0.2); }
+.status-cancelled { background: rgba(255, 255, 255, 0.2); }
 
 .status-text {
   font-size: 22rpx;
   font-weight: 700;
   color: #000000;
+}
+
+.status-completed .status-text,
+.status-cancelled .status-text {
+  color: $textPrimary;
 }
 
 .hero-info-rows {
@@ -292,52 +370,22 @@ onLoad(async (options) => {
   color: rgba(255, 255, 255, 0.85);
 }
 
-/* ---- Section Headers ---- */
-.section-header {
-  display: flex;
-  align-items: center;
-  gap: 16rpx;
-  margin-bottom: 20rpx;
-}
-
-.section-icon-box {
-  width: 52rpx;
-  height: 52rpx;
-  border-radius: 16rpx;
-  background: rgba(0, 230, 118, 0.16);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.section-icon-rank {
-  background: rgba(255, 165, 2, 0.16);
-}
-
-.section-icon-text {
-  font-size: 24rpx;
-}
-
-.section-title {
-  font-size: 30rpx;
-  font-weight: 600;
-  color: #FFFFFF;
-}
-
-/* ---- Groups ---- */
+// ============================================================
+// Groups
+// ============================================================
 .groups-list {
   display: flex;
   flex-direction: column;
   gap: 16rpx;
-  margin-bottom: 32rpx;
 }
 
 .group-card {
-  background: #1C2333;
+  background: $cardBg;
   border-radius: 32rpx;
   display: flex;
   overflow: hidden;
-  border: 1rpx solid rgba(255, 255, 255, 0.08);
+  border: $border;
+  box-shadow: 0 4rpx 24rpx rgba(0, 0, 0, 0.3);
 }
 
 .group-color-border {
@@ -360,12 +408,12 @@ onLoad(async (options) => {
 .group-name {
   font-size: 28rpx;
   font-weight: 600;
-  color: #FFFFFF;
+  color: $textPrimary;
 }
 
 .group-count {
   font-size: 24rpx;
-  color: #8B949E;
+  color: $textSecondary;
 }
 
 .member-row {
@@ -379,7 +427,7 @@ onLoad(async (options) => {
   width: 72rpx;
   height: 72rpx;
   border-radius: 50%;
-  background: #242D3D;
+  background: #252525;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -388,7 +436,7 @@ onLoad(async (options) => {
 
 .member-avatar-text {
   font-size: 28rpx;
-  color: #00E676;
+  color: $green;
   font-weight: 600;
 }
 
@@ -400,12 +448,12 @@ onLoad(async (options) => {
 
 .member-name {
   font-size: 26rpx;
-  color: #FFFFFF;
+  color: $textPrimary;
 }
 
 .member-time {
   font-size: 22rpx;
-  color: #8B949E;
+  color: $textSecondary;
   margin-top: 2rpx;
 }
 
@@ -415,33 +463,32 @@ onLoad(async (options) => {
 
 .group-empty-text {
   font-size: 24rpx;
-  color: #8B949E;
+  color: $textSecondary;
 }
 
-/* ---- Action Buttons ---- */
-.action-area {
-  margin-bottom: 32rpx;
-}
-
+// ============================================================
+// Action Buttons
+// ============================================================
 .btn-register {
-  background: linear-gradient(135deg, #00E676, #00BFA5);
-  border-radius: 24rpx;
+  background: linear-gradient(90deg, $green, $greenDark);
+  border-radius: 100rpx;
   height: 96rpx;
   display: flex;
   align-items: center;
   justify-content: center;
+  box-shadow: 0 8rpx 24rpx rgba(7, 193, 96, 0.3);
 }
 
 .btn-register-text {
   font-size: 30rpx;
   font-weight: 600;
-  color: #0D1117;
+  color: $textPrimary;
 }
 
 .btn-cancel {
   background: transparent;
   border: 2rpx solid #EF4444;
-  border-radius: 24rpx;
+  border-radius: 100rpx;
   height: 96rpx;
   display: flex;
   align-items: center;
@@ -454,20 +501,19 @@ onLoad(async (options) => {
   color: #EF4444;
 }
 
-/* ---- Rankings ---- */
-.rankings-section {
-  margin-bottom: 24rpx;
-}
-
+// ============================================================
+// Rankings
+// ============================================================
 .rank-card {
-  background: #1C2333;
+  background: $cardBg;
   border-radius: 32rpx;
   overflow: hidden;
-  border: 1rpx solid rgba(255, 255, 255, 0.08);
+  border: $border;
+  box-shadow: 0 4rpx 24rpx rgba(0, 0, 0, 0.3);
 }
 
 .rank-card-header {
-  background: linear-gradient(135deg, #16803B, #166534);
+  background: linear-gradient(135deg, $green, $greenDark);
   padding: 20rpx 24rpx;
 }
 
@@ -478,7 +524,7 @@ onLoad(async (options) => {
 .rank-card-header-text {
   font-size: 26rpx;
   font-weight: 600;
-  color: #FFFFFF;
+  color: $textPrimary;
 }
 
 .rank-list {
@@ -503,61 +549,37 @@ onLoad(async (options) => {
   font-size: 32rpx;
 }
 
-.medal-0 {
-  color: #FFD700;
-}
-
-.medal-1 {
-  color: #C0C0C0;
-}
-
-.medal-2 {
-  color: #CD7F32;
-}
-
 .rank-number {
   font-size: 28rpx;
   font-weight: 600;
-  color: #8B949E;
+  color: $textSecondary;
 }
 
 .rank-name {
   flex: 1;
   font-size: 28rpx;
-  color: #FFFFFF;
+  color: $textPrimary;
 }
 
 .rank-value {
   font-size: 28rpx;
   font-weight: 600;
-  color: #00E676;
+  color: $green;
 }
 
 .rank-value-orange {
   color: #FFA502;
 }
 
-/* ---- AI Summary ---- */
+// ============================================================
+// AI Summary
+// ============================================================
 .ai-summary-card {
-  background: #1C2333;
+  background: $cardBg;
   border-radius: 32rpx;
   padding: 28rpx 32rpx;
-  border: 2rpx solid transparent;
-  background-clip: padding-box;
-  position: relative;
-  margin-bottom: 24rpx;
-
-  &::before {
-    content: '';
-    position: absolute;
-    top: -2rpx;
-    left: -2rpx;
-    right: -2rpx;
-    bottom: -2rpx;
-    border-radius: 34rpx;
-    background: linear-gradient(135deg, #4F46E5, #7C3AED);
-    z-index: -1;
-  }
+  border: 1rpx solid rgba(168, 85, 247, 0.3);
+  box-shadow: 0 4rpx 24rpx rgba(0, 0, 0, 0.3);
 }
 
 .ai-summary-header {
@@ -574,12 +596,12 @@ onLoad(async (options) => {
 .ai-summary-title {
   font-size: 30rpx;
   font-weight: 600;
-  color: #FFFFFF;
+  color: $textPrimary;
 }
 
 .ai-summary-text {
   font-size: 26rpx;
-  color: #8B949E;
+  color: $textSecondary;
   line-height: 1.7;
 }
 </style>

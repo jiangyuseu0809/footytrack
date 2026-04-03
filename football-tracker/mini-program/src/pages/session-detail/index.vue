@@ -1,145 +1,173 @@
 <template>
   <view class="page">
-    <!-- Nav Bar -->
-    <view class="nav-bar">
-      <text class="back" @tap="goBack">‹</text>
-      <text class="nav-title">训练详情</text>
+    <!-- Header -->
+    <view class="header">
+      <view class="header-nav">
+        <view class="back-row" @tap="goBack">
+          <text class="back-arrow">‹</text>
+          <text class="back-text">返回</text>
+        </view>
+        <text class="nav-title">{{ matchName }}</text>
+        <view class="nav-right" />
+      </view>
+      <text class="header-sub">{{ dateStr }} · {{ locationStr }}</text>
     </view>
 
-    <view v-if="session" class="content">
-      <!-- Overview Hero Card -->
-      <view class="overview-card">
-        <view class="overview-row">
-          <view class="overview-icon-box overview-icon-venue">
-            <text class="overview-icon-text">📍</text>
-          </view>
-          <view class="overview-text-col">
-            <text class="overview-label">训练时间</text>
-            <text class="overview-value">{{ formatDateTime(session.startTime) }}</text>
-          </view>
-        </view>
-        <view class="overview-row">
-          <view class="overview-icon-box overview-icon-clock">
-            <text class="overview-icon-text">⏱</text>
-          </view>
-          <view class="overview-text-col">
-            <text class="overview-label">持续时间</text>
-            <text class="overview-value">{{ durationStr }}</text>
-          </view>
-        </view>
-      </view>
-
-      <!-- Stats Grid -->
-      <view class="stats-grid">
-        <view class="stat-item">
-          <view class="stat-icon-box stat-icon-distance">
-            <text class="stat-icon-text">🏃</text>
-          </view>
-          <text class="stat-label">距离</text>
-          <text class="stat-value stat-value-distance">{{ formatDistance(session.totalDistanceMeters) }}</text>
-          <text class="stat-unit">km</text>
-        </view>
-        <view class="stat-item">
-          <view class="stat-icon-box stat-icon-calories">
-            <text class="stat-icon-text">🔥</text>
-          </view>
-          <text class="stat-label">卡路里</text>
-          <text class="stat-value stat-value-calories">{{ Math.round(session.caloriesBurned || 0) }}</text>
-          <text class="stat-unit">kcal</text>
-        </view>
-        <view class="stat-item">
-          <view class="stat-icon-box stat-icon-maxspeed">
-            <text class="stat-icon-text">⚡</text>
-          </view>
-          <text class="stat-label">最高速度</text>
-          <text class="stat-value stat-value-maxspeed">{{ (session.maxSpeedKmh || 0).toFixed(1) }}</text>
-          <text class="stat-unit">km/h</text>
-        </view>
-        <view class="stat-item">
-          <view class="stat-icon-box stat-icon-sprint">
-            <text class="stat-icon-text">💨</text>
-          </view>
-          <text class="stat-label">冲刺</text>
-          <text class="stat-value stat-value-sprint">{{ session.sprintCount || 0 }}</text>
-          <text class="stat-unit">次</text>
-        </view>
-        <view class="stat-item">
-          <view class="stat-icon-box stat-icon-avgspeed">
-            <text class="stat-icon-text">🏎</text>
-          </view>
-          <text class="stat-label">平均速度</text>
-          <text class="stat-value stat-value-avgspeed">{{ (session.avgSpeedKmh || 0).toFixed(1) }}</text>
-          <text class="stat-unit">km/h</text>
-        </view>
-        <view class="stat-item">
-          <view class="stat-icon-box stat-icon-highintensity">
-            <text class="stat-icon-text">🎯</text>
-          </view>
-          <text class="stat-label">高强度距离</text>
-          <text class="stat-value stat-value-highintensity">{{ ((session.highIntensityDistanceMeters || 0) / 1000).toFixed(1) }}</text>
-          <text class="stat-unit">km</text>
-        </view>
-      </view>
-
-      <!-- Heart Rate Card -->
-      <view class="section-card">
-        <view class="section-header">
-          <view class="section-icon-box section-icon-hr">
-            <text class="section-icon-text">❤️</text>
-          </view>
-          <text class="section-title">心率数据</text>
-        </view>
-        <view class="hr-columns">
-          <view class="hr-col">
-            <text class="hr-col-label">平均心率</text>
-            <view class="hr-value-row">
-              <text class="hr-value">{{ session.avgHeartRate || '-' }}</text>
-              <text class="hr-unit">bpm</text>
+    <scroll-view v-if="session" scroll-y class="scroll-area">
+      <!-- Core Stats -->
+      <view class="section">
+        <view class="stats-card">
+          <text class="card-title">核心数据</text>
+          <view class="stats-row">
+            <view class="stat-cell">
+              <view class="stat-icon-box orange-red">
+                <text class="stat-icon">🔥</text>
+              </view>
+              <text class="stat-sub-label">热量</text>
+              <text class="stat-big-value">{{ Math.round(session.caloriesBurned || 0) }}</text>
+              <text class="stat-tiny-unit">kcal</text>
+            </view>
+            <view class="stat-cell">
+              <view class="stat-icon-box blue">
+                <text class="stat-icon">📍</text>
+              </view>
+              <text class="stat-sub-label">距离</text>
+              <text class="stat-big-value">{{ distanceKm }}</text>
+              <text class="stat-tiny-unit">km</text>
+            </view>
+            <view class="stat-cell">
+              <view class="stat-icon-box yellow-orange">
+                <text class="stat-icon">⚡</text>
+              </view>
+              <text class="stat-sub-label">冲刺</text>
+              <text class="stat-big-value">{{ session.sprintCount || 0 }}</text>
+              <text class="stat-tiny-unit">次</text>
             </view>
           </view>
-          <view class="hr-divider" />
-          <view class="hr-col">
-            <text class="hr-col-label">最高心率</text>
-            <view class="hr-value-row">
-              <text class="hr-value hr-value-max">{{ session.maxHeartRate || '-' }}</text>
-              <text class="hr-unit">bpm</text>
+          <view class="stats-row">
+            <view class="stat-cell">
+              <view class="stat-icon-box purple">
+                <text class="stat-icon">⏱️</text>
+              </view>
+              <text class="stat-sub-label">时长</text>
+              <text class="stat-big-value">{{ durationMin }}</text>
+              <text class="stat-tiny-unit">分钟</text>
+            </view>
+            <view class="stat-cell">
+              <view class="stat-icon-box pink-red">
+                <text class="stat-icon">❤️</text>
+              </view>
+              <text class="stat-sub-label">最高心率</text>
+              <text class="stat-big-value">{{ session.maxHeartRate || '-' }}</text>
+              <text class="stat-tiny-unit">bpm</text>
+            </view>
+            <view class="stat-cell">
+              <view class="stat-icon-box green-teal">
+                <text class="stat-icon">❤️</text>
+              </view>
+              <text class="stat-sub-label">平均心率</text>
+              <text class="stat-big-value">{{ session.avgHeartRate || '-' }}</text>
+              <text class="stat-tiny-unit">bpm</text>
             </view>
           </view>
         </view>
       </view>
 
-      <!-- Slack Index Card -->
-      <view class="section-card">
-        <view class="section-header">
-          <view class="section-icon-box section-icon-slack">
-            <text class="section-icon-text">🐟</text>
+      <!-- Heart Rate Placeholder -->
+      <view v-if="session.avgHeartRate" class="section">
+        <view class="chart-card">
+          <view class="chart-header">
+            <text class="chart-header-icon">📈</text>
+            <text class="chart-header-title">心率变化曲线</text>
           </view>
-          <text class="section-title">摸鱼指数</text>
-        </view>
-        <view class="slack-content">
-          <view class="slack-bar-track">
-            <view class="slack-bar-fill" :style="{ width: (session.slackIndex || 0) + '%' }" />
-          </view>
-          <view class="slack-info-row">
-            <text class="slack-percentage">{{ session.slackIndex || 0 }}%</text>
-            <text class="slack-label">{{ session.slackLabel || '-' }}</text>
+          <view class="hr-chart-placeholder">
+            <view class="hr-bar-row">
+              <view v-for="(bar, i) in heartRateBars" :key="i" class="hr-bar-col">
+                <view class="hr-bar" :style="{ height: bar.height + '%' }" />
+                <text class="hr-bar-label">{{ bar.label }}</text>
+              </view>
+            </view>
+            <view class="hr-chart-info">
+              <text class="hr-chart-info-text">平均 {{ session.avgHeartRate }} bpm · 最高 {{ session.maxHeartRate }} bpm</text>
+            </view>
           </view>
         </view>
       </view>
 
-      <!-- Performance Score Card -->
-      <view class="section-card">
-        <view class="section-header">
-          <view class="section-icon-box section-icon-perf">
-            <text class="section-icon-text">📊</text>
+      <!-- Ability Analysis -->
+      <view class="section">
+        <view class="chart-card">
+          <view class="chart-header">
+            <text class="chart-header-icon">🎯</text>
+            <text class="chart-header-title">能力分析图</text>
           </view>
-          <text class="section-title">综合评分</text>
-        </view>
-        <view class="score-content">
-          <text class="score-value">{{ score.toFixed(1) }}</text>
+          <view class="radar-placeholder">
+            <view class="radar-grid">
+              <view v-for="item in abilityData" :key="item.ability" class="radar-item">
+                <text class="radar-label">{{ item.ability }}</text>
+                <view class="radar-bar-track">
+                  <view class="radar-bar-fill" :style="{ width: item.value + '%' }" />
+                </view>
+                <text class="radar-bar-value">{{ item.value }}</text>
+              </view>
+            </view>
+          </view>
         </view>
       </view>
-    </view>
+
+      <!-- Heat Map -->
+      <view class="section">
+        <view class="chart-card">
+          <text class="chart-card-title">跑动覆盖热力图</text>
+          <view class="heatmap-box">
+            <view class="field-outline">
+              <view class="field-center-line" />
+              <view class="field-center-circle" />
+            </view>
+            <view class="heat-point heat-1" />
+            <view class="heat-point heat-2" />
+            <view class="heat-point heat-3" />
+          </view>
+          <view class="heatmap-legend">
+            <text class="legend-text">低活跃度</text>
+            <view class="legend-bar" />
+            <text class="legend-text">高活跃度</text>
+          </view>
+        </view>
+      </view>
+
+      <!-- Slack Index -->
+      <view v-if="session.slackIndex != null" class="section">
+        <view class="chart-card">
+          <view class="chart-header">
+            <text class="chart-header-icon">🐟</text>
+            <text class="chart-header-title">摸鱼指数</text>
+          </view>
+          <view class="slack-content">
+            <view class="slack-bar-track">
+              <view class="slack-bar-fill" :style="{ width: (session.slackIndex || 0) + '%' }" />
+            </view>
+            <view class="slack-info-row">
+              <text class="slack-percentage">{{ session.slackIndex || 0 }}%</text>
+              <text class="slack-label-text">{{ session.slackLabel || '-' }}</text>
+            </view>
+          </view>
+        </view>
+      </view>
+
+      <!-- Performance Score -->
+      <view class="section section--last">
+        <view class="chart-card">
+          <view class="chart-header">
+            <text class="chart-header-icon">📊</text>
+            <text class="chart-header-title">综合评分</text>
+          </view>
+          <view class="score-content">
+            <text class="score-value">{{ score.toFixed(1) }}</text>
+          </view>
+        </view>
+      </view>
+    </scroll-view>
   </view>
 </template>
 
@@ -150,12 +178,69 @@ import { getSessions, type SessionDto } from '../../utils/api'
 import { formatDistance, formatDateTime, formatDuration, computePerformanceScore } from '../../utils/format'
 
 const session = ref<SessionDto | null>(null)
-const durationStr = computed(() => {
-  if (!session.value) return '-'
-  return formatDuration(session.value.endTime - session.value.startTime)
+
+const matchName = computed(() => '训练详情')
+const dateStr = computed(() => session.value ? formatDateTime(session.value.startTime) : '')
+const locationStr = computed(() => '运动场')
+
+const distanceKm = computed(() => {
+  if (!session.value) return '0'
+  return ((session.value.totalDistanceMeters || 0) / 1000).toFixed(1)
 })
+
+const durationMin = computed(() => {
+  if (!session.value) return 0
+  return Math.round((session.value.endTime - session.value.startTime) / 60000)
+})
+
 const score = computed(() => session.value ? computePerformanceScore(session.value) : 0)
+
+const heartRateBars = computed(() => {
+  if (!session.value || !session.value.avgHeartRate) return []
+  const avg = session.value.avgHeartRate || 120
+  const max = session.value.maxHeartRate || 150
+  // Generate simulated bar chart data based on avg/max
+  const points = [
+    { label: '开始', value: Math.round(avg * 0.6) },
+    { label: '15\'', value: Math.round(avg * 0.85) },
+    { label: '30\'', value: avg },
+    { label: '45\'', value: Math.round((avg + max) / 2) },
+    { label: '60\'', value: Math.round(avg * 1.05) },
+    { label: '75\'', value: max },
+    { label: '结束', value: Math.round(avg * 0.65) },
+  ]
+  const maxVal = Math.max(...points.map(p => p.value))
+  return points.map(p => ({ label: p.label, height: Math.round((p.value / maxVal) * 100) }))
+})
+
+const abilityData = computed(() => {
+  if (!session.value) {
+    return [
+      { ability: '速度', value: 0 },
+      { ability: '耐力', value: 0 },
+      { ability: '爆发力', value: 0 },
+      { ability: '灵活性', value: 0 },
+      { ability: '体能', value: 0 },
+      { ability: '持久力', value: 0 },
+    ]
+  }
+  const s = session.value
+  const maxSpeed = s.maxSpeedKmh || 0
+  const avgSpeed = s.avgSpeedKmh || 0
+  const dist = (s.totalDistanceMeters || 0) / 1000
+  const sprints = s.sprintCount || 0
+  return [
+    { ability: '速度', value: Math.min(100, Math.round(maxSpeed * 4)) },
+    { ability: '耐力', value: Math.min(100, Math.round(dist * 15)) },
+    { ability: '爆发力', value: Math.min(100, Math.round(sprints * 5)) },
+    { ability: '灵活性', value: Math.min(100, Math.round(avgSpeed * 8)) },
+    { ability: '体能', value: Math.min(100, Math.round((dist + avgSpeed) * 6)) },
+    { ability: '持久力', value: Math.min(100, Math.round(dist * 12)) },
+  ]
+})
+
 function goBack() { uni.navigateBack() }
+
 onLoad(async (options) => {
   const id = options?.id
   if (!id) return
@@ -167,264 +252,394 @@ onLoad(async (options) => {
 </script>
 
 <style lang="scss" scoped>
+$pageBg: #0a0a0a;
+$cardBg: #1a1a1a;
+$border: 1rpx solid #2a2a2a;
+$green: #07c160;
+$greenDark: #05a850;
+$textPrimary: #FFFFFF;
+$textSecondary: #999;
+$textMuted: #666;
+
 .page {
   min-height: 100vh;
-  background: #0D1117;
+  background: $pageBg;
 }
 
-.nav-bar {
-  padding: 100rpx 32rpx 28rpx;
+.scroll-area {
+  height: calc(100vh - 280rpx);
+}
+
+// ============================================================
+// Header
+// ============================================================
+.header {
+  background: linear-gradient(135deg, $green, $greenDark);
+  padding: 100rpx 32rpx 36rpx;
+  box-shadow: 0 8rpx 32rpx rgba(7, 193, 96, 0.2);
+}
+
+.header-nav {
   display: flex;
   align-items: center;
-
-  .back {
-    font-size: 52rpx;
-    color: #00E676;
-    margin-right: 12rpx;
-    font-weight: 300;
-    line-height: 1;
-  }
-
-  .nav-title {
-    font-size: 36rpx;
-    font-weight: 600;
-    color: #FFFFFF;
-  }
+  justify-content: space-between;
+  margin-bottom: 12rpx;
 }
 
-.content {
-  padding: 0 32rpx 60rpx;
-}
-
-/* ---- Overview Hero Card ---- */
-.overview-card {
-  background: linear-gradient(135deg, #00E676, #00BFA5);
-  border-radius: 36rpx;
-  padding: 32rpx;
-  margin-bottom: 32rpx;
-  display: flex;
-  flex-direction: column;
-  gap: 24rpx;
-}
-
-.overview-row {
+.back-row {
   display: flex;
   align-items: center;
-  gap: 20rpx;
+  min-width: 120rpx;
 }
 
-.overview-icon-box {
-  width: 64rpx;
-  height: 64rpx;
-  border-radius: 16rpx;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
+.back-arrow {
+  font-size: 48rpx;
+  color: $textPrimary;
+  margin-right: 4rpx;
+  font-weight: 300;
+  line-height: 1;
 }
 
-.overview-icon-venue {
-  background: rgba(0, 0, 0, 0.15);
-}
-
-.overview-icon-clock {
-  background: rgba(0, 0, 0, 0.15);
-}
-
-.overview-icon-text {
+.back-text {
   font-size: 28rpx;
+  color: $textPrimary;
 }
 
-.overview-text-col {
-  display: flex;
-  flex-direction: column;
-}
-
-.overview-label {
-  font-size: 22rpx;
-  color: rgba(0, 0, 0, 0.5);
-}
-
-.overview-value {
-  font-size: 32rpx;
+.nav-title {
+  font-size: 36rpx;
   font-weight: 700;
-  color: #0D1117;
+  color: $textPrimary;
+  text-align: center;
+  flex: 1;
 }
 
-/* ---- Stats Grid (3 cols x 2 rows) ---- */
-.stats-grid {
+.nav-right {
+  min-width: 120rpx;
+}
+
+.header-sub {
+  font-size: 26rpx;
+  color: rgba(255, 255, 255, 0.9);
+  display: block;
+  text-align: center;
+}
+
+// ============================================================
+// Sections
+// ============================================================
+.section {
+  padding: 24rpx 32rpx 0;
+}
+
+.section--last {
+  padding-bottom: 120rpx;
+}
+
+// ============================================================
+// Core Stats Card
+// ============================================================
+.stats-card {
+  background: $cardBg;
+  border-radius: 32rpx;
+  padding: 28rpx 24rpx;
+  border: $border;
+  box-shadow: 0 4rpx 24rpx rgba(0, 0, 0, 0.3);
+}
+
+.card-title {
+  font-size: 30rpx;
+  font-weight: 500;
+  color: $textPrimary;
+  display: block;
+  margin-bottom: 24rpx;
+}
+
+.stats-row {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
   gap: 16rpx;
-  margin-bottom: 32rpx;
+  margin-bottom: 16rpx;
+
+  &:last-child {
+    margin-bottom: 0;
+  }
 }
 
-.stat-item {
-  background: #1C2333;
-  border-radius: 28rpx;
-  padding: 20rpx 16rpx;
+.stat-cell {
+  text-align: center;
   display: flex;
   flex-direction: column;
   align-items: center;
-  border: 1rpx solid rgba(255, 255, 255, 0.08);
 }
 
 .stat-icon-box {
-  width: 64rpx;
-  height: 64rpx;
-  border-radius: 16rpx;
+  width: 80rpx;
+  height: 80rpx;
+  border-radius: 20rpx;
   display: flex;
   align-items: center;
   justify-content: center;
   margin-bottom: 8rpx;
+  box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.2);
 }
 
-.stat-icon-distance {
-  background: linear-gradient(135deg, rgba(0, 230, 118, 0.2), rgba(105, 240, 174, 0.2));
+.orange-red { background: linear-gradient(135deg, #fb923c, #ef4444); }
+.blue { background: linear-gradient(135deg, #60a5fa, #3b82f6); }
+.yellow-orange { background: linear-gradient(135deg, #facc15, #f97316); }
+.purple { background: linear-gradient(135deg, #a78bfa, #7c3aed); }
+.pink-red { background: linear-gradient(135deg, #f472b6, #ef4444); }
+.green-teal { background: linear-gradient(135deg, #4ade80, #14b8a6); }
+
+.stat-icon {
+  font-size: 36rpx;
 }
 
-.stat-icon-calories {
-  background: linear-gradient(135deg, rgba(255, 165, 2, 0.2), rgba(255, 99, 72, 0.2));
-}
-
-.stat-icon-maxspeed {
-  background: linear-gradient(135deg, rgba(46, 213, 115, 0.2), rgba(123, 237, 159, 0.2));
-}
-
-.stat-icon-sprint {
-  background: linear-gradient(135deg, rgba(255, 71, 87, 0.2), rgba(255, 107, 129, 0.2));
-}
-
-.stat-icon-avgspeed {
-  background: linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(96, 165, 250, 0.2));
-}
-
-.stat-icon-highintensity {
-  background: linear-gradient(135deg, rgba(168, 85, 247, 0.2), rgba(139, 92, 246, 0.2));
-}
-
-.stat-icon-text {
-  font-size: 26rpx;
-}
-
-.stat-label {
-  font-size: 20rpx;
-  color: #8B949E;
+.stat-sub-label {
+  font-size: 22rpx;
+  color: $textSecondary;
   margin-bottom: 4rpx;
 }
 
-.stat-value {
-  font-size: 32rpx;
+.stat-big-value {
+  font-size: 36rpx;
   font-weight: 700;
+  color: $textPrimary;
+  line-height: 1.1;
 }
 
-.stat-value-distance { color: #00E676; }
-.stat-value-calories { color: #FFA502; }
-.stat-value-maxspeed { color: #2ED573; }
-.stat-value-sprint { color: #FF4757; }
-.stat-value-avgspeed { color: #3B82F6; }
-.stat-value-highintensity { color: #A855F7; }
-
-.stat-unit {
-  font-size: 18rpx;
-  color: #8B949E;
+.stat-tiny-unit {
+  font-size: 20rpx;
+  color: $textMuted;
   margin-top: 2rpx;
 }
 
-/* ---- Section Cards ---- */
-.section-card {
-  background: #1C2333;
+// ============================================================
+// Chart Card
+// ============================================================
+.chart-card {
+  background: $cardBg;
   border-radius: 32rpx;
   padding: 28rpx 32rpx;
-  margin-bottom: 24rpx;
-  border: 1rpx solid rgba(255, 255, 255, 0.08);
+  border: $border;
+  box-shadow: 0 4rpx 24rpx rgba(0, 0, 0, 0.3);
 }
 
-.section-header {
+.chart-header {
   display: flex;
   align-items: center;
-  gap: 16rpx;
   margin-bottom: 24rpx;
 }
 
-.section-icon-box {
-  width: 52rpx;
-  height: 52rpx;
-  border-radius: 16rpx;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+.chart-header-icon {
+  font-size: 32rpx;
+  margin-right: 12rpx;
 }
 
-.section-icon-hr {
-  background: rgba(255, 71, 87, 0.16);
-}
-
-.section-icon-slack {
-  background: rgba(255, 165, 2, 0.16);
-}
-
-.section-icon-perf {
-  background: rgba(0, 230, 118, 0.16);
-}
-
-.section-icon-text {
-  font-size: 24rpx;
-}
-
-.section-title {
+.chart-header-title {
   font-size: 30rpx;
-  font-weight: 600;
-  color: #FFFFFF;
+  font-weight: 500;
+  color: $textPrimary;
 }
 
-/* ---- Heart Rate ---- */
-.hr-columns {
+.chart-card-title {
+  font-size: 30rpx;
+  font-weight: 500;
+  color: $textPrimary;
+  display: block;
+  margin-bottom: 24rpx;
+}
+
+// ============================================================
+// Heart Rate Bar Chart Placeholder
+// ============================================================
+.hr-chart-placeholder {
+  padding: 0;
+}
+
+.hr-bar-row {
   display: flex;
-  align-items: center;
+  align-items: flex-end;
+  height: 280rpx;
+  gap: 12rpx;
+  padding: 0 8rpx;
 }
 
-.hr-col {
+.hr-bar-col {
   flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
+  height: 100%;
+  justify-content: flex-end;
 }
 
-.hr-divider {
-  width: 1rpx;
-  height: 80rpx;
-  background: #30363D;
+.hr-bar {
+  width: 100%;
+  background: linear-gradient(180deg, $green, $greenDark);
+  border-radius: 8rpx 8rpx 0 0;
+  min-height: 8rpx;
 }
 
-.hr-col-label {
-  font-size: 22rpx;
-  color: #8B949E;
-  margin-bottom: 8rpx;
+.hr-bar-label {
+  font-size: 20rpx;
+  color: $textMuted;
+  margin-top: 8rpx;
 }
 
-.hr-value-row {
+.hr-chart-info {
+  margin-top: 16rpx;
+  text-align: center;
+}
+
+.hr-chart-info-text {
+  font-size: 24rpx;
+  color: $textSecondary;
+}
+
+// ============================================================
+// Radar as Bar Chart
+// ============================================================
+.radar-placeholder {
+  padding: 0;
+}
+
+.radar-grid {
   display: flex;
-  align-items: baseline;
-  gap: 6rpx;
+  flex-direction: column;
+  gap: 20rpx;
 }
 
-.hr-value {
-  font-size: 48rpx;
-  font-weight: 700;
-  color: #FF4757;
+.radar-item {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
 }
 
-.hr-value-max {
-  color: #FF6B81;
+.radar-label {
+  font-size: 24rpx;
+  color: $textSecondary;
+  width: 80rpx;
+  flex-shrink: 0;
 }
 
-.hr-unit {
+.radar-bar-track {
+  flex: 1;
+  height: 16rpx;
+  background: #2a2a2a;
+  border-radius: 8rpx;
+  overflow: hidden;
+}
+
+.radar-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, $green, $greenDark);
+  border-radius: 8rpx;
+  transition: width 0.5s;
+}
+
+.radar-bar-value {
+  font-size: 24rpx;
+  font-weight: 600;
+  color: $textPrimary;
+  width: 60rpx;
+  text-align: right;
+}
+
+// ============================================================
+// Heat Map
+// ============================================================
+.heatmap-box {
+  aspect-ratio: 4/3;
+  border-radius: 20rpx;
+  position: relative;
+  overflow: hidden;
+  border: $border;
+  background: linear-gradient(135deg, #0a2a0f, #2a2a0a, #2a0a0a);
+}
+
+.field-outline {
+  position: absolute;
+  top: 24rpx;
+  left: 24rpx;
+  right: 24rpx;
+  bottom: 24rpx;
+  border: 2rpx solid rgba(255, 255, 255, 0.15);
+}
+
+.field-center-line {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 1rpx;
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.field-center-circle {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 100rpx;
+  height: 100rpx;
+  border: 2rpx solid rgba(255, 255, 255, 0.15);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.heat-point {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(20rpx);
+}
+
+.heat-1 {
+  top: 30%;
+  left: 22%;
+  width: 120rpx;
+  height: 120rpx;
+  background: rgba(239, 68, 68, 0.5);
+}
+
+.heat-2 {
+  top: 45%;
+  left: 45%;
+  width: 160rpx;
+  height: 160rpx;
+  background: rgba(249, 115, 22, 0.5);
+}
+
+.heat-3 {
+  top: 60%;
+  right: 22%;
+  width: 120rpx;
+  height: 120rpx;
+  background: rgba(234, 179, 8, 0.5);
+}
+
+.heatmap-legend {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 16rpx;
+  padding: 0 8rpx;
+}
+
+.legend-text {
   font-size: 22rpx;
-  color: #8B949E;
+  color: $textMuted;
 }
 
-/* ---- Slack Index ---- */
+.legend-bar {
+  flex: 1;
+  height: 12rpx;
+  margin: 0 24rpx;
+  background: linear-gradient(90deg, #16a34a, #eab308, #ef4444);
+  border-radius: 6rpx;
+}
+
+// ============================================================
+// Slack Index
+// ============================================================
 .slack-content {
   display: flex;
   flex-direction: column;
@@ -433,16 +648,16 @@ onLoad(async (options) => {
 
 .slack-bar-track {
   width: 100%;
-  height: 20rpx;
-  background: #242D3D;
-  border-radius: 10rpx;
+  height: 16rpx;
+  background: #2a2a2a;
+  border-radius: 8rpx;
   overflow: hidden;
 }
 
 .slack-bar-fill {
   height: 100%;
-  background: #FFA502;
-  border-radius: 10rpx;
+  background: linear-gradient(90deg, #FFA502, #FF6348);
+  border-radius: 8rpx;
   transition: width 0.3s;
 }
 
@@ -458,12 +673,14 @@ onLoad(async (options) => {
   color: #FFA502;
 }
 
-.slack-label {
+.slack-label-text {
   font-size: 24rpx;
-  color: #8B949E;
+  color: $textSecondary;
 }
 
-/* ---- Performance Score ---- */
+// ============================================================
+// Performance Score
+// ============================================================
 .score-content {
   display: flex;
   justify-content: center;
@@ -473,6 +690,6 @@ onLoad(async (options) => {
 .score-value {
   font-size: 80rpx;
   font-weight: 700;
-  color: #00BFA5;
+  color: $green;
 }
 </style>

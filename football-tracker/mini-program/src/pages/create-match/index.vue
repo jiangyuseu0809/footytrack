@@ -1,77 +1,140 @@
 <template>
   <view class="page">
-    <!-- Nav Bar -->
-    <view class="nav-bar">
-      <text class="back" @tap="goBack">‹</text>
-      <text class="nav-title">新建比赛</text>
+    <!-- Header -->
+    <view class="header">
+      <text class="header-title">创建比赛</text>
     </view>
 
-    <view class="form">
-      <!-- Title -->
-      <text class="label">比赛标题</text>
-      <view class="input-wrapper">
-        <text class="input-icon">⚽</text>
-        <input class="input-field" v-model="title" placeholder="例如：周末友谊赛" placeholder-class="placeholder" />
-      </view>
+    <scroll-view scroll-y class="scroll-area">
+      <!-- Quick Templates -->
+      <view class="section">
+        <view class="template-card">
+          <view class="template-header" @tap="showTemplates = !showTemplates">
+            <view class="template-left">
+              <view class="template-icon-box">
+                <text class="template-icon">⭐</text>
+              </view>
+              <view class="template-text">
+                <text class="template-title">常用模板</text>
+                <text class="template-sub">快速创建比赛</text>
+              </view>
+            </view>
+            <text class="template-chevron" :class="{ rotated: showTemplates }">›</text>
+          </view>
 
-      <!-- Location -->
-      <text class="label">地点</text>
-      <view class="input-wrapper">
-        <text class="input-icon">📍</text>
-        <input class="input-field" v-model="location" placeholder="球场名称" placeholder-class="placeholder" />
-      </view>
-
-      <!-- Date -->
-      <text class="label">比赛日期</text>
-      <picker mode="date" @change="onDateChange">
-        <view class="input-wrapper">
-          <text class="input-icon">📅</text>
-          <text :class="['picker-text', { 'picker-placeholder': !dateStr }]">{{ dateStr || '选择日期' }}</text>
-        </view>
-      </picker>
-
-      <!-- Time -->
-      <text class="label">开始时间</text>
-      <picker mode="time" @change="onTimeChange">
-        <view class="input-wrapper">
-          <text class="input-icon">🕐</text>
-          <text :class="['picker-text', { 'picker-placeholder': !timeStr }]">{{ timeStr || '选择时间' }}</text>
-        </view>
-      </picker>
-
-      <!-- Groups -->
-      <text class="label">分组数</text>
-      <view class="stepper-row">
-        <view class="stepper-btn" @tap="groups = Math.max(2, groups - 1)">
-          <text class="stepper-btn-text">-</text>
-        </view>
-        <text class="stepper-value">{{ groups }}</text>
-        <view class="stepper-btn" @tap="groups++">
-          <text class="stepper-btn-text">+</text>
-        </view>
-        <view class="stepper-preview">
-          <text v-for="(c, i) in defaultColors.slice(0, groups)" :key="i" class="color-tag">{{ c }}</text>
+          <view v-if="showTemplates" class="template-list">
+            <view
+              v-for="tpl in templates"
+              :key="tpl.id"
+              class="template-item"
+              @tap="handleUseTemplate(tpl)"
+            >
+              <view class="template-item-info">
+                <text class="template-item-name">{{ tpl.name }}</text>
+                <text class="template-item-meta">{{ tpl.location }} · {{ tpl.duration }}分钟</text>
+              </view>
+              <text class="template-plus">＋</text>
+            </view>
+          </view>
         </view>
       </view>
 
-      <!-- Players per group -->
-      <text class="label">每组人数</text>
-      <view class="stepper-row">
-        <view class="stepper-btn" @tap="playersPerGroup = Math.max(1, playersPerGroup - 1)">
-          <text class="stepper-btn-text">-</text>
+      <!-- Create Form -->
+      <view class="section">
+        <view class="form-card">
+          <text class="form-section-title">比赛信息</text>
+
+          <view class="form-group">
+            <text class="form-label">比赛名称</text>
+            <view class="input-wrapper">
+              <input
+                class="input-field"
+                v-model="title"
+                placeholder="输入比赛名称"
+                placeholder-class="placeholder"
+              />
+            </view>
+          </view>
+
+          <view class="form-group">
+            <text class="form-label">比赛地点</text>
+            <view class="input-wrapper">
+              <input
+                class="input-field"
+                v-model="location"
+                placeholder="输入比赛地点"
+                placeholder-class="placeholder"
+              />
+            </view>
+          </view>
+
+          <view class="form-group">
+            <text class="form-label">比赛日期</text>
+            <picker mode="date" @change="onDateChange">
+              <view class="input-wrapper">
+                <text :class="['picker-text', { 'picker-placeholder': !dateStr }]">{{ dateStr || '选择日期' }}</text>
+              </view>
+            </picker>
+          </view>
+
+          <view class="form-group">
+            <text class="form-label">开始时间</text>
+            <picker mode="time" @change="onTimeChange">
+              <view class="input-wrapper">
+                <text :class="['picker-text', { 'picker-placeholder': !timeStr }]">{{ timeStr || '选择时间' }}</text>
+              </view>
+            </picker>
+          </view>
+
+          <view class="form-group">
+            <text class="form-label">分组数</text>
+            <view class="stepper-row">
+              <view class="stepper-btn" @tap="groups = Math.max(2, groups - 1)">
+                <text class="stepper-btn-text">-</text>
+              </view>
+              <text class="stepper-value">{{ groups }}</text>
+              <view class="stepper-btn" @tap="groups++">
+                <text class="stepper-btn-text">+</text>
+              </view>
+              <view class="stepper-preview">
+                <text v-for="(c, i) in defaultColors.slice(0, groups)" :key="i" class="color-tag">{{ c }}</text>
+              </view>
+            </view>
+          </view>
+
+          <view class="form-group">
+            <text class="form-label">每组人数</text>
+            <view class="stepper-row">
+              <view class="stepper-btn" @tap="playersPerGroup = Math.max(1, playersPerGroup - 1)">
+                <text class="stepper-btn-text">-</text>
+              </view>
+              <text class="stepper-value">{{ playersPerGroup }}</text>
+              <view class="stepper-btn" @tap="playersPerGroup++">
+                <text class="stepper-btn-text">+</text>
+              </view>
+              <text class="stepper-total">共 {{ groups * playersPerGroup }} 人</text>
+            </view>
+          </view>
         </view>
-        <text class="stepper-value">{{ playersPerGroup }}</text>
-        <view class="stepper-btn" @tap="playersPerGroup++">
-          <text class="stepper-btn-text">+</text>
-        </view>
-        <text class="stepper-total">共 {{ groups * playersPerGroup }} 人</text>
       </view>
 
-      <!-- Submit -->
-      <view class="submit-btn" @tap="handleSubmit">
-        <text class="submit-btn-text">创建比赛</text>
+      <!-- Action Buttons -->
+      <view class="section">
+        <view class="create-btn" @tap="handleSubmit">
+          <text class="create-btn-text">创建比赛</text>
+        </view>
+        <view class="share-btn">
+          <text class="share-btn-text">📤 分享给好友</text>
+        </view>
       </view>
-    </view>
+
+      <!-- Tips -->
+      <view class="section section--last">
+        <view class="tips-card">
+          <text class="tips-text">💡 <text class="tips-highlight">温馨提示：</text>创建比赛后可通过微信分享给好友，邀请他们一起参与</text>
+        </view>
+      </view>
+    </scroll-view>
   </view>
 </template>
 
@@ -79,16 +142,35 @@
 import { ref } from 'vue'
 import { createMatch } from '../../utils/api'
 
+interface MatchTemplate {
+  id: string
+  name: string
+  location: string
+  duration: number
+  participants: number
+}
+
 const title = ref('')
 const location = ref('')
 const dateStr = ref('')
 const timeStr = ref('')
 const groups = ref(2)
 const playersPerGroup = ref(5)
+const showTemplates = ref(false)
 
 const defaultColors = ['红', '蓝', '绿', '黄', '白', '黑']
 
-function goBack() { uni.navigateBack() }
+const templates: MatchTemplate[] = [
+  { id: '1', name: '周末友谊赛', location: '体育中心足球场', duration: 90, participants: 10 },
+  { id: '2', name: '工作日训练', location: '社区球场', duration: 60, participants: 8 },
+  { id: '3', name: '五人制对抗', location: '室内球场', duration: 45, participants: 10 },
+]
+
+function handleUseTemplate(tpl: MatchTemplate) {
+  title.value = tpl.name
+  location.value = tpl.location
+  showTemplates.value = false
+}
 
 function onDateChange(e: any) { dateStr.value = e.detail.value }
 function onTimeChange(e: any) { timeStr.value = e.detail.value }
@@ -111,7 +193,7 @@ async function handleSubmit() {
       groupColors,
     })
     uni.showToast({ title: '创建成功', icon: 'success' })
-    setTimeout(() => uni.navigateBack(), 1000)
+    setTimeout(() => uni.switchTab({ url: '/pages/home/index' }), 1000)
   } catch (e: any) {
     uni.showToast({ title: e.message, icon: 'none' })
   }
@@ -119,83 +201,222 @@ async function handleSubmit() {
 </script>
 
 <style lang="scss" scoped>
+$pageBg: #0a0a0a;
+$cardBg: #1a1a1a;
+$border: 1rpx solid #2a2a2a;
+$green: #07c160;
+$greenDark: #05a850;
+$textPrimary: #FFFFFF;
+$textSecondary: #999;
+$textMuted: #666;
+
 .page {
   min-height: 100vh;
-  background: #0D1117;
+  background: $pageBg;
 }
 
-.nav-bar {
-  padding: 100rpx 32rpx 28rpx;
+.scroll-area {
+  height: calc(100vh - 170rpx);
+}
+
+// ============================================================
+// Header
+// ============================================================
+.header {
+  background: $cardBg;
+  padding: 120rpx 32rpx 28rpx;
+  border-bottom: $border;
+}
+
+.header-title {
+  font-size: 34rpx;
+  font-weight: 700;
+  color: $textPrimary;
+  display: block;
+  text-align: center;
+}
+
+// ============================================================
+// Sections
+// ============================================================
+.section {
+  padding: 24rpx 32rpx 0;
+}
+
+.section--last {
+  padding-bottom: 120rpx;
+}
+
+// ============================================================
+// Template Card
+// ============================================================
+.template-card {
+  background: $cardBg;
+  border-radius: 32rpx;
+  overflow: hidden;
+  border: $border;
+  box-shadow: 0 4rpx 24rpx rgba(0, 0, 0, 0.3);
+}
+
+.template-header {
   display: flex;
   align-items: center;
-
-  .back {
-    font-size: 52rpx;
-    color: #00E676;
-    margin-right: 12rpx;
-    font-weight: 300;
-    line-height: 1;
-  }
-
-  .nav-title {
-    font-size: 36rpx;
-    font-weight: 600;
-    color: #FFFFFF;
-  }
+  justify-content: space-between;
+  padding: 24rpx 28rpx;
 }
 
-.form {
-  padding: 0 32rpx 60rpx;
-}
-
-/* ---- Labels ---- */
-.label {
-  font-size: 26rpx;
-  color: #8B949E;
-  display: block;
-  margin-top: 28rpx;
-  margin-bottom: 12rpx;
-}
-
-/* ---- Input Fields ---- */
-.input-wrapper {
-  background: #1C2333;
-  border-radius: 24rpx;
-  padding: 0 28rpx;
-  height: 96rpx;
+.template-left {
   display: flex;
   align-items: center;
   gap: 16rpx;
-  border: 1rpx solid rgba(255, 255, 255, 0.08);
 }
 
-.input-icon {
+.template-icon-box {
+  width: 72rpx;
+  height: 72rpx;
+  border-radius: 20rpx;
+  background: linear-gradient(135deg, #facc15, #f97316);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.2);
+}
+
+.template-icon {
+  font-size: 36rpx;
+}
+
+.template-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.template-title {
+  font-size: 30rpx;
+  font-weight: 500;
+  color: $textPrimary;
+}
+
+.template-sub {
+  font-size: 22rpx;
+  color: $textMuted;
+}
+
+.template-chevron {
+  font-size: 40rpx;
+  color: $textMuted;
+  font-weight: 300;
+  transition: transform 0.3s;
+
+  &.rotated {
+    transform: rotate(90deg);
+  }
+}
+
+.template-list {
+  padding: 0 28rpx 24rpx;
+  display: flex;
+  flex-direction: column;
+  gap: 12rpx;
+}
+
+.template-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20rpx 24rpx;
+  background: #252525;
+  border-radius: 20rpx;
+  border: 1rpx solid #333;
+}
+
+.template-item-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.template-item-name {
   font-size: 28rpx;
-  flex-shrink: 0;
+  font-weight: 500;
+  color: $textPrimary;
+}
+
+.template-item-meta {
+  font-size: 22rpx;
+  color: $textMuted;
+  margin-top: 4rpx;
+}
+
+.template-plus {
+  font-size: 32rpx;
+  color: $green;
+  font-weight: 500;
+}
+
+// ============================================================
+// Form Card
+// ============================================================
+.form-card {
+  background: $cardBg;
+  border-radius: 32rpx;
+  padding: 28rpx 28rpx;
+  border: $border;
+  box-shadow: 0 4rpx 24rpx rgba(0, 0, 0, 0.3);
+}
+
+.form-section-title {
+  font-size: 30rpx;
+  font-weight: 500;
+  color: $textPrimary;
+  display: block;
+  margin-bottom: 24rpx;
+}
+
+.form-group {
+  margin-bottom: 24rpx;
+}
+
+.form-label {
+  font-size: 26rpx;
+  color: $textSecondary;
+  display: block;
+  margin-bottom: 12rpx;
+}
+
+.input-wrapper {
+  background: #252525;
+  border-radius: 20rpx;
+  padding: 0 24rpx;
+  height: 88rpx;
+  display: flex;
+  align-items: center;
+  border: 1rpx solid #333;
 }
 
 .input-field {
   flex: 1;
   font-size: 28rpx;
-  color: #FFFFFF;
+  color: $textPrimary;
   background: transparent;
 }
 
 .picker-text {
   flex: 1;
   font-size: 28rpx;
-  color: #FFFFFF;
+  color: $textPrimary;
 }
 
 .picker-placeholder {
-  color: #545d68;
+  color: $textMuted;
 }
 
 .placeholder {
-  color: #545d68;
+  color: $textMuted;
 }
 
-/* ---- Stepper ---- */
+// ============================================================
+// Stepper
+// ============================================================
 .stepper-row {
   display: flex;
   align-items: center;
@@ -206,8 +427,8 @@ async function handleSubmit() {
   width: 64rpx;
   height: 64rpx;
   border-radius: 50%;
-  background: #1C2333;
-  border: 1rpx solid #30363D;
+  background: #252525;
+  border: 1rpx solid #333;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -217,14 +438,14 @@ async function handleSubmit() {
 .stepper-btn-text {
   font-size: 36rpx;
   font-weight: 600;
-  color: #00E676;
+  color: $green;
   line-height: 1;
 }
 
 .stepper-value {
   font-size: 36rpx;
   font-weight: 700;
-  color: #FFFFFF;
+  color: $textPrimary;
   min-width: 48rpx;
   text-align: center;
 }
@@ -238,32 +459,73 @@ async function handleSubmit() {
 
 .color-tag {
   font-size: 22rpx;
-  color: #8B949E;
-  background: #242D3D;
+  color: $textSecondary;
+  background: #333;
   padding: 4rpx 14rpx;
   border-radius: 10rpx;
 }
 
 .stepper-total {
   font-size: 24rpx;
-  color: #8B949E;
+  color: $textSecondary;
   margin-left: 12rpx;
 }
 
-/* ---- Submit Button ---- */
-.submit-btn {
-  margin-top: 48rpx;
-  background: linear-gradient(135deg, #00E676, #00BFA5);
-  border-radius: 24rpx;
-  height: 100rpx;
+// ============================================================
+// Action Buttons
+// ============================================================
+.create-btn {
+  background: linear-gradient(90deg, $green, $greenDark);
+  border-radius: 100rpx;
+  height: 96rpx;
   display: flex;
   align-items: center;
   justify-content: center;
+  box-shadow: 0 8rpx 24rpx rgba(7, 193, 96, 0.3);
 }
 
-.submit-btn-text {
+.create-btn-text {
   font-size: 32rpx;
-  font-weight: 600;
-  color: #0D1117;
+  font-weight: 500;
+  color: $textPrimary;
+}
+
+.share-btn {
+  margin-top: 16rpx;
+  background: $cardBg;
+  border-radius: 100rpx;
+  height: 96rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: $border;
+}
+
+.share-btn-text {
+  font-size: 30rpx;
+  font-weight: 500;
+  color: #ccc;
+}
+
+// ============================================================
+// Tips
+// ============================================================
+.tips-card {
+  background: #1a2428;
+  border-radius: 32rpx;
+  padding: 28rpx 32rpx;
+  border: 1rpx solid rgba(59, 130, 246, 0.2);
+  box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.2);
+}
+
+.tips-text {
+  font-size: 26rpx;
+  color: #ccc;
+  line-height: 1.5;
+}
+
+.tips-highlight {
+  font-weight: 500;
+  color: #60a5fa;
 }
 </style>

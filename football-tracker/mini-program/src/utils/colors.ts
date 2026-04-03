@@ -1,18 +1,19 @@
-/** App color palette — matches iOS FootballTracker dark theme */
+/** App color palette — WeChat-style dark theme */
 export const colors = {
   // Backgrounds
-  darkBg: '#0D1117',
-  cardBg: '#1C2333',
-  cardBgLight: '#242D3D',
-  divider: '#30363D',
+  darkBg: '#0a0a0a',
+  cardBg: '#1a1a1a',
+  cardBgLight: '#252525',
+  divider: '#2a2a2a',
 
   // Primary accents
-  neonGreen: '#00E676',
-  teal: '#00BFA5',
+  wechatGreen: '#07c160',
+  wechatGreenDark: '#05a850',
 
   // Text
   textPrimary: '#FFFFFF',
-  textSecondary: '#8B949E',
+  textSecondary: '#999999',
+  textMuted: '#666666',
 
   // Data colors
   heartRate: '#FF4757',
@@ -21,15 +22,18 @@ export const colors = {
   caloriesLight: '#FF6348',
   speed: '#2ED573',
   speedLight: '#7BED9F',
-  distance: '#00E676',
-  distanceLight: '#69F0AE',
+  distance: '#3B82F6',
+  distanceLight: '#60A5FA',
 
   // UI
   blue: '#3B82F6',
   indigo: '#4F46E5',
-  red: '#E53935',
+  red: '#EF4444',
   orange: '#FF9800',
   yellow: '#FFEB3B',
+  purple: '#A855F7',
+  pink: '#EC4899',
+  teal: '#14B8A6',
 }
 
 /** Convert hex to rgba */

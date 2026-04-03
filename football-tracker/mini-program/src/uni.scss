@@ -1,29 +1,30 @@
-/* FootballTracker Dark Theme Variables */
+/* FootballTracker Dark Theme Variables - WeChat Style */
 
-$dark-bg: #0D1117;
-$card-bg: #1C2333;
-$card-bg-light: #242D3D;
-$divider: #30363D;
+$dark-bg: #0a0a0a;
+$card-bg: #1a1a1a;
+$card-bg-light: #252525;
+$divider: #2a2a2a;
 
-$neon-green: #00E676;
-$teal: #00BFA5;
+$wechat-green: #07c160;
+$wechat-green-dark: #05a850;
 
 $text-primary: #FFFFFF;
-$text-secondary: #8B949E;
+$text-secondary: #999999;
+$text-muted: #666666;
 
 $blue: #3B82F6;
 $indigo: #4F46E5;
-$red: #E53935;
+$red: #EF4444;
 
-$card-radius: 28rpx;
-$card-padding: 28rpx;
-$page-padding: 28rpx;
+$card-radius: 32rpx;
+$card-padding: 32rpx;
+$page-padding: 32rpx;
 
 /* Override uni-app defaults */
-$uni-color-primary: #00E676;
-$uni-color-success: #2ED573;
+$uni-color-primary: #07c160;
+$uni-color-success: #07c160;
 $uni-color-warning: #FFA502;
 $uni-color-error: #FF4757;
-$uni-bg-color: #0D1117;
+$uni-bg-color: #0a0a0a;
 $uni-text-color: #FFFFFF;
-$uni-text-color-grey: #8B949E;
+$uni-text-color-grey: #999999;
