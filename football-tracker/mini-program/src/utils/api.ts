@@ -49,6 +49,11 @@ function request<T = any>(endpoint: string, options: RequestOptions = {}): Promi
       success(res) {
         if (res.statusCode >= 200 && res.statusCode < 300) {
           resolve(res.data as T)
+        } else if (res.statusCode === 401) {
+          clearAuth()
+          uni.showToast({ title: '登录已过期，请重新登录', icon: 'none' })
+          setTimeout(() => uni.navigateTo({ url: '/pages/login/index' }), 1500)
+          reject(new Error('登录已过期'))
         } else {
           const errMsg = (res.data as any)?.error || `服务器错误(${res.statusCode})`
           reject(new Error(errMsg))
@@ -118,6 +123,36 @@ export async function getProfile(): Promise<UserProfile> {
 
 export async function updateProfile(data: { nickname?: string; weightKg?: number; age?: number }): Promise<UserProfile> {
   return request<UserProfile>('/api/user/profile', { method: 'PUT', data })
+}
+
+export function uploadAvatar(filePath: string): Promise<{ avatarUrl: string }> {
+  return new Promise((resolve, reject) => {
+    // 读取文件为 ArrayBuffer 后以 raw bytes 发送
+    const fs = uni.getFileSystemManager()
+    fs.readFile({
+      filePath,
+      success(readRes) {
+        uni.request({
+          url: BASE_URL + '/api/user/avatar',
+          method: 'PUT',
+          header: {
+            Authorization: `Bearer ${getToken()}`,
+            'Content-Type': 'application/octet-stream',
+          },
+          data: readRes.data,
+          success(res) {
+            if (res.statusCode >= 200 && res.statusCode < 300) {
+              resolve(res.data as { avatarUrl: string })
+            } else {
+              reject(new Error('上传头像失败'))
+            }
+          },
+          fail(err) { reject(new Error(err.errMsg || '上传头像失败')) },
+        })
+      },
+      fail(err) { reject(new Error('读取头像文件失败')) },
+    })
+  })
 }
 
 // --- Sessions ---

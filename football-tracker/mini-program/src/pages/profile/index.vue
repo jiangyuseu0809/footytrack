@@ -6,11 +6,21 @@
 
       <!-- User Info -->
       <view class="user-info">
-        <view class="avatar-circle">
-          <text class="avatar-icon">👤</text>
-        </view>
+        <button class="avatar-btn" open-type="chooseAvatar" @chooseavatar="onChooseAvatar">
+          <image v-if="profile?.avatarUrl" class="avatar-img" :src="profile.avatarUrl" mode="aspectFill" />
+          <view v-else class="avatar-circle">
+            <text class="avatar-icon">👤</text>
+          </view>
+        </button>
         <view class="user-text">
-          <text class="nickname">{{ profile?.nickname || '足球爱好者' }}</text>
+          <input
+            type="nickname"
+            class="nickname-input"
+            :value="profile?.nickname || '足球爱好者'"
+            placeholder="设置昵称"
+            placeholder-class="nickname-placeholder"
+            @blur="onNicknameBlur"
+          />
           <text class="join-date">加入于 {{ joinDate }}</text>
         </view>
       </view>
@@ -128,7 +138,7 @@
               <view class="menu-icon-box green-icon">
                 <text class="menu-icon-text">⌚</text>
               </view>
-              <text class="menu-label">绑定 Apple Watch</text>
+              <text class="menu-label">绑定 Watch</text>
               <text class="menu-chevron">›</text>
             </view>
 
@@ -154,17 +164,17 @@
           </view>
         </view>
 
-        <!-- About -->
-        <view class="about-section">
-          <text class="about-text">FootyTrack v1.0.0</text>
-          <text class="about-sub">记录每一次精彩瞬间</text>
-        </view>
-
         <!-- Logout -->
-        <view class="section section--last">
+        <view class="section">
           <view class="logout-btn" @tap="handleLogout">
             <text class="logout-text">退出登录</text>
           </view>
+        </view>
+
+        <!-- About -->
+        <view class="about-section section--last">
+          <text class="about-text">FootyTrack v1.0.0</text>
+          <text class="about-sub">记录每一次精彩瞬间</text>
         </view>
       </template>
     </scroll-view>
@@ -176,7 +186,8 @@ import { ref, computed } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import {
   getProfile, getSessions, getPlayerAnalysis, getEarnedBadges,
-  clearAuth, isLoggedIn, type UserProfile, type SessionDto, type Badge, type UserBadge
+  clearAuth, isLoggedIn, updateProfile, uploadAvatar,
+  type UserProfile, type SessionDto, type Badge, type UserBadge
 } from '../../utils/api'
 import { formatDistance } from '../../utils/format'
 
@@ -199,8 +210,9 @@ const totalCaloriesStr = computed(() => {
 })
 
 const joinDate = computed(() => {
-  // Placeholder based on profile creation
-  return '2025-12'
+  if (!profile.value?.createdAt) return '--'
+  const d = new Date(profile.value.createdAt)
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
 })
 
 const monthSessions = computed(() => {
@@ -244,6 +256,33 @@ async function loadData() {
 
 function goLogin() {
   uni.navigateTo({ url: '/pages/login/index' })
+}
+
+async function onChooseAvatar(e: any) {
+  const tempPath = e.detail.avatarUrl
+  if (!tempPath) return
+  try {
+    uni.showLoading({ title: '上传中...' })
+    const res = await uploadAvatar(tempPath)
+    if (profile.value) profile.value.avatarUrl = res.avatarUrl
+    uni.hideLoading()
+    uni.showToast({ title: '头像已更新', icon: 'success' })
+  } catch (err: any) {
+    uni.hideLoading()
+    uni.showToast({ title: err.message || '上传失败', icon: 'none' })
+  }
+}
+
+async function onNicknameBlur(e: any) {
+  const newName = e.detail.value
+  if (!newName || newName === profile.value?.nickname) return
+  try {
+    const res = await updateProfile({ nickname: newName })
+    if (profile.value) profile.value.nickname = res.nickname
+    uni.showToast({ title: '昵称已更新', icon: 'success' })
+  } catch (err: any) {
+    uni.showToast({ title: err.message || '更新失败', icon: 'none' })
+  }
 }
 
 function goBindWatch() {
@@ -332,20 +371,48 @@ $textMuted: #666;
   box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.15);
 }
 
+.avatar-btn {
+  background: transparent !important;
+  border: none;
+  padding: 0;
+  margin: 0;
+  width: 120rpx;
+  height: 120rpx;
+  border-radius: 50%;
+  overflow: hidden;
+  flex-shrink: 0;
+
+  &::after {
+    border: none;
+  }
+}
+
+.avatar-img {
+  width: 120rpx;
+  height: 120rpx;
+  border-radius: 50%;
+  box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.15);
+}
+
 .avatar-icon {
   font-size: 56rpx;
+}
+
+.nickname-input {
+  font-size: 36rpx;
+  font-weight: 700;
+  color: $textPrimary;
+  background: transparent;
+  margin-bottom: 4rpx;
+}
+
+.nickname-placeholder {
+  color: rgba(255, 255, 255, 0.5);
 }
 
 .user-text {
   display: flex;
   flex-direction: column;
-}
-
-.nickname {
-  font-size: 36rpx;
-  font-weight: 700;
-  color: $textPrimary;
-  margin-bottom: 4rpx;
 }
 
 .join-date {

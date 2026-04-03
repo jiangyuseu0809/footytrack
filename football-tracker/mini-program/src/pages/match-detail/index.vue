@@ -1,11 +1,16 @@
 <template>
   <view class="page">
     <!-- Header -->
-    <view class="header">
-      <view class="header-nav">
-        <view class="back-row" @tap="goBack">
-          <text class="back-arrow">‹</text>
-          <text class="back-text">返回</text>
+    <view class="header" :style="{ paddingTop: statusBarHeight + 'px' }">
+      <view class="header-nav" :style="{ height: navBarHeight + 'px' }">
+        <view class="nav-capsule" :style="{ height: capsuleHeight + 'px', borderRadius: capsuleHeight / 2 + 'px' }">
+          <view class="capsule-btn" @tap="goBack">
+            <text class="capsule-icon capsule-icon-back">＜</text>
+          </view>
+          <view class="capsule-divider" />
+          <view class="capsule-btn" @tap="goHome">
+            <image class="capsule-home-img" src="/static/icon-home-white.png" mode="aspectFit" />
+          </view>
         </view>
         <text class="nav-title">{{ detail?.match.title || '比赛详情' }}</text>
         <view class="nav-right" />
@@ -153,6 +158,12 @@ const rankings = ref<any>(null)
 const summary = ref('')
 const matchId = ref('')
 
+const menuBtn = uni.getMenuButtonBoundingClientRect()
+const sysInfo = uni.getSystemInfoSync()
+const statusBarHeight = sysInfo.statusBarHeight || 44
+const capsuleHeight = menuBtn.height
+const navBarHeight = (menuBtn.top - statusBarHeight) * 2 + menuBtn.height
+
 const statusText = computed(() => {
   if (!detail.value) return ''
   const s = detail.value.match.status
@@ -169,6 +180,7 @@ const groupsList = computed(() => {
 })
 
 function goBack() { uni.navigateBack() }
+function goHome() { uni.switchTab({ url: '/pages/home/index' }) }
 
 async function loadData() {
   try {
@@ -224,9 +236,11 @@ $textMuted: #666;
 // Header
 // ============================================================
 .header {
-  background: linear-gradient(135deg, $green, $greenDark);
-  padding: 100rpx 32rpx 36rpx;
-  box-shadow: 0 8rpx 32rpx rgba(7, 193, 96, 0.2);
+  background: $cardBg;
+  padding-left: 16rpx;
+  padding-right: 16rpx;
+  padding-bottom: 16rpx;
+  border-bottom: $border;
 }
 
 .header-nav {
@@ -235,35 +249,54 @@ $textMuted: #666;
   justify-content: space-between;
 }
 
-.back-row {
+.nav-capsule {
   display: flex;
   align-items: center;
-  min-width: 120rpx;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1rpx solid rgba(255, 255, 255, 0.15);
+  overflow: hidden;
 }
 
-.back-arrow {
-  font-size: 48rpx;
+.capsule-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 68rpx;
+  height: 100%;
+}
+
+.capsule-icon {
   color: $textPrimary;
-  margin-right: 4rpx;
-  font-weight: 300;
   line-height: 1;
 }
 
-.back-text {
-  font-size: 28rpx;
-  color: $textPrimary;
+.capsule-icon-back {
+  font-size: 30rpx;
+  font-weight: 300;
+}
+
+.capsule-home-img {
+  width: 32rpx;
+  height: 32rpx;
+}
+
+.capsule-divider {
+  width: 1rpx;
+  height: 50%;
+  background: rgba(255, 255, 255, 0.2);
 }
 
 .nav-title {
-  font-size: 36rpx;
-  font-weight: 700;
+  font-size: 34rpx;
+  font-weight: 600;
   color: $textPrimary;
   text-align: center;
   flex: 1;
 }
 
 .nav-right {
-  min-width: 120rpx;
+  width: 136rpx;
+  flex-shrink: 0;
 }
 
 // ============================================================

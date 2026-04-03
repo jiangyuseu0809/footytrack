@@ -106,16 +106,8 @@
             <text class="chart-header-icon">🎯</text>
             <text class="chart-header-title">{{ timeRange === 'week' ? '本周能力分析' : '今日能力分析' }}</text>
           </view>
-          <view class="radar-placeholder">
-            <view class="radar-grid">
-              <view v-for="item in abilityData" :key="item.ability" class="radar-item">
-                <text class="radar-label">{{ item.ability }}</text>
-                <view class="radar-bar-track">
-                  <view class="radar-bar-fill" :style="{ width: item.value + '%' }" />
-                </view>
-                <text class="radar-bar-value">{{ item.value }}</text>
-              </view>
-            </view>
+          <view class="radar-canvas-wrap">
+            <image v-if="radarImage" :src="radarImage" class="radar-image" mode="aspectFit" />
           </view>
         </view>
       </view>
@@ -148,17 +140,21 @@
         </view>
       </view>
     </scroll-view>
+
+    <!-- Hidden canvas for radar chart rendering -->
+    <canvas canvas-id="radarCanvas" id="radarCanvas" class="offscreen-canvas" />
   </view>
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch, nextTick } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import { getSessions, isLoggedIn, type SessionDto } from '../../utils/api'
 
 const timeRange = ref<'week' | 'today'>('week')
 const sessions = ref<SessionDto[]>([])
 const isWatchConnected = ref(false)
+const radarImage = ref('')
 
 const weekSessions = computed(() => {
   const now = new Date()
@@ -237,7 +233,118 @@ function handleShare() {
   // WeChat share placeholder
 }
 
-onShow(() => { loadData() })
+function drawRadar() {
+  const ctx = uni.createCanvasContext('radarCanvas')
+  const data = abilityData.value
+  const count = data.length
+  if (count === 0) return
+
+  // Canvas size in px (will be scaled by device pixel ratio via CSS)
+  const size = 280
+  const cx = size / 2
+  const cy = size / 2
+  const maxR = size / 2 - 40
+  const levels = 4
+  const angleStep = (Math.PI * 2) / count
+  const startAngle = -Math.PI / 2
+
+  // Clear
+  ctx.clearRect(0, 0, size, size)
+
+  // Draw grid rings
+  for (let lv = 1; lv <= levels; lv++) {
+    const r = (maxR / levels) * lv
+    ctx.beginPath()
+    for (let i = 0; i <= count; i++) {
+      const angle = startAngle + angleStep * (i % count)
+      const x = cx + r * Math.cos(angle)
+      const y = cy + r * Math.sin(angle)
+      if (i === 0) ctx.moveTo(x, y)
+      else ctx.lineTo(x, y)
+    }
+    ctx.closePath()
+    ctx.setStrokeStyle('rgba(255,255,255,0.08)')
+    ctx.setLineWidth(1)
+    ctx.stroke()
+  }
+
+  // Draw axis lines
+  for (let i = 0; i < count; i++) {
+    const angle = startAngle + angleStep * i
+    ctx.beginPath()
+    ctx.moveTo(cx, cy)
+    ctx.lineTo(cx + maxR * Math.cos(angle), cy + maxR * Math.sin(angle))
+    ctx.setStrokeStyle('rgba(255,255,255,0.06)')
+    ctx.setLineWidth(1)
+    ctx.stroke()
+  }
+
+  // Draw data area
+  ctx.beginPath()
+  for (let i = 0; i <= count; i++) {
+    const idx = i % count
+    const angle = startAngle + angleStep * idx
+    const r = (data[idx].value / 100) * maxR
+    const x = cx + r * Math.cos(angle)
+    const y = cy + r * Math.sin(angle)
+    if (i === 0) ctx.moveTo(x, y)
+    else ctx.lineTo(x, y)
+  }
+  ctx.closePath()
+  ctx.setFillStyle('rgba(7,193,96,0.3)')
+  ctx.fill()
+  ctx.setStrokeStyle('#07c160')
+  ctx.setLineWidth(2)
+  ctx.stroke()
+
+  // Draw data points
+  for (let i = 0; i < count; i++) {
+    const angle = startAngle + angleStep * i
+    const r = (data[i].value / 100) * maxR
+    const x = cx + r * Math.cos(angle)
+    const y = cy + r * Math.sin(angle)
+    ctx.beginPath()
+    ctx.arc(x, y, 3, 0, Math.PI * 2)
+    ctx.setFillStyle('#07c160')
+    ctx.fill()
+  }
+
+  // Draw labels
+  ctx.setFontSize(11)
+  ctx.setTextAlign('center')
+  ctx.setTextBaseline('middle')
+  ctx.setFillStyle('#999999')
+  for (let i = 0; i < count; i++) {
+    const angle = startAngle + angleStep * i
+    const labelR = maxR + 20
+    const x = cx + labelR * Math.cos(angle)
+    const y = cy + labelR * Math.sin(angle)
+    ctx.fillText(data[i].ability, x, y)
+  }
+
+  ctx.draw(false, () => {
+    setTimeout(() => {
+      uni.canvasToTempFilePath({
+        canvasId: 'radarCanvas',
+        success: (res) => { radarImage.value = res.tempFilePath },
+        fail: (err) => { console.error('canvasToTempFilePath fail', err) },
+      })
+    }, 150)
+  })
+}
+
+watch([timeRange, abilityData], () => {
+  nextTick(() => {
+    setTimeout(() => drawRadar(), 100)
+  })
+})
+
+onShow(() => {
+  loadData()
+  nextTick(() => {
+    setTimeout(() => drawRadar(), 300)
+  })
+})
 </script>
 
 <style lang="scss" scoped>
@@ -501,52 +608,25 @@ $textMuted: #666;
 }
 
 // ============================================================
-// Radar as Bar Chart (mini-program doesn't support recharts)
+// Radar Canvas
 // ============================================================
-.radar-placeholder {
-  padding: 0;
-}
-
-.radar-grid {
+.radar-canvas-wrap {
   display: flex;
-  flex-direction: column;
-  gap: 20rpx;
-}
-
-.radar-item {
-  display: flex;
+  justify-content: center;
   align-items: center;
-  gap: 16rpx;
 }
 
-.radar-label {
-  font-size: 24rpx;
-  color: $textSecondary;
-  width: 80rpx;
-  flex-shrink: 0;
+.radar-image {
+  width: 560rpx;
+  height: 560rpx;
 }
 
-.radar-bar-track {
-  flex: 1;
-  height: 16rpx;
-  background: #2a2a2a;
-  border-radius: 8rpx;
-  overflow: hidden;
-}
-
-.radar-bar-fill {
-  height: 100%;
-  background: linear-gradient(90deg, $green, $greenDark);
-  border-radius: 8rpx;
-  transition: width 0.5s;
-}
-
-.radar-bar-value {
-  font-size: 24rpx;
-  font-weight: 600;
-  color: $textPrimary;
-  width: 60rpx;
-  text-align: right;
+.offscreen-canvas {
+  position: fixed;
+  left: -9999rpx;
+  top: -9999rpx;
+  width: 280px;
+  height: 280px;
 }
 
 // ============================================================

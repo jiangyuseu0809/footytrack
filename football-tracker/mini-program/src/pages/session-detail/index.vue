@@ -1,16 +1,20 @@
 <template>
   <view class="page">
     <!-- Header -->
-    <view class="header">
-      <view class="header-nav">
-        <view class="back-row" @tap="goBack">
-          <text class="back-arrow">‹</text>
-          <text class="back-text">返回</text>
+    <view class="header" :style="{ paddingTop: statusBarHeight + 'px' }">
+      <view class="header-nav" :style="{ height: navBarHeight + 'px' }">
+        <view class="nav-capsule" :style="{ height: capsuleHeight + 'px', borderRadius: capsuleHeight / 2 + 'px' }">
+          <view class="capsule-btn" @tap="goBack">
+            <text class="capsule-icon capsule-icon-back">＜</text>
+          </view>
+          <view class="capsule-divider" />
+          <view class="capsule-btn" @tap="goHome">
+            <image class="capsule-home-img" src="/static/icon-home-white.png" mode="aspectFit" />
+          </view>
         </view>
         <text class="nav-title">{{ matchName }}</text>
         <view class="nav-right" />
       </view>
-      <text class="header-sub">{{ dateStr }} · {{ locationStr }}</text>
     </view>
 
     <scroll-view v-if="session" scroll-y class="scroll-area">
@@ -179,6 +183,12 @@ import { formatDistance, formatDateTime, formatDuration, computePerformanceScore
 
 const session = ref<SessionDto | null>(null)
 
+const menuBtn = uni.getMenuButtonBoundingClientRect()
+const sysInfo = uni.getSystemInfoSync()
+const statusBarHeight = sysInfo.statusBarHeight || 44
+const capsuleHeight = menuBtn.height
+const navBarHeight = (menuBtn.top - statusBarHeight) * 2 + menuBtn.height
+
 const matchName = computed(() => '训练详情')
 const dateStr = computed(() => session.value ? formatDateTime(session.value.startTime) : '')
 const locationStr = computed(() => '运动场')
@@ -240,6 +250,7 @@ const abilityData = computed(() => {
 })
 
 function goBack() { uni.navigateBack() }
+function goHome() { uni.switchTab({ url: '/pages/home/index' }) }
 
 onLoad(async (options) => {
   const id = options?.id
@@ -274,54 +285,67 @@ $textMuted: #666;
 // Header
 // ============================================================
 .header {
-  background: linear-gradient(135deg, $green, $greenDark);
-  padding: 100rpx 32rpx 36rpx;
-  box-shadow: 0 8rpx 32rpx rgba(7, 193, 96, 0.2);
+  background: $cardBg;
+  padding-left: 16rpx;
+  padding-right: 16rpx;
+  padding-bottom: 16rpx;
+  border-bottom: $border;
 }
 
 .header-nav {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 12rpx;
 }
 
-.back-row {
+.nav-capsule {
   display: flex;
   align-items: center;
-  min-width: 120rpx;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1rpx solid rgba(255, 255, 255, 0.15);
+  overflow: hidden;
 }
 
-.back-arrow {
-  font-size: 48rpx;
+.capsule-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 68rpx;
+  height: 100%;
+}
+
+.capsule-icon {
   color: $textPrimary;
-  margin-right: 4rpx;
-  font-weight: 300;
   line-height: 1;
 }
 
-.back-text {
-  font-size: 28rpx;
-  color: $textPrimary;
+.capsule-icon-back {
+  font-size: 30rpx;
+  font-weight: 300;
+}
+
+.capsule-home-img {
+  width: 32rpx;
+  height: 32rpx;
+}
+
+.capsule-divider {
+  width: 1rpx;
+  height: 50%;
+  background: rgba(255, 255, 255, 0.2);
 }
 
 .nav-title {
-  font-size: 36rpx;
-  font-weight: 700;
+  font-size: 34rpx;
+  font-weight: 600;
   color: $textPrimary;
   text-align: center;
   flex: 1;
 }
 
 .nav-right {
-  min-width: 120rpx;
-}
-
-.header-sub {
-  font-size: 26rpx;
-  color: rgba(255, 255, 255, 0.9);
-  display: block;
-  text-align: center;
+  width: 136rpx;
+  flex-shrink: 0;
 }
 
 // ============================================================
