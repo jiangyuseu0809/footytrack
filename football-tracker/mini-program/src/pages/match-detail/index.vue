@@ -93,12 +93,6 @@
 
       <!-- Rankings: Distance -->
       <view v-if="rankings && rankings.distanceRanking && rankings.distanceRanking.length > 0" class="section">
-        <view class="section-header-row">
-          <view class="section-icon-box orange-icon">
-            <text class="section-icon-text">🏆</text>
-          </view>
-          <text class="section-title">距离排行</text>
-        </view>
         <view class="rank-card">
           <view class="rank-card-header">
             <text class="rank-card-header-text">🏃 距离排行榜</text>
