@@ -155,9 +155,7 @@
               <view class="field-center-line" />
               <view class="field-center-circle" />
             </view>
-            <view class="heat-point heat-1" />
-            <view class="heat-point heat-2" />
-            <view class="heat-point heat-3" />
+            <image v-if="heatmapImage" :src="heatmapImage" class="heatmap-image" mode="aspectFill" />
           </view>
           <view class="heatmap-legend">
             <text class="legend-text">低活跃度</text>
@@ -177,6 +175,7 @@
 
     <!-- Hidden canvas for radar chart rendering -->
     <canvas canvas-id="radarCanvas" id="radarCanvas" class="offscreen-canvas" />
+    <canvas canvas-id="heatmapCanvas" id="heatmapCanvas" class="offscreen-canvas offscreen-canvas--heatmap" />
   </view>
 </template>
 
@@ -191,6 +190,7 @@ const sessions = ref<SessionDto[]>([])
 const upcomingMatches = ref<Match[]>([])
 const isWatchConnected = ref(false)
 const radarImage = ref('')
+const heatmapImage = ref('')
 
 const weekSessions = computed(() => {
   const now = new Date()
@@ -392,9 +392,108 @@ function drawRadar() {
   })
 }
 
+interface TrackPoint {
+  latitude: number
+  longitude: number
+  speed: number
+}
+
+function parseTrackPoints(sessions: SessionDto[]): TrackPoint[] {
+  const points: TrackPoint[] = []
+  for (const s of sessions) {
+    if (!s.trackPointsData) continue
+    try {
+      const json = decodeURIComponent(escape(atob(s.trackPointsData)))
+      const arr = JSON.parse(json) as any[]
+      for (const p of arr) {
+        if (p.latitude && p.longitude) {
+          points.push({ latitude: p.latitude, longitude: p.longitude, speed: p.speed || 0 })
+        }
+      }
+    } catch {}
+  }
+  return points
+}
+
+function drawHeatmap() {
+  const ctx = uni.createCanvasContext('heatmapCanvas')
+  const w = 350
+  const h = 263 // 4:3 ratio
+
+  ctx.clearRect(0, 0, w, h)
+
+  // Dark green base (low activity)
+  ctx.setFillStyle('#0a2a0f')
+  ctx.fillRect(0, 0, w, h)
+
+  const points = parseTrackPoints(todaySessions.value)
+
+  if (points.length > 0) {
+    // Compute bounding box
+    let minLat = Infinity, maxLat = -Infinity, minLng = Infinity, maxLng = -Infinity
+    for (const p of points) {
+      if (p.latitude < minLat) minLat = p.latitude
+      if (p.latitude > maxLat) maxLat = p.latitude
+      if (p.longitude < minLng) minLng = p.longitude
+      if (p.longitude > maxLng) maxLng = p.longitude
+    }
+
+    // Add padding
+    const latPad = Math.max((maxLat - minLat) * 0.1, 0.0002)
+    const lngPad = Math.max((maxLng - minLng) * 0.1, 0.0002)
+    minLat -= latPad; maxLat += latPad
+    minLng -= lngPad; maxLng += lngPad
+
+    const latRange = maxLat - minLat || 0.001
+    const lngRange = maxLng - minLng || 0.001
+
+    // Find max speed for normalization
+    const maxSpeed = Math.max(...points.map(p => p.speed), 1)
+
+    // Draw heat blobs
+    for (const p of points) {
+      const x = ((p.longitude - minLng) / lngRange) * w
+      const y = (1 - (p.latitude - minLat) / latRange) * h // flip Y
+      const intensity = Math.min(p.speed / maxSpeed, 1)
+      const radius = 8 + intensity * 8
+
+      // Color: green(low) → yellow → red(high)
+      let r: number, g: number, b: number
+      if (intensity < 0.5) {
+        const t = intensity * 2
+        r = Math.round(22 + t * (234 - 22))
+        g = Math.round(163 + t * (179 - 163))
+        b = Math.round(74 - t * 74)
+      } else {
+        const t = (intensity - 0.5) * 2
+        r = Math.round(234 + t * (239 - 234))
+        g = Math.round(179 - t * (179 - 68))
+        b = Math.round(0 + t * 68)
+      }
+
+      const alpha = 0.35 + intensity * 0.35
+      ctx.beginPath()
+      ctx.arc(x, y, radius, 0, Math.PI * 2)
+      ctx.setFillStyle(`rgba(${r},${g},${b},${alpha})`)
+      ctx.fill()
+    }
+  }
+
+  ctx.draw(false, () => {
+    setTimeout(() => {
+      uni.canvasToTempFilePath({
+        canvasId: 'heatmapCanvas',
+        success: (res) => { heatmapImage.value = res.tempFilePath },
+        fail: (err) => { console.error('heatmap canvasToTempFilePath fail', err) },
+      })
+    }, 150)
+  })
+}
+
 watch([timeRange, abilityData], () => {
   nextTick(() => {
     setTimeout(() => drawRadar(), 100)
+    setTimeout(() => drawHeatmap(), 100)
   })
 })
 
@@ -402,6 +501,7 @@ onShow(() => {
   loadData()
   nextTick(() => {
     setTimeout(() => drawRadar(), 300)
+    setTimeout(() => drawHeatmap(), 400)
   })
 })
 </script>
@@ -793,7 +893,15 @@ $textMuted: #666;
   position: relative;
   overflow: hidden;
   border: $border;
-  background: linear-gradient(135deg, #0a2a0f, #2a2a0a, #2a0a0a);
+  background: #0a2a0f;
+}
+
+.heatmap-image {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
 }
 
 .field-outline {
@@ -825,34 +933,9 @@ $textMuted: #666;
   transform: translate(-50%, -50%);
 }
 
-.heat-point {
-  position: absolute;
-  border-radius: 50%;
-  filter: blur(20rpx);
-}
-
-.heat-1 {
-  top: 30%;
-  left: 22%;
-  width: 120rpx;
-  height: 120rpx;
-  background: rgba(239, 68, 68, 0.5);
-}
-
-.heat-2 {
-  top: 45%;
-  left: 45%;
-  width: 160rpx;
-  height: 160rpx;
-  background: rgba(249, 115, 22, 0.5);
-}
-
-.heat-3 {
-  top: 60%;
-  right: 22%;
-  width: 120rpx;
-  height: 120rpx;
-  background: rgba(234, 179, 8, 0.5);
+.offscreen-canvas--heatmap {
+  width: 350px;
+  height: 263px;
 }
 
 .heatmap-legend {
