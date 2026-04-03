@@ -1,5 +1,6 @@
 package com.footballtracker.server
 
+import com.footballtracker.server.auth.BindCodeStore
 import com.footballtracker.server.auth.JwtService
 import com.footballtracker.server.auth.SmsCodeStore
 import com.footballtracker.server.config.loadConfig
@@ -30,6 +31,7 @@ fun Application.module() {
     // Initialize services
     val jwtService = JwtService(config.jwt)
     val smsCodeStore = SmsCodeStore()
+    val bindCodeStore = BindCodeStore()
     val tencentSmsService = TencentSmsService(config.tencent)
     val weChatService = WeChatService(config.wechat)
     val userService = UserService()
@@ -53,5 +55,5 @@ fun Application.module() {
     configureSerialization()
     configureStatusPages()
     configureAuthentication(config.jwt)
-    configureRouting(jwtService, smsCodeStore, tencentSmsService, weChatService, userService, sessionService, teamService, badgeService, matchService, playerAnalysisService, matchSummaryService, config.avatar)
+    configureRouting(jwtService, smsCodeStore, bindCodeStore, tencentSmsService, weChatService, userService, sessionService, teamService, badgeService, matchService, playerAnalysisService, matchSummaryService, config.avatar)
 }

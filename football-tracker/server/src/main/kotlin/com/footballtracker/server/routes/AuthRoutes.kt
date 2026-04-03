@@ -1,5 +1,6 @@
 package com.footballtracker.server.routes
 
+import com.footballtracker.server.auth.BindCodeStore
 import com.footballtracker.server.auth.JwtService
 import com.footballtracker.server.auth.SmsCodeStore
 import com.footballtracker.server.service.TencentSmsService
@@ -7,6 +8,8 @@ import com.footballtracker.server.service.UserService
 import com.footballtracker.server.service.WeChatService
 import io.ktor.http.*
 import io.ktor.server.application.*
+import io.ktor.server.auth.*
+import io.ktor.server.auth.jwt.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
@@ -28,9 +31,19 @@ data class UsernamePasswordRequest(val username: String, val password: String)
 @Serializable
 data class AuthResponse(val token: String, val uid: String, val isNewUser: Boolean)
 
+@Serializable
+data class BindCodeRequest(val code: String)
+
+@Serializable
+data class BindCodeResponse(val code: String, val expiresInSeconds: Int)
+
+@Serializable
+data class BindTokenResponse(val token: String, val uid: String)
+
 fun Route.authRoutes(
     jwtService: JwtService,
     smsCodeStore: SmsCodeStore,
+    bindCodeStore: BindCodeStore,
     tencentSmsService: TencentSmsService,
     weChatService: WeChatService,
     userService: UserService
@@ -142,6 +155,21 @@ fun Route.authRoutes(
 
             val token = jwtService.generateToken(user.uid.toString())
             call.respond(AuthResponse(token = token, uid = user.uid.toString(), isNewUser = false))
+        }
+
+        // Watch bind: verify code and return token (unauthenticated)
+        post("/bind/verify") {
+            val req = call.receive<BindCodeRequest>()
+            val code = req.code.trim()
+
+            val uid = bindCodeStore.verifyCode(code)
+            if (uid == null) {
+                call.respond(HttpStatusCode.Unauthorized, mapOf("error" to "绑定码无效或已过期"))
+                return@post
+            }
+
+            val token = jwtService.generateToken(uid)
+            call.respond(BindTokenResponse(token = token, uid = uid))
         }
     }
 }

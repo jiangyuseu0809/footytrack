@@ -1,41 +1,75 @@
 <template>
   <view class="page">
+    <!-- Nav Bar -->
     <view class="nav-bar">
       <text class="back" @tap="goBack">‹</text>
       <text class="nav-title">新建比赛</text>
     </view>
 
     <view class="form">
+      <!-- Title -->
       <text class="label">比赛标题</text>
-      <input class="input" v-model="title" placeholder="例如：周末友谊赛" placeholder-class="placeholder" />
+      <view class="input-wrapper">
+        <text class="input-icon">⚽</text>
+        <input class="input-field" v-model="title" placeholder="例如：周末友谊赛" placeholder-class="placeholder" />
+      </view>
 
+      <!-- Location -->
       <text class="label">地点</text>
-      <input class="input" v-model="location" placeholder="球场名称" placeholder-class="placeholder" />
+      <view class="input-wrapper">
+        <text class="input-icon">📍</text>
+        <input class="input-field" v-model="location" placeholder="球场名称" placeholder-class="placeholder" />
+      </view>
 
-      <text class="label">比赛时间</text>
+      <!-- Date -->
+      <text class="label">比赛日期</text>
       <picker mode="date" @change="onDateChange">
-        <view class="input picker">{{ dateStr || '选择日期' }}</view>
+        <view class="input-wrapper">
+          <text class="input-icon">📅</text>
+          <text :class="['picker-text', { 'picker-placeholder': !dateStr }]">{{ dateStr || '选择日期' }}</text>
+        </view>
       </picker>
+
+      <!-- Time -->
+      <text class="label">开始时间</text>
       <picker mode="time" @change="onTimeChange">
-        <view class="input picker">{{ timeStr || '选择时间' }}</view>
+        <view class="input-wrapper">
+          <text class="input-icon">🕐</text>
+          <text :class="['picker-text', { 'picker-placeholder': !timeStr }]">{{ timeStr || '选择时间' }}</text>
+        </view>
       </picker>
 
+      <!-- Groups -->
       <text class="label">分组数</text>
-      <view class="num-row">
-        <view class="num-btn" @tap="groups = Math.max(2, groups - 1)">-</view>
-        <text class="num-value">{{ groups }}</text>
-        <view class="num-btn" @tap="groups++">+</view>
+      <view class="stepper-row">
+        <view class="stepper-btn" @tap="groups = Math.max(2, groups - 1)">
+          <text class="stepper-btn-text">-</text>
+        </view>
+        <text class="stepper-value">{{ groups }}</text>
+        <view class="stepper-btn" @tap="groups++">
+          <text class="stepper-btn-text">+</text>
+        </view>
+        <view class="stepper-preview">
+          <text v-for="(c, i) in defaultColors.slice(0, groups)" :key="i" class="color-tag">{{ c }}</text>
+        </view>
       </view>
 
+      <!-- Players per group -->
       <text class="label">每组人数</text>
-      <view class="num-row">
-        <view class="num-btn" @tap="playersPerGroup = Math.max(1, playersPerGroup - 1)">-</view>
-        <text class="num-value">{{ playersPerGroup }}</text>
-        <view class="num-btn" @tap="playersPerGroup++">+</view>
+      <view class="stepper-row">
+        <view class="stepper-btn" @tap="playersPerGroup = Math.max(1, playersPerGroup - 1)">
+          <text class="stepper-btn-text">-</text>
+        </view>
+        <text class="stepper-value">{{ playersPerGroup }}</text>
+        <view class="stepper-btn" @tap="playersPerGroup++">
+          <text class="stepper-btn-text">+</text>
+        </view>
+        <text class="stepper-total">共 {{ groups * playersPerGroup }} 人</text>
       </view>
 
+      <!-- Submit -->
       <view class="submit-btn" @tap="handleSubmit">
-        <text>创建比赛</text>
+        <text class="submit-btn-text">创建比赛</text>
       </view>
     </view>
   </view>
@@ -85,35 +119,151 @@ async function handleSubmit() {
 </script>
 
 <style lang="scss" scoped>
-.page { min-height: 100vh; background: #0D1117; }
+.page {
+  min-height: 100vh;
+  background: #0D1117;
+}
+
 .nav-bar {
-  padding: 100rpx 28rpx 28rpx; display: flex; align-items: center;
-  .back { font-size: 52rpx; color: #00E676; margin-right: 12rpx; font-weight: 300; }
-  .nav-title { font-size: 36rpx; font-weight: 600; color: #fff; }
-}
-.form { padding: 0 28rpx; }
-.label { font-size: 26rpx; color: #8B949E; display: block; margin: 20rpx 0 8rpx; }
-.input {
-  background: #1C2333; border-radius: 20rpx; padding: 24rpx 28rpx;
-  font-size: 28rpx; color: #fff; border: 1rpx solid #30363D;
-  &.picker { color: #8B949E; }
-}
-.placeholder { color: #545d68; }
-.num-row {
-  display: flex; align-items: center; gap: 24rpx;
-  .num-btn {
-    width: 64rpx; height: 64rpx; border-radius: 50%;
-    background: #1C2333; color: #00E676;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 36rpx; font-weight: 600;
-    border: 1rpx solid #30363D;
+  padding: 100rpx 32rpx 28rpx;
+  display: flex;
+  align-items: center;
+
+  .back {
+    font-size: 52rpx;
+    color: #00E676;
+    margin-right: 12rpx;
+    font-weight: 300;
+    line-height: 1;
   }
-  .num-value { font-size: 36rpx; font-weight: 700; color: #fff; }
+
+  .nav-title {
+    font-size: 36rpx;
+    font-weight: 600;
+    color: #FFFFFF;
+  }
 }
+
+.form {
+  padding: 0 32rpx 60rpx;
+}
+
+/* ---- Labels ---- */
+.label {
+  font-size: 26rpx;
+  color: #8B949E;
+  display: block;
+  margin-top: 28rpx;
+  margin-bottom: 12rpx;
+}
+
+/* ---- Input Fields ---- */
+.input-wrapper {
+  background: #1C2333;
+  border-radius: 24rpx;
+  padding: 0 28rpx;
+  height: 96rpx;
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  border: 1rpx solid rgba(255, 255, 255, 0.08);
+}
+
+.input-icon {
+  font-size: 28rpx;
+  flex-shrink: 0;
+}
+
+.input-field {
+  flex: 1;
+  font-size: 28rpx;
+  color: #FFFFFF;
+  background: transparent;
+}
+
+.picker-text {
+  flex: 1;
+  font-size: 28rpx;
+  color: #FFFFFF;
+}
+
+.picker-placeholder {
+  color: #545d68;
+}
+
+.placeholder {
+  color: #545d68;
+}
+
+/* ---- Stepper ---- */
+.stepper-row {
+  display: flex;
+  align-items: center;
+  gap: 20rpx;
+}
+
+.stepper-btn {
+  width: 64rpx;
+  height: 64rpx;
+  border-radius: 50%;
+  background: #1C2333;
+  border: 1rpx solid #30363D;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.stepper-btn-text {
+  font-size: 36rpx;
+  font-weight: 600;
+  color: #00E676;
+  line-height: 1;
+}
+
+.stepper-value {
+  font-size: 36rpx;
+  font-weight: 700;
+  color: #FFFFFF;
+  min-width: 48rpx;
+  text-align: center;
+}
+
+.stepper-preview {
+  display: flex;
+  gap: 8rpx;
+  margin-left: 12rpx;
+  flex-wrap: wrap;
+}
+
+.color-tag {
+  font-size: 22rpx;
+  color: #8B949E;
+  background: #242D3D;
+  padding: 4rpx 14rpx;
+  border-radius: 10rpx;
+}
+
+.stepper-total {
+  font-size: 24rpx;
+  color: #8B949E;
+  margin-left: 12rpx;
+}
+
+/* ---- Submit Button ---- */
 .submit-btn {
-  background: #00E676; color: #0D1117;
-  text-align: center; padding: 24rpx;
-  border-radius: 44rpx; font-size: 30rpx; font-weight: 600;
-  margin-top: 40rpx;
+  margin-top: 48rpx;
+  background: linear-gradient(135deg, #00E676, #00BFA5);
+  border-radius: 24rpx;
+  height: 100rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.submit-btn-text {
+  font-size: 32rpx;
+  font-weight: 600;
+  color: #0D1117;
 }
 </style>

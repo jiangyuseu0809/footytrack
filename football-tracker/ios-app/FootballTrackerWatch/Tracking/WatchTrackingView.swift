@@ -4,6 +4,7 @@ import SwiftUI
 struct WatchTrackingView: View {
     @ObservedObject var manager: TrackingManager
     var isAuthenticated: Bool
+    @State private var showBindView = false
 
     var body: some View {
         if manager.isTracking {
@@ -18,11 +19,13 @@ struct WatchTrackingView: View {
     private var startView: some View {
         VStack {
             if !isAuthenticated {
-                Text("请在iPhone上登录配对")
-                    .font(.system(size: 12))
-                    .foregroundColor(.orange)
-                    .multilineTextAlignment(.center)
-                    .padding(.top, 8)
+                Button(action: { showBindView = true }) {
+                    Text("输入绑定码登录")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundColor(.green)
+                }
+                .buttonStyle(.plain)
+                .padding(.top, 8)
             }
 
             Spacer()
@@ -46,6 +49,9 @@ struct WatchTrackingView: View {
                     .foregroundColor(.yellow)
                     .padding(.bottom, 4)
             }
+        }
+        .sheet(isPresented: $showBindView) {
+            WatchBindView()
         }
     }
 

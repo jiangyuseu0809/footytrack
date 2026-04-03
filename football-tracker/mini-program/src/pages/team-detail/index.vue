@@ -1,52 +1,98 @@
 <template>
   <view class="page">
+    <!-- Nav Bar -->
     <view class="nav-bar">
       <text class="back" @tap="goBack">‹</text>
       <text class="nav-title">{{ detail?.team.name || '球队详情' }}</text>
     </view>
 
     <view v-if="detail" class="content">
-      <!-- Team Info -->
-      <view class="team-hero">
-        <text class="team-name">{{ detail.team.name }}</text>
-        <view class="invite-row" @tap="copyInviteCode">
-          <text class="invite-label">邀请码:</text>
-          <text class="invite-code">{{ detail.team.inviteCode }}</text>
-          <text class="copy-hint">点击复制</text>
+      <!-- Hero Card -->
+      <view class="hero-card">
+        <text class="hero-team-name">{{ detail.team.name }}</text>
+        <view class="hero-stats-row">
+          <view class="hero-stat">
+            <text class="hero-stat-value">{{ detail.members.length }}</text>
+            <text class="hero-stat-label">队员</text>
+          </view>
+          <view class="hero-stat-divider" />
+          <view class="hero-stat">
+            <text class="hero-stat-value">{{ avgDistance }}</text>
+            <text class="hero-stat-label">平均距离(km)</text>
+          </view>
+          <view class="hero-stat-divider" />
+          <view class="hero-stat">
+            <text class="hero-stat-value">{{ totalSessions }}</text>
+            <text class="hero-stat-label">总场次</text>
+          </view>
+        </view>
+        <view class="hero-invite-row" @tap="copyInviteCode">
+          <text class="hero-invite-label">邀请码</text>
+          <view class="hero-invite-code-box">
+            <text class="hero-invite-code">{{ detail.team.inviteCode }}</text>
+            <text class="hero-invite-copy">复制</text>
+          </view>
         </view>
       </view>
 
-      <!-- Members -->
-      <text class="section-title">队员 ({{ detail.members.length }})</text>
-      <view v-for="m in detail.members" :key="m.userUid" class="member-card">
-        <view class="member-avatar">
-          <text>{{ m.nickname[0] }}</text>
+      <!-- Squad Section -->
+      <view class="section-header">
+        <view class="section-icon-box">
+          <text class="section-icon-text">👥</text>
         </view>
-        <view class="member-info">
-          <text class="member-name">{{ m.nickname }}</text>
-          <text class="member-role">{{ m.role === 'creator' ? '队长' : '队员' }}</text>
-        </view>
-        <view class="member-stats">
-          <text class="m-stat">{{ m.sessionCount }} 场</text>
-          <text class="m-stat">{{ (m.totalDistanceMeters / 1000).toFixed(1) }} km</text>
+        <text class="section-title">球队阵容</text>
+      </view>
+
+      <view class="member-list">
+        <view v-for="m in detail.members" :key="m.userUid" class="member-card">
+          <view class="member-avatar">
+            <text class="member-avatar-text">{{ m.nickname[0] }}</text>
+          </view>
+          <view class="member-info">
+            <view class="member-name-row">
+              <text class="member-name">{{ m.nickname }}</text>
+              <view v-if="m.role === 'creator'" class="role-badge">
+                <text class="role-badge-text">队长</text>
+              </view>
+              <view v-else class="role-badge role-badge-member">
+                <text class="role-badge-text role-badge-text-member">队员</text>
+              </view>
+            </view>
+            <view class="member-stats-row">
+              <text class="member-stat">{{ m.sessionCount }} 场训练</text>
+              <text class="member-stat-dot">·</text>
+              <text class="member-stat">{{ (m.totalDistanceMeters / 1000).toFixed(1) }} km</text>
+            </view>
+          </view>
         </view>
       </view>
 
-      <!-- Leave -->
+      <!-- Leave Button -->
       <view class="leave-btn" @tap="handleLeave">
-        <text>离开球队</text>
+        <text class="leave-btn-text">离开球队</text>
       </view>
     </view>
   </view>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import { getTeamDetail, leaveTeam } from '../../utils/api'
 
 const detail = ref<any>(null)
 const teamId = ref('')
+
+const avgDistance = computed(() => {
+  if (!detail.value || detail.value.members.length === 0) return '0'
+  const total = detail.value.members.reduce((sum: number, m: any) => sum + (m.totalDistanceMeters || 0), 0)
+  return (total / detail.value.members.length / 1000).toFixed(1)
+})
+
+const totalSessions = computed(() => {
+  if (!detail.value) return 0
+  return detail.value.members.reduce((sum: number, m: any) => sum + (m.sessionCount || 0), 0)
+})
 
 function goBack() { uni.navigateBack() }
 
@@ -86,48 +132,250 @@ onLoad(async (options) => {
 </script>
 
 <style lang="scss" scoped>
-.page { min-height: 100vh; background: #0D1117; }
+.page {
+  min-height: 100vh;
+  background: #0D1117;
+}
+
 .nav-bar {
-  padding: 100rpx 28rpx 28rpx; display: flex; align-items: center;
-  .back { font-size: 52rpx; color: #00E676; margin-right: 12rpx; font-weight: 300; }
-  .nav-title { font-size: 36rpx; font-weight: 600; color: #fff; }
+  padding: 100rpx 32rpx 28rpx;
+  display: flex;
+  align-items: center;
+
+  .back {
+    font-size: 52rpx;
+    color: #00E676;
+    margin-right: 12rpx;
+    font-weight: 300;
+    line-height: 1;
+  }
+
+  .nav-title {
+    font-size: 36rpx;
+    font-weight: 600;
+    color: #FFFFFF;
+  }
 }
-.content { padding: 0 28rpx 60rpx; }
-.team-hero {
+
+.content {
+  padding: 0 32rpx 60rpx;
+}
+
+/* ---- Hero Card ---- */
+.hero-card {
   background: linear-gradient(135deg, #3B82F6, #4F46E5);
-  border-radius: 28rpx; padding: 32rpx; margin-bottom: 24rpx;
-  .team-name { font-size: 40rpx; font-weight: 700; color: #fff; display: block; margin-bottom: 12rpx; }
-  .invite-row {
-    display: flex; align-items: center; gap: 8rpx;
-    .invite-label { font-size: 24rpx; color: rgba(255,255,255,0.7); }
-    .invite-code { font-size: 28rpx; font-weight: 600; color: #fff; }
-    .copy-hint { font-size: 20rpx; color: rgba(255,255,255,0.5); }
-  }
+  border-radius: 36rpx;
+  padding: 32rpx;
+  margin-bottom: 32rpx;
 }
-.section-title { font-size: 28rpx; font-weight: 600; color: #8B949E; margin-bottom: 16rpx; }
+
+.hero-team-name {
+  font-size: 40rpx;
+  font-weight: 700;
+  color: #FFFFFF;
+  display: block;
+  margin-bottom: 24rpx;
+}
+
+.hero-stats-row {
+  display: flex;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 24rpx;
+  padding: 20rpx 0;
+  margin-bottom: 24rpx;
+}
+
+.hero-stat {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.hero-stat-value {
+  font-size: 36rpx;
+  font-weight: 700;
+  color: #FFFFFF;
+}
+
+.hero-stat-label {
+  font-size: 20rpx;
+  color: rgba(255, 255, 255, 0.65);
+  margin-top: 4rpx;
+}
+
+.hero-stat-divider {
+  width: 1rpx;
+  height: 48rpx;
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.hero-invite-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.hero-invite-label {
+  font-size: 24rpx;
+  color: rgba(255, 255, 255, 0.65);
+}
+
+.hero-invite-code-box {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 16rpx;
+  padding: 10rpx 20rpx;
+}
+
+.hero-invite-code {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #FFFFFF;
+  font-family: monospace;
+  letter-spacing: 2rpx;
+}
+
+.hero-invite-copy {
+  font-size: 22rpx;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+/* ---- Section Header ---- */
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  margin-bottom: 20rpx;
+}
+
+.section-icon-box {
+  width: 52rpx;
+  height: 52rpx;
+  border-radius: 16rpx;
+  background: rgba(0, 230, 118, 0.16);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.section-icon-text {
+  font-size: 24rpx;
+}
+
+.section-title {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #FFFFFF;
+}
+
+/* ---- Member List ---- */
+.member-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12rpx;
+}
+
 .member-card {
-  background: #1C2333; border-radius: 20rpx; padding: 20rpx;
-  display: flex; align-items: center; margin-bottom: 12rpx;
-  border: 1rpx solid rgba(255,255,255,0.08);
-  .member-avatar {
-    width: 72rpx; height: 72rpx; border-radius: 50%;
-    background: #242D3D; display: flex; align-items: center; justify-content: center;
-    color: #00E676; font-size: 28rpx; font-weight: 600; margin-right: 16rpx;
-  }
-  .member-info {
-    flex: 1;
-    .member-name { font-size: 28rpx; color: #fff; display: block; }
-    .member-role { font-size: 22rpx; color: #8B949E; display: block; }
-  }
-  .member-stats {
-    text-align: right;
-    .m-stat { font-size: 22rpx; color: #8B949E; display: block; }
-  }
+  background: #1C2333;
+  border-radius: 32rpx;
+  padding: 24rpx;
+  display: flex;
+  align-items: center;
+  gap: 20rpx;
+  border: 1rpx solid rgba(255, 255, 255, 0.08);
 }
+
+.member-avatar {
+  width: 88rpx;
+  height: 88rpx;
+  border-radius: 50%;
+  background: #242D3D;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.member-avatar-text {
+  font-size: 32rpx;
+  color: #00E676;
+  font-weight: 600;
+}
+
+.member-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6rpx;
+}
+
+.member-name-row {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+}
+
+.member-name {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #FFFFFF;
+}
+
+.role-badge {
+  background: rgba(0, 230, 118, 0.16);
+  padding: 4rpx 14rpx;
+  border-radius: 10rpx;
+}
+
+.role-badge-member {
+  background: rgba(139, 148, 158, 0.16);
+}
+
+.role-badge-text {
+  font-size: 20rpx;
+  font-weight: 600;
+  color: #00E676;
+}
+
+.role-badge-text-member {
+  color: #8B949E;
+}
+
+.member-stats-row {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+}
+
+.member-stat {
+  font-size: 22rpx;
+  color: #8B949E;
+}
+
+.member-stat-dot {
+  font-size: 22rpx;
+  color: #30363D;
+}
+
+/* ---- Leave Button ---- */
 .leave-btn {
-  background: #1C2333; border: 1rpx solid #E53935;
-  text-align: center; padding: 22rpx; border-radius: 44rpx;
   margin-top: 40rpx;
-  color: #E53935; font-size: 28rpx; font-weight: 600;
+  border: 2rpx solid #FF4757;
+  border-radius: 24rpx;
+  height: 96rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+}
+
+.leave-btn-text {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #FF4757;
 }
 </style>

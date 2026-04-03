@@ -278,3 +278,9 @@ export async function getEarnedBadges(): Promise<{ allBadges: Badge[]; earnedBad
 export async function checkBadges(): Promise<{ newBadges: Badge[] }> {
   return request('/api/badges/check', { method: 'POST' })
 }
+
+// --- Watch Bind ---
+
+export async function generateBindCode(): Promise<{ code: string; expiresInSeconds: number }> {
+  return request('/api/auth/bind/generate', { method: 'POST' })
+}

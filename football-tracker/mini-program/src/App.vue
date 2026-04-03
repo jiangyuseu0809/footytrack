@@ -1,12 +1,8 @@
-<script setup lang="ts">
-import { onLaunch } from '@dcloudio/uni-app'
-import { isLoggedIn } from './utils/api'
+<template>
+  <view />
+</template>
 
-onLaunch(() => {
-  if (!isLoggedIn()) {
-    uni.reLaunch({ url: '/pages/login/index' })
-  }
-})
+<script setup lang="ts">
 </script>
 
 <style>
