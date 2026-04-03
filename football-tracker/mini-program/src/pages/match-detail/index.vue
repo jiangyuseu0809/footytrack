@@ -112,7 +112,7 @@
       </view>
 
       <!-- Rankings: Calories -->
-      <view v-if="rankings && rankings.caloriesRanking && rankings.caloriesRanking.length > 0" class="section">
+      <view v-if="rankings && rankings.caloriesRanking && rankings.caloriesRanking.length > 0" class="section section--last">
         <view class="rank-card">
           <view class="rank-card-header rank-card-header-orange">
             <text class="rank-card-header-text">🔥 卡路里排行榜</text>
@@ -129,17 +129,6 @@
           </view>
         </view>
       </view>
-
-      <!-- AI Summary -->
-      <view v-if="summary" class="section section--last">
-        <view class="ai-summary-card">
-          <view class="ai-summary-header">
-            <text class="ai-summary-icon">🤖</text>
-            <text class="ai-summary-title">AI 比赛总结</text>
-          </view>
-          <text class="ai-summary-text">{{ summary }}</text>
-        </view>
-      </view>
     </scroll-view>
   </view>
 </template>
@@ -149,13 +138,12 @@ import { ref, computed } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import {
   getMatchDetail, registerForMatch, cancelMatchRegistration,
-  getMatchRankings, getMatchSummary, type MatchRegistration
+  getMatchRankings, type MatchRegistration
 } from '../../utils/api'
 import { formatDateTime } from '../../utils/format'
 
 const detail = ref<any>(null)
 const rankings = ref<any>(null)
-const summary = ref('')
 const matchId = ref('')
 
 const menuBtn = uni.getMenuButtonBoundingClientRect()
@@ -186,7 +174,6 @@ async function loadData() {
   try {
     detail.value = await getMatchDetail(matchId.value)
     try { rankings.value = await getMatchRankings(matchId.value) } catch {}
-    try { const s = await getMatchSummary(matchId.value); summary.value = s.summary } catch {}
   } catch (e) { console.error(e) }
 }
 
@@ -602,39 +589,5 @@ $textMuted: #666;
 
 .rank-value-orange {
   color: #FFA502;
-}
-
-// ============================================================
-// AI Summary
-// ============================================================
-.ai-summary-card {
-  background: $cardBg;
-  border-radius: 32rpx;
-  padding: 28rpx 32rpx;
-  border: 1rpx solid rgba(168, 85, 247, 0.3);
-  box-shadow: 0 4rpx 24rpx rgba(0, 0, 0, 0.3);
-}
-
-.ai-summary-header {
-  display: flex;
-  align-items: center;
-  gap: 12rpx;
-  margin-bottom: 20rpx;
-}
-
-.ai-summary-icon {
-  font-size: 28rpx;
-}
-
-.ai-summary-title {
-  font-size: 30rpx;
-  font-weight: 600;
-  color: $textPrimary;
-}
-
-.ai-summary-text {
-  font-size: 26rpx;
-  color: $textSecondary;
-  line-height: 1.7;
 }
 </style>
