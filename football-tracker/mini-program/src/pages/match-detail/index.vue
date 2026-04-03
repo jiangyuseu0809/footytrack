@@ -81,8 +81,13 @@
         <view v-if="!detail.isRegistered" class="btn-register" @tap="handleRegister">
           <text class="btn-register-text">报名参加</text>
         </view>
-        <view v-else class="btn-cancel" @tap="handleCancel">
-          <text class="btn-cancel-text">取消报名</text>
+        <view v-else class="action-row">
+          <button class="btn-share" open-type="share">
+            <text class="btn-share-text">分享比赛</text>
+          </button>
+          <view class="btn-cancel" @tap="handleCancel">
+            <text class="btn-cancel-text">取消报名</text>
+          </view>
         </view>
       </view>
 
@@ -135,7 +140,7 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { onLoad } from '@dcloudio/uni-app'
+import { onLoad, onShareAppMessage } from '@dcloudio/uni-app'
 import {
   getMatchDetail, registerForMatch, cancelMatchRegistration,
   getMatchRankings, type MatchRegistration
@@ -197,6 +202,14 @@ async function handleCancel() {
 onLoad(async (options) => {
   matchId.value = options?.id || ''
   if (matchId.value) await loadData()
+})
+
+onShareAppMessage(() => {
+  const title = detail.value?.match.title || '来一起踢球吧'
+  return {
+    title,
+    path: `/pages/match-detail/index?id=${matchId.value}`,
+  }
 })
 </script>
 
@@ -489,6 +502,36 @@ $textMuted: #666;
 // ============================================================
 // Action Buttons
 // ============================================================
+.action-row {
+  display: flex;
+  gap: 16rpx;
+}
+
+.btn-share {
+  flex: 1;
+  background: linear-gradient(90deg, $green, $greenDark);
+  border-radius: 100rpx;
+  height: 96rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8rpx 24rpx rgba(7, 193, 96, 0.3);
+  padding: 0;
+  margin: 0;
+  border: none;
+  line-height: 96rpx;
+
+  &::after {
+    border: none;
+  }
+}
+
+.btn-share-text {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: $textPrimary;
+}
+
 .btn-register {
   background: linear-gradient(90deg, $green, $greenDark);
   border-radius: 100rpx;
@@ -506,6 +549,7 @@ $textMuted: #666;
 }
 
 .btn-cancel {
+  flex: 1;
   background: transparent;
   border: 2rpx solid #EF4444;
   border-radius: 100rpx;
