@@ -12,6 +12,42 @@
     </view>
 
     <scroll-view scroll-y class="scroll-content">
+      <!-- Upcoming Matches -->
+      <view v-if="upcomingMatches.length" class="section">
+        <view class="upcoming-header">
+          <text class="upcoming-title">即将开始</text>
+          <text class="upcoming-count">{{ upcomingMatches.length }} 场比赛</text>
+        </view>
+        <view class="upcoming-list">
+          <view
+            v-for="m in upcomingMatches"
+            :key="m.id"
+            class="upcoming-card"
+            @tap="goMatchDetail(m.id)"
+          >
+            <view class="upcoming-card-top">
+              <view class="upcoming-status-dot" />
+              <text class="upcoming-name">{{ m.title }}</text>
+              <text class="upcoming-arrow">›</text>
+            </view>
+            <view class="upcoming-info-rows">
+              <view class="upcoming-info-row">
+                <text class="upcoming-info-icon">📍</text>
+                <text class="upcoming-info-text">{{ m.location }}</text>
+              </view>
+              <view class="upcoming-info-row">
+                <text class="upcoming-info-icon">📅</text>
+                <text class="upcoming-info-text">{{ formatMatchTime(m.matchDate) }}</text>
+              </view>
+              <view class="upcoming-info-row">
+                <text class="upcoming-info-icon">👥</text>
+                <text class="upcoming-info-text">{{ m.registrationCount }}/{{ m.maxPlayers || m.groups * m.playersPerGroup }} 人已报名</text>
+              </view>
+            </view>
+          </view>
+        </view>
+      </view>
+
       <!-- Time Range Toggle -->
       <view class="section">
         <view class="toggle-bar">
@@ -149,10 +185,12 @@
 <script setup lang="ts">
 import { ref, computed, watch, nextTick } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
-import { getSessions, isLoggedIn, type SessionDto } from '../../utils/api'
+import { getSessions, getMatches, isLoggedIn, type SessionDto, type Match } from '../../utils/api'
+import { formatDateTime, formatWeekday } from '../../utils/format'
 
 const timeRange = ref<'week' | 'today'>('week')
 const sessions = ref<SessionDto[]>([])
+const upcomingMatches = ref<Match[]>([])
 const isWatchConnected = ref(false)
 const radarImage = ref('')
 
@@ -218,11 +256,20 @@ const abilityData = computed(() => {
 async function loadData() {
   if (!isLoggedIn()) return
   try {
-    const res = await getSessions()
-    sessions.value = res.sessions
+    const [sessRes, matchRes] = await Promise.all([getSessions(), getMatches()])
+    sessions.value = sessRes.sessions
+    upcomingMatches.value = matchRes.matches
   } catch (e) {
     console.error('Failed to load home data', e)
   }
+}
+
+function formatMatchTime(ts: number): string {
+  return `${formatWeekday(ts)} ${formatDateTime(ts)}`
+}
+
+function goMatchDetail(id: string) {
+  uni.navigateTo({ url: `/pages/match-detail/index?id=${id}` })
 }
 
 function goBindWatch() {
@@ -426,6 +473,94 @@ $textMuted: #666;
 
 .section--last {
   padding-bottom: 160rpx;
+}
+
+// ============================================================
+// Upcoming Matches
+// ============================================================
+.upcoming-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16rpx;
+}
+
+.upcoming-title {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: $textPrimary;
+}
+
+.upcoming-count {
+  font-size: 24rpx;
+  color: $textSecondary;
+}
+
+.upcoming-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+}
+
+.upcoming-card {
+  background: $cardBg;
+  border-radius: 32rpx;
+  padding: 28rpx;
+  border: $border;
+  box-shadow: 0 4rpx 24rpx rgba(0, 0, 0, 0.3);
+}
+
+.upcoming-card-top {
+  display: flex;
+  align-items: center;
+  margin-bottom: 20rpx;
+}
+
+.upcoming-status-dot {
+  width: 16rpx;
+  height: 16rpx;
+  border-radius: 50%;
+  background: $green;
+  margin-right: 12rpx;
+  flex-shrink: 0;
+  box-shadow: 0 0 8rpx rgba(7, 193, 96, 0.6);
+}
+
+.upcoming-name {
+  flex: 1;
+  font-size: 30rpx;
+  font-weight: 600;
+  color: $textPrimary;
+}
+
+.upcoming-arrow {
+  font-size: 36rpx;
+  color: $textMuted;
+  font-weight: 300;
+  flex-shrink: 0;
+}
+
+.upcoming-info-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 10rpx;
+  padding-left: 28rpx;
+}
+
+.upcoming-info-row {
+  display: flex;
+  align-items: center;
+  gap: 10rpx;
+}
+
+.upcoming-info-icon {
+  font-size: 22rpx;
+  flex-shrink: 0;
+}
+
+.upcoming-info-text {
+  font-size: 24rpx;
+  color: $textSecondary;
 }
 
 // ============================================================
