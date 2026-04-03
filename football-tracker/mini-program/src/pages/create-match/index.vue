@@ -6,8 +6,8 @@
     </view>
 
     <scroll-view scroll-y class="scroll-area">
-      <!-- Quick Templates -->
-      <view class="section">
+      <!-- Quick Templates (only shown when user has saved templates) -->
+      <view v-if="templates.length" class="section">
         <view class="template-card">
           <view class="template-header" @tap="showTemplates = !showTemplates">
             <view class="template-left">
@@ -16,7 +16,7 @@
               </view>
               <view class="template-text">
                 <text class="template-title">常用模板</text>
-                <text class="template-sub">快速创建比赛</text>
+                <text class="template-sub">{{ templates.length }} 个已保存</text>
               </view>
             </view>
             <text class="template-chevron" :class="{ rotated: showTemplates }">›</text>
@@ -27,13 +27,15 @@
               v-for="tpl in templates"
               :key="tpl.id"
               class="template-item"
-              @tap="handleUseTemplate(tpl)"
             >
-              <view class="template-item-info">
+              <view class="template-item-info" @tap="handleUseTemplate(tpl)">
                 <text class="template-item-name">{{ tpl.name }}</text>
-                <text class="template-item-meta">{{ tpl.location }} · {{ tpl.duration }}分钟</text>
+                <text class="template-item-meta">{{ tpl.location }} · {{ tpl.groups }}组 · 每组{{ tpl.playersPerGroup }}人</text>
               </view>
-              <text class="template-plus">＋</text>
+              <view class="template-actions">
+                <text class="template-plus" @tap="handleUseTemplate(tpl)">＋</text>
+                <text class="template-delete" @tap.stop="handleDeleteTemplate(tpl.id)">✕</text>
+              </view>
             </view>
           </view>
         </view>
@@ -148,8 +150,15 @@
         </view>
       </view>
 
-      <!-- Action Buttons -->
+      <!-- Save as Template + Action Buttons -->
       <view class="section">
+        <view class="save-template-row" @tap="saveAsTemplate = !saveAsTemplate">
+          <view class="checkbox" :class="{ 'checkbox--checked': saveAsTemplate }">
+            <text v-if="saveAsTemplate" class="checkbox-icon">✓</text>
+          </view>
+          <text class="save-template-text">保存为常用模板</text>
+        </view>
+
         <view class="create-btn" @tap="handleSubmit">
           <text class="create-btn-text">创建比赛</text>
         </view>
@@ -176,8 +185,23 @@ interface MatchTemplate {
   id: string
   name: string
   location: string
-  duration: number
-  participants: number
+  groups: number
+  playersPerGroup: number
+  maxPlayers: number
+  teamMode: 'choose' | 'random'
+}
+
+const TEMPLATE_STORAGE_KEY = 'match_templates'
+
+function loadTemplates(): MatchTemplate[] {
+  try {
+    const raw = uni.getStorageSync(TEMPLATE_STORAGE_KEY)
+    return raw ? JSON.parse(raw) : []
+  } catch { return [] }
+}
+
+function saveTemplates(list: MatchTemplate[]) {
+  uni.setStorageSync(TEMPLATE_STORAGE_KEY, JSON.stringify(list))
 }
 
 const title = ref('')
@@ -191,14 +215,10 @@ const teamMode = ref<'choose' | 'random'>('choose')
 const latitude = ref<number | null>(null)
 const longitude = ref<number | null>(null)
 const showTemplates = ref(false)
+const saveAsTemplate = ref(false)
+const templates = ref<MatchTemplate[]>(loadTemplates())
 
 const defaultColors = ['红', '蓝', '绿', '黄', '白', '黑']
-
-const templates: MatchTemplate[] = [
-  { id: '1', name: '周末友谊赛', location: '体育中心足球场', duration: 90, participants: 10 },
-  { id: '2', name: '工作日训练', location: '社区球场', duration: 60, participants: 8 },
-  { id: '3', name: '五人制对抗', location: '室内球场', duration: 45, participants: 10 },
-]
 
 // Keep maxPlayers >= groups * playersPerGroup
 watch([groups, playersPerGroup], () => {
@@ -216,9 +236,18 @@ function decreaseMaxPlayers() {
 function handleUseTemplate(tpl: MatchTemplate) {
   title.value = tpl.name
   location.value = tpl.location
+  groups.value = tpl.groups
+  playersPerGroup.value = tpl.playersPerGroup
+  maxPlayers.value = tpl.maxPlayers
+  teamMode.value = tpl.teamMode
   latitude.value = null
   longitude.value = null
   showTemplates.value = false
+}
+
+function handleDeleteTemplate(id: string) {
+  templates.value = templates.value.filter(t => t.id !== id)
+  saveTemplates(templates.value)
 }
 
 function onDateChange(e: any) { dateStr.value = e.detail.value }
@@ -258,6 +287,22 @@ async function handleSubmit() {
       latitude: latitude.value ?? undefined,
       longitude: longitude.value ?? undefined,
     })
+
+    // Save as template if checked
+    if (saveAsTemplate.value) {
+      const newTpl: MatchTemplate = {
+        id: Date.now().toString(),
+        name: title.value,
+        location: location.value,
+        groups: groups.value,
+        playersPerGroup: playersPerGroup.value,
+        maxPlayers: maxPlayers.value,
+        teamMode: teamMode.value,
+      }
+      templates.value = [newTpl, ...templates.value].slice(0, 10) // max 10 templates
+      saveTemplates(templates.value)
+    }
+
     uni.showToast({ title: '创建成功', icon: 'success' })
     setTimeout(() => uni.switchTab({ url: '/pages/home/index' }), 1000)
   } catch (e: any) {
@@ -417,6 +462,18 @@ $textMuted: #666;
   font-size: 32rpx;
   color: $green;
   font-weight: 500;
+}
+
+.template-actions {
+  display: flex;
+  align-items: center;
+  gap: 24rpx;
+}
+
+.template-delete {
+  font-size: 26rpx;
+  color: $textMuted;
+  padding: 8rpx;
 }
 
 // ============================================================
@@ -600,6 +657,44 @@ $textMuted: #666;
 
 .toggle-btn--active .toggle-btn-text {
   color: $textPrimary;
+}
+
+// ============================================================
+// Save as Template Checkbox
+// ============================================================
+.save-template-row {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  margin-bottom: 24rpx;
+}
+
+.checkbox {
+  width: 40rpx;
+  height: 40rpx;
+  border-radius: 10rpx;
+  border: 2rpx solid #555;
+  background: #252525;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.checkbox--checked {
+  background: $green;
+  border-color: $green;
+}
+
+.checkbox-icon {
+  font-size: 24rpx;
+  color: $textPrimary;
+  font-weight: 700;
+}
+
+.save-template-text {
+  font-size: 28rpx;
+  color: $textSecondary;
 }
 
 // ============================================================
