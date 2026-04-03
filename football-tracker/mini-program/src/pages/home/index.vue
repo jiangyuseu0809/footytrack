@@ -168,7 +168,7 @@
       <!-- Share Button -->
       <view class="section section--last">
         <view class="share-btn" @tap="handleShare">
-          <text class="share-btn-text">📤 分享{{ timeRange === 'week' ? '本周' : '今日' }}运动数据</text>
+          <text class="share-btn-text">📤 分享{{ timeRange === 'week' ? '本周' : '今日' }}踢球数据</text>
         </view>
       </view>
     </scroll-view>
@@ -176,6 +176,7 @@
     <!-- Hidden canvas for radar chart rendering -->
     <canvas canvas-id="radarCanvas" id="radarCanvas" class="offscreen-canvas" />
     <canvas canvas-id="heatmapCanvas" id="heatmapCanvas" class="offscreen-canvas offscreen-canvas--heatmap" />
+    <canvas canvas-id="shareCanvas" id="shareCanvas" class="offscreen-canvas offscreen-canvas--share" />
   </view>
 </template>
 
@@ -289,7 +290,275 @@ function goBindWatch() {
 }
 
 function handleShare() {
-  // WeChat share placeholder
+  uni.showLoading({ title: '生成中...' })
+  drawShareCard(() => {
+    uni.canvasToTempFilePath({
+      canvasId: 'shareCanvas',
+      success: (res) => {
+        uni.hideLoading()
+        uni.previewImage({ urls: [res.tempFilePath], current: res.tempFilePath })
+      },
+      fail: () => {
+        uni.hideLoading()
+        uni.showToast({ title: '生成失败', icon: 'none' })
+      },
+    })
+  })
+}
+
+function drawShareCard(callback: () => void) {
+  const ctx = uni.createCanvasContext('shareCanvas')
+  const W = 375
+  const H = 960
+  const pad = 20
+  const contentW = W - pad * 2
+  const green = '#07c160'
+
+  // Background
+  ctx.setFillStyle('#0a0a0a')
+  ctx.fillRect(0, 0, W, H)
+
+  // --- Header ---
+  ctx.setFillStyle(green)
+  ctx.fillRect(0, 0, W, 80)
+  ctx.setFontSize(18)
+  ctx.setTextAlign('center')
+  ctx.setTextBaseline('middle')
+  ctx.setFillStyle('#FFFFFF')
+  const headerText = timeRange.value === 'week' ? '本周踢球数据' : '今日踢球数据'
+  ctx.fillText(`FootyTrack · ${headerText}`, W / 2, 40)
+
+  // --- Date line ---
+  ctx.setFontSize(12)
+  ctx.setFillStyle('#999999')
+  ctx.setTextAlign('center')
+  const now = new Date()
+  const dateStr = `${now.getFullYear()}年${now.getMonth() + 1}月${now.getDate()}日`
+  ctx.fillText(dateStr, W / 2, 100)
+
+  // --- Stats Grid (2x3) ---
+  const stats = currentStats.value
+  const statsData = [
+    { label: '踢球次数', value: `${stats.matches}`, unit: '场' },
+    { label: '热量消耗', value: `${stats.calories}`, unit: 'kcal' },
+    { label: '跑动距离', value: `${stats.distance}`, unit: 'km' },
+    { label: '冲刺次数', value: `${stats.sprints}`, unit: '次' },
+    { label: '运动时间', value: `${stats.duration}`, unit: '分钟' },
+    { label: '最高心率', value: `${stats.maxHeartRate}`, unit: 'bpm' },
+  ]
+
+  const gridTop = 120
+  const cellW = contentW / 3
+  const cellH = 70
+
+  for (let i = 0; i < statsData.length; i++) {
+    const col = i % 3
+    const row = Math.floor(i / 3)
+    const cx = pad + col * cellW + cellW / 2
+    const cy = gridTop + row * cellH
+
+    // Card bg
+    ctx.setFillStyle('#1a1a1a')
+    const cardW = cellW - 8
+    const cardH = cellH - 8
+    roundRect(ctx, cx - cardW / 2, cy - 4, cardW, cardH, 8)
+    ctx.fill()
+
+    // Value
+    ctx.setFontSize(20)
+    ctx.setFillStyle('#FFFFFF')
+    ctx.setTextAlign('center')
+    ctx.fillText(statsData[i].value, cx, cy + 18)
+
+    // Label + unit
+    ctx.setFontSize(10)
+    ctx.setFillStyle('#999999')
+    ctx.fillText(`${statsData[i].label}(${statsData[i].unit})`, cx, cy + 40)
+  }
+
+  // --- Ability Radar ---
+  const radarTop = gridTop + cellH * 2 + 20
+  ctx.setFontSize(13)
+  ctx.setFillStyle('#FFFFFF')
+  ctx.setTextAlign('left')
+  ctx.fillText('能力分析', pad, radarTop)
+
+  const radarCx = W / 2
+  const radarCy = radarTop + 110
+  const radarR = 70
+  const data = abilityData.value
+  const count = data.length
+  const angleStep = (Math.PI * 2) / count
+  const startAngle = -Math.PI / 2
+
+  // Grid
+  for (let lv = 1; lv <= 4; lv++) {
+    const r = (radarR / 4) * lv
+    ctx.beginPath()
+    for (let i = 0; i <= count; i++) {
+      const angle = startAngle + angleStep * (i % count)
+      const x = radarCx + r * Math.cos(angle)
+      const y = radarCy + r * Math.sin(angle)
+      if (i === 0) ctx.moveTo(x, y)
+      else ctx.lineTo(x, y)
+    }
+    ctx.closePath()
+    ctx.setStrokeStyle('rgba(255,255,255,0.1)')
+    ctx.setLineWidth(0.5)
+    ctx.stroke()
+  }
+
+  // Data area
+  ctx.beginPath()
+  for (let i = 0; i <= count; i++) {
+    const idx = i % count
+    const angle = startAngle + angleStep * idx
+    const r = (data[idx].value / 100) * radarR
+    const x = radarCx + r * Math.cos(angle)
+    const y = radarCy + r * Math.sin(angle)
+    if (i === 0) ctx.moveTo(x, y)
+    else ctx.lineTo(x, y)
+  }
+  ctx.closePath()
+  ctx.setFillStyle('rgba(7,193,96,0.35)')
+  ctx.fill()
+  ctx.setStrokeStyle(green)
+  ctx.setLineWidth(1.5)
+  ctx.stroke()
+
+  // Labels
+  ctx.setFontSize(10)
+  ctx.setTextAlign('center')
+  ctx.setFillStyle('#CCCCCC')
+  for (let i = 0; i < count; i++) {
+    const angle = startAngle + angleStep * i
+    const lx = radarCx + (radarR + 16) * Math.cos(angle)
+    const ly = radarCy + (radarR + 16) * Math.sin(angle)
+    ctx.fillText(data[i].ability, lx, ly + 3)
+  }
+
+  // --- Heatmap ---
+  const hmTop = radarCy + radarR + 40
+  ctx.setFontSize(13)
+  ctx.setFillStyle('#FFFFFF')
+  ctx.setTextAlign('left')
+  ctx.fillText('跑动热力图', pad, hmTop)
+
+  const hmBoxTop = hmTop + 12
+  const hmW = contentW
+  const hmH = Math.round(contentW * 3 / 4)
+
+  // Field background
+  ctx.setFillStyle('#0a2a0f')
+  roundRect(ctx, pad, hmBoxTop, hmW, hmH, 8)
+  ctx.fill()
+
+  // Field lines
+  ctx.setStrokeStyle('rgba(255,255,255,0.15)')
+  ctx.setLineWidth(1)
+  ctx.strokeRect(pad + 10, hmBoxTop + 10, hmW - 20, hmH - 20)
+  // Center line
+  ctx.beginPath()
+  ctx.moveTo(pad + 10, hmBoxTop + hmH / 2)
+  ctx.lineTo(pad + hmW - 10, hmBoxTop + hmH / 2)
+  ctx.stroke()
+  // Center circle
+  ctx.beginPath()
+  ctx.arc(pad + hmW / 2, hmBoxTop + hmH / 2, 25, 0, Math.PI * 2)
+  ctx.stroke()
+
+  // Draw heat points
+  const points = parseTrackPoints(todaySessions.value)
+  if (points.length > 0) {
+    let minLat = Infinity, maxLat = -Infinity, minLng = Infinity, maxLng = -Infinity
+    for (const p of points) {
+      if (p.latitude < minLat) minLat = p.latitude
+      if (p.latitude > maxLat) maxLat = p.latitude
+      if (p.longitude < minLng) minLng = p.longitude
+      if (p.longitude > maxLng) maxLng = p.longitude
+    }
+    const latPad2 = Math.max((maxLat - minLat) * 0.1, 0.0002)
+    const lngPad2 = Math.max((maxLng - minLng) * 0.1, 0.0002)
+    minLat -= latPad2; maxLat += latPad2
+    minLng -= lngPad2; maxLng += lngPad2
+    const latRange = maxLat - minLat || 0.001
+    const lngRange = maxLng - minLng || 0.001
+    const maxSpd = Math.max(...points.map(p => p.speed), 1)
+
+    for (const p of points) {
+      const px = pad + 10 + ((p.longitude - minLng) / lngRange) * (hmW - 20)
+      const py = hmBoxTop + 10 + (1 - (p.latitude - minLat) / latRange) * (hmH - 20)
+      const intensity = Math.min(p.speed / maxSpd, 1)
+      const radius = 4 + intensity * 5
+      let cr: number, cg: number, cb: number
+      if (intensity < 0.5) {
+        const t = intensity * 2
+        cr = Math.round(22 + t * 212); cg = Math.round(163 + t * 16); cb = Math.round(74 - t * 74)
+      } else {
+        const t = (intensity - 0.5) * 2
+        cr = Math.round(234 + t * 5); cg = Math.round(179 - t * 111); cb = Math.round(t * 68)
+      }
+      ctx.beginPath()
+      ctx.arc(px, py, radius, 0, Math.PI * 2)
+      ctx.setFillStyle(`rgba(${cr},${cg},${cb},${0.4 + intensity * 0.3})`)
+      ctx.fill()
+    }
+  }
+
+  // --- Footer branding ---
+  const footerTop = hmBoxTop + hmH + 30
+  // Divider
+  ctx.setStrokeStyle('rgba(255,255,255,0.1)')
+  ctx.setLineWidth(0.5)
+  ctx.beginPath()
+  ctx.moveTo(pad, footerTop)
+  ctx.lineTo(W - pad, footerTop)
+  ctx.stroke()
+
+  // App name
+  ctx.setFontSize(16)
+  ctx.setFillStyle(green)
+  ctx.setTextAlign('center')
+  ctx.fillText('FootyTrack', W / 2, footerTop + 28)
+
+  // Slogan
+  ctx.setFontSize(11)
+  ctx.setFillStyle('#999999')
+  ctx.fillText('记录你的每一场球', W / 2, footerTop + 50)
+
+  // QR hint
+  ctx.setFillStyle('#1a1a1a')
+  roundRect(ctx, W / 2 - 35, footerTop + 62, 70, 70, 6)
+  ctx.fill()
+  ctx.setStrokeStyle('rgba(255,255,255,0.15)')
+  roundRect(ctx, W / 2 - 35, footerTop + 62, 70, 70, 6)
+  ctx.stroke()
+
+  ctx.setFontSize(9)
+  ctx.setFillStyle('#666666')
+  ctx.fillText('小程序码', W / 2, footerTop + 100)
+
+  ctx.setFontSize(10)
+  ctx.setFillStyle('#666666')
+  ctx.fillText('微信扫码体验', W / 2, footerTop + 148)
+
+  ctx.draw(false, () => {
+    setTimeout(() => callback(), 300)
+  })
+}
+
+function roundRect(ctx: any, x: number, y: number, w: number, h: number, r: number) {
+  ctx.beginPath()
+  ctx.moveTo(x + r, y)
+  ctx.lineTo(x + w - r, y)
+  ctx.arcTo(x + w, y, x + w, y + r, r)
+  ctx.lineTo(x + w, y + h - r)
+  ctx.arcTo(x + w, y + h, x + w - r, y + h, r)
+  ctx.lineTo(x + r, y + h)
+  ctx.arcTo(x, y + h, x, y + h - r, r)
+  ctx.lineTo(x, y + r)
+  ctx.arcTo(x, y, x + r, y, r)
+  ctx.closePath()
 }
 
 function drawRadar() {
@@ -937,6 +1206,11 @@ $textMuted: #666;
 .offscreen-canvas--heatmap {
   width: 350px;
   height: 263px;
+}
+
+.offscreen-canvas--share {
+  width: 375px;
+  height: 960px;
 }
 
 .heatmap-legend {
