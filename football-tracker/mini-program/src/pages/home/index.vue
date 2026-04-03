@@ -911,6 +911,7 @@ $textMuted: #666;
   right: 24rpx;
   bottom: 24rpx;
   border: 2rpx solid rgba(255, 255, 255, 0.15);
+  z-index: 1;
 }
 
 .field-center-line {
