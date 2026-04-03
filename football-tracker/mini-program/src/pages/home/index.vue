@@ -13,21 +13,19 @@
 
     <scroll-view scroll-y class="scroll-content">
       <!-- Upcoming Matches -->
-      <view v-if="upcomingMatches.length" class="section">
-        <view class="upcoming-header">
-          <text class="upcoming-title">即将开始</text>
-          <text class="upcoming-count">{{ upcomingMatches.length }} 场比赛</text>
-        </view>
+      <view v-if="visibleMatches.length" class="section">
         <view class="upcoming-list">
           <view
-            v-for="m in upcomingMatches"
+            v-for="m in visibleMatches"
             :key="m.id"
             class="upcoming-card"
             @tap="goMatchDetail(m.id)"
           >
             <view class="upcoming-card-top">
-              <view class="upcoming-status-dot" />
               <text class="upcoming-name">{{ m.title }}</text>
+              <view class="match-status-tag" :class="'match-status--' + getMatchStatus(m.matchDate).type">
+                <text class="match-status-tag-text">{{ getMatchStatus(m.matchDate).label }}</text>
+              </view>
               <text class="upcoming-arrow">›</text>
             </view>
             <view class="upcoming-info-rows">
@@ -264,6 +262,20 @@ async function loadData() {
   }
 }
 
+function getMatchStatus(matchDate: number): { type: string; label: string } {
+  const now = Date.now()
+  const diff = now - matchDate
+  if (diff < 0) return { type: 'upcoming', label: '即将开赛' }
+  if (diff < 2 * 3600 * 1000) return { type: 'live', label: '进行中' }
+  return { type: 'finished', label: '比赛完结' }
+}
+
+const visibleMatches = computed(() => {
+  const now = Date.now()
+  const twelveHours = 12 * 3600 * 1000
+  return upcomingMatches.value.filter(m => now - m.matchDate < twelveHours)
+})
+
 function formatMatchTime(ts: number): string {
   return `${formatWeekday(ts)} ${formatDateTime(ts)}`
 }
@@ -478,24 +490,6 @@ $textMuted: #666;
 // ============================================================
 // Upcoming Matches
 // ============================================================
-.upcoming-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 16rpx;
-}
-
-.upcoming-title {
-  font-size: 30rpx;
-  font-weight: 600;
-  color: $textPrimary;
-}
-
-.upcoming-count {
-  font-size: 24rpx;
-  color: $textSecondary;
-}
-
 .upcoming-list {
   display: flex;
   flex-direction: column;
@@ -516,21 +510,47 @@ $textMuted: #666;
   margin-bottom: 20rpx;
 }
 
-.upcoming-status-dot {
-  width: 16rpx;
-  height: 16rpx;
-  border-radius: 50%;
-  background: $green;
-  margin-right: 12rpx;
-  flex-shrink: 0;
-  box-shadow: 0 0 8rpx rgba(7, 193, 96, 0.6);
-}
-
 .upcoming-name {
   flex: 1;
   font-size: 30rpx;
   font-weight: 600;
   color: $textPrimary;
+}
+
+.match-status-tag {
+  padding: 4rpx 16rpx;
+  border-radius: 8rpx;
+  margin-right: 12rpx;
+  flex-shrink: 0;
+}
+
+.match-status--upcoming {
+  background: rgba(7, 193, 96, 0.15);
+}
+
+.match-status--live {
+  background: rgba(250, 204, 21, 0.2);
+}
+
+.match-status--finished {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.match-status-tag-text {
+  font-size: 22rpx;
+  font-weight: 500;
+}
+
+.match-status--upcoming .match-status-tag-text {
+  color: $green;
+}
+
+.match-status--live .match-status-tag-text {
+  color: #FACC15;
+}
+
+.match-status--finished .match-status-tag-text {
+  color: $textSecondary;
 }
 
 .upcoming-arrow {
