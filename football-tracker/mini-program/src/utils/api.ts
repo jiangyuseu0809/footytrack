@@ -242,6 +242,10 @@ export interface Match {
   status: string
   registrationCount: number
   createdAt: number
+  maxPlayers?: number
+  teamMode?: string
+  latitude?: number
+  longitude?: number
 }
 
 export interface MatchRegistration {
@@ -262,6 +266,10 @@ export async function createMatch(data: {
   groups: number
   playersPerGroup: number
   groupColors: string
+  maxPlayers?: number
+  teamMode?: string
+  latitude?: number
+  longitude?: number
 }): Promise<Match> {
   return request<Match>('/api/matches', { method: 'POST', data })
 }

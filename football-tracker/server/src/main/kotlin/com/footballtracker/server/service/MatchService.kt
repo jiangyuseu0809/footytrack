@@ -18,7 +18,11 @@ data class MatchRow(
     val playersPerGroup: Int,
     val groupColors: String,
     val status: String,
-    val createdAt: Long
+    val createdAt: Long,
+    val maxPlayers: Int? = null,
+    val teamMode: String = "choose",
+    val latitude: Double? = null,
+    val longitude: Double? = null
 )
 
 data class MatchRegistrationRow(
@@ -37,7 +41,11 @@ class MatchService {
         location: String,
         groups: Int,
         playersPerGroup: Int,
-        groupColors: String
+        groupColors: String,
+        maxPlayers: Int? = null,
+        teamMode: String = "choose",
+        latitude: Double? = null,
+        longitude: Double? = null
     ): MatchRow = transaction {
         val now = System.currentTimeMillis()
 
@@ -49,6 +57,10 @@ class MatchService {
             it[MatchesTable.groups] = groups
             it[MatchesTable.playersPerGroup] = playersPerGroup
             it[MatchesTable.groupColors] = groupColors
+            it[MatchesTable.maxPlayers] = maxPlayers
+            it[MatchesTable.teamMode] = teamMode
+            it[MatchesTable.latitude] = latitude
+            it[MatchesTable.longitude] = longitude
             it[MatchesTable.createdAt] = now
         } get MatchesTable.id
 
@@ -59,7 +71,7 @@ class MatchService {
             it[MatchRegistrationsTable.registeredAt] = now
         }
 
-        MatchRow(matchId, creatorUid, title, matchDate, location, groups, playersPerGroup, groupColors, "upcoming", now)
+        MatchRow(matchId, creatorUid, title, matchDate, location, groups, playersPerGroup, groupColors, "upcoming", now, maxPlayers, teamMode, latitude, longitude)
     }
 
     fun getUpcomingMatchesByUser(userUid: UUID): List<MatchRow> = transaction {
@@ -153,6 +165,10 @@ class MatchService {
         playersPerGroup = this[MatchesTable.playersPerGroup],
         groupColors = this[MatchesTable.groupColors],
         status = this[MatchesTable.status],
-        createdAt = this[MatchesTable.createdAt]
+        createdAt = this[MatchesTable.createdAt],
+        maxPlayers = this[MatchesTable.maxPlayers],
+        teamMode = this[MatchesTable.teamMode],
+        latitude = this[MatchesTable.latitude],
+        longitude = this[MatchesTable.longitude]
     )
 }

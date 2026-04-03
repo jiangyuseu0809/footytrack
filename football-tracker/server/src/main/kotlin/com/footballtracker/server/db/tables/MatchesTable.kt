@@ -11,6 +11,10 @@ object MatchesTable : Table("matches") {
     val groups = integer("groups")
     val playersPerGroup = integer("players_per_group")
     val groupColors = varchar("group_colors", 200) // comma-separated, e.g. "red,blue"
+    val maxPlayers = integer("max_players").nullable()
+    val teamMode = varchar("team_mode", 20).default("choose") // choose | random
+    val latitude = double("latitude").nullable()
+    val longitude = double("longitude").nullable()
     val status = varchar("status", 20).default("upcoming") // upcoming | completed | cancelled
     val createdAt = long("created_at").default(System.currentTimeMillis())
 

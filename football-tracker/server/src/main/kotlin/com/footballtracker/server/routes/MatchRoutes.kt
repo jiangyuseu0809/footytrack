@@ -18,7 +18,11 @@ data class CreateMatchRequest(
     val location: String,
     val groups: Int,
     val playersPerGroup: Int,
-    val groupColors: String
+    val groupColors: String,
+    val maxPlayers: Int? = null,
+    val teamMode: String = "choose",
+    val latitude: Double? = null,
+    val longitude: Double? = null
 )
 
 @Serializable
@@ -38,7 +42,11 @@ data class MatchResponse(
     val groupColors: String,
     val status: String,
     val registrationCount: Long,
-    val createdAt: Long
+    val createdAt: Long,
+    val maxPlayers: Int? = null,
+    val teamMode: String = "choose",
+    val latitude: Double? = null,
+    val longitude: Double? = null
 )
 
 @Serializable
@@ -94,7 +102,11 @@ fun Route.matchRoutes(
                 location = req.location,
                 groups = req.groups,
                 playersPerGroup = req.playersPerGroup,
-                groupColors = req.groupColors
+                groupColors = req.groupColors,
+                maxPlayers = req.maxPlayers,
+                teamMode = req.teamMode,
+                latitude = req.latitude,
+                longitude = req.longitude
             )
             val count = matchService.getRegistrationCount(match.id)
             call.respond(HttpStatusCode.Created, match.toResponse(count))
@@ -241,5 +253,9 @@ private fun com.footballtracker.server.service.MatchRow.toResponse(registrationC
     groupColors = groupColors,
     status = status,
     registrationCount = registrationCount,
-    createdAt = createdAt
+    createdAt = createdAt,
+    maxPlayers = maxPlayers,
+    teamMode = teamMode,
+    latitude = latitude,
+    longitude = longitude
 )

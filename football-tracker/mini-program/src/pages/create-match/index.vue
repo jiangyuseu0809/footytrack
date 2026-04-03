@@ -58,32 +58,28 @@
 
           <view class="form-group">
             <text class="form-label">比赛地点</text>
-            <view class="input-wrapper">
-              <input
-                class="input-field"
-                v-model="location"
-                placeholder="输入比赛地点"
-                placeholder-class="placeholder"
-              />
+            <view class="input-wrapper input-wrapper--location" @tap="chooseLocation">
+              <text :class="['picker-text', { 'picker-placeholder': !location }]">{{ location || '选择比赛地点' }}</text>
+              <text class="location-icon">📍</text>
             </view>
           </view>
 
           <view class="form-group">
-            <text class="form-label">比赛日期</text>
-            <picker mode="date" @change="onDateChange">
-              <view class="input-wrapper">
-                <text :class="['picker-text', { 'picker-placeholder': !dateStr }]">{{ dateStr || '选择日期' }}</text>
-              </view>
-            </picker>
-          </view>
-
-          <view class="form-group">
-            <text class="form-label">开始时间</text>
-            <picker mode="time" @change="onTimeChange">
-              <view class="input-wrapper">
-                <text :class="['picker-text', { 'picker-placeholder': !timeStr }]">{{ timeStr || '选择时间' }}</text>
-              </view>
-            </picker>
+            <text class="form-label">比赛时间</text>
+            <view class="datetime-row">
+              <picker mode="date" @change="onDateChange" class="datetime-picker">
+                <view class="input-wrapper input-wrapper--half">
+                  <text :class="['picker-text', { 'picker-placeholder': !dateStr }]">{{ dateStr || '选择日期' }}</text>
+                  <text class="picker-icon">📅</text>
+                </view>
+              </picker>
+              <picker mode="time" @change="onTimeChange" class="datetime-picker">
+                <view class="input-wrapper input-wrapper--half">
+                  <text :class="['picker-text', { 'picker-placeholder': !timeStr }]">{{ timeStr || '选择时间' }}</text>
+                  <text class="picker-icon">🕐</text>
+                </view>
+              </picker>
+            </view>
           </view>
 
           <view class="form-group">
@@ -115,6 +111,40 @@
               <text class="stepper-total">共 {{ groups * playersPerGroup }} 人</text>
             </view>
           </view>
+
+          <view class="form-group">
+            <text class="form-label">人数上限</text>
+            <view class="stepper-row">
+              <view class="stepper-btn" @tap="decreaseMaxPlayers">
+                <text class="stepper-btn-text">-</text>
+              </view>
+              <text class="stepper-value">{{ maxPlayers }}</text>
+              <view class="stepper-btn" @tap="maxPlayers = Math.min(99, maxPlayers + 1)">
+                <text class="stepper-btn-text">+</text>
+              </view>
+              <text class="stepper-total">最少 {{ groups * playersPerGroup }} 人</text>
+            </view>
+          </view>
+
+          <view class="form-group">
+            <text class="form-label">分队模式</text>
+            <view class="toggle-row">
+              <view
+                class="toggle-btn"
+                :class="{ 'toggle-btn--active': teamMode === 'choose' }"
+                @tap="teamMode = 'choose'"
+              >
+                <text class="toggle-btn-text">选择分队</text>
+              </view>
+              <view
+                class="toggle-btn"
+                :class="{ 'toggle-btn--active': teamMode === 'random' }"
+                @tap="teamMode = 'random'"
+              >
+                <text class="toggle-btn-text">随机分队</text>
+              </view>
+            </view>
+          </view>
         </view>
       </view>
 
@@ -139,7 +169,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import { createMatch } from '../../utils/api'
 
 interface MatchTemplate {
@@ -156,6 +186,10 @@ const dateStr = ref('')
 const timeStr = ref('')
 const groups = ref(2)
 const playersPerGroup = ref(5)
+const maxPlayers = ref(10)
+const teamMode = ref<'choose' | 'random'>('choose')
+const latitude = ref<number | null>(null)
+const longitude = ref<number | null>(null)
 const showTemplates = ref(false)
 
 const defaultColors = ['红', '蓝', '绿', '黄', '白', '黑']
@@ -166,14 +200,42 @@ const templates: MatchTemplate[] = [
   { id: '3', name: '五人制对抗', location: '室内球场', duration: 45, participants: 10 },
 ]
 
+// Keep maxPlayers >= groups * playersPerGroup
+watch([groups, playersPerGroup], () => {
+  const minPlayers = groups.value * playersPerGroup.value
+  if (maxPlayers.value < minPlayers) {
+    maxPlayers.value = minPlayers
+  }
+})
+
+function decreaseMaxPlayers() {
+  const minPlayers = groups.value * playersPerGroup.value
+  maxPlayers.value = Math.max(minPlayers, maxPlayers.value - 1)
+}
+
 function handleUseTemplate(tpl: MatchTemplate) {
   title.value = tpl.name
   location.value = tpl.location
+  latitude.value = null
+  longitude.value = null
   showTemplates.value = false
 }
 
 function onDateChange(e: any) { dateStr.value = e.detail.value }
 function onTimeChange(e: any) { timeStr.value = e.detail.value }
+
+function chooseLocation() {
+  uni.chooseLocation({
+    success(res) {
+      location.value = res.name || res.address
+      latitude.value = res.latitude
+      longitude.value = res.longitude
+    },
+    fail() {
+      // User cancelled or permission denied — ignore
+    },
+  })
+}
 
 async function handleSubmit() {
   if (!title.value || !location.value || !dateStr.value || !timeStr.value) {
@@ -191,6 +253,10 @@ async function handleSubmit() {
       groups: groups.value,
       playersPerGroup: playersPerGroup.value,
       groupColors,
+      maxPlayers: maxPlayers.value,
+      teamMode: teamMode.value,
+      latitude: latitude.value ?? undefined,
+      longitude: longitude.value ?? undefined,
     })
     uni.showToast({ title: '创建成功', icon: 'success' })
     setTimeout(() => uni.switchTab({ url: '/pages/home/index' }), 1000)
@@ -393,6 +459,15 @@ $textMuted: #666;
   border: 1rpx solid #333;
 }
 
+.input-wrapper--location {
+  justify-content: space-between;
+}
+
+.location-icon {
+  font-size: 32rpx;
+  flex-shrink: 0;
+}
+
 .input-field {
   flex: 1;
   font-size: 28rpx;
@@ -412,6 +487,27 @@ $textMuted: #666;
 
 .placeholder {
   color: $textMuted;
+}
+
+// ============================================================
+// DateTime Row
+// ============================================================
+.datetime-row {
+  display: flex;
+  gap: 16rpx;
+}
+
+.datetime-picker {
+  flex: 1;
+}
+
+.input-wrapper--half {
+  justify-content: space-between;
+}
+
+.picker-icon {
+  font-size: 28rpx;
+  flex-shrink: 0;
 }
 
 // ============================================================
@@ -469,6 +565,41 @@ $textMuted: #666;
   font-size: 24rpx;
   color: $textSecondary;
   margin-left: 12rpx;
+}
+
+// ============================================================
+// Toggle (Team Mode)
+// ============================================================
+.toggle-row {
+  display: flex;
+  background: #252525;
+  border-radius: 100rpx;
+  border: 1rpx solid #333;
+  padding: 6rpx;
+}
+
+.toggle-btn {
+  flex: 1;
+  height: 72rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 100rpx;
+  transition: background 0.25s, color 0.25s;
+}
+
+.toggle-btn--active {
+  background: $green;
+}
+
+.toggle-btn-text {
+  font-size: 28rpx;
+  font-weight: 500;
+  color: $textMuted;
+}
+
+.toggle-btn--active .toggle-btn-text {
+  color: $textPrimary;
 }
 
 // ============================================================
