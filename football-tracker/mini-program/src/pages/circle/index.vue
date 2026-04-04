@@ -29,7 +29,7 @@
         <view class="circle-selector" @tap="showCircleList = !showCircleList">
           <view class="selector-row">
             <view class="selector-avatar" :style="{ background: selectedCircle ? getCircleGradient(selectedCircle.id) : '' }">
-              <text class="selector-avatar-icon">👥</text>
+              <text class="selector-avatar-icon">{{ selectedCircle?.avatarEmoji || '⚽' }}</text>
             </view>
             <view class="selector-info">
               <text class="selector-name">{{ selectedCircle?.name || '' }}</text>
@@ -48,7 +48,7 @@
               @tap.stop="selectCircle(circle.id)"
             >
               <view class="dropdown-avatar" :style="{ background: getCircleGradient(circle.id) }">
-                <text class="dropdown-avatar-icon">👥</text>
+                <text class="dropdown-avatar-icon">{{ circle.avatarEmoji || '⚽' }}</text>
               </view>
               <view class="dropdown-info">
                 <text class="dropdown-name" :class="{ 'dropdown-name--active': circle.id === selectedCircleId }">{{ circle.name }}</text>
@@ -75,7 +75,9 @@
                 <text class="info-name">{{ selectedCircle.name }}</text>
                 <text class="info-subtitle">{{ timePeriodLabel }}运动数据PK</text>
               </view>
-              <text class="info-trophy">🏆</text>
+              <view class="info-avatar" :class="{ 'info-avatar--editable': isOwner }" @tap="openAvatarPicker">
+                <text class="info-avatar-emoji">{{ selectedCircle.avatarEmoji || '⚽' }}</text>
+              </view>
             </view>
             <view class="info-stats">
               <view class="info-stat-badge">
@@ -226,7 +228,18 @@
     <view v-if="showCreateModal" class="modal-mask" @tap="showCreateModal = false">
       <view class="modal" @tap.stop>
         <text class="modal-title">创建圈子</text>
-        <text class="modal-desc">为你的运动圈子取一个名字</text>
+        <text class="modal-desc">选择头像并为圈子取个名字</text>
+        <view class="avatar-picker-row">
+          <view
+            v-for="emoji in avatarOptions"
+            :key="emoji"
+            class="avatar-option"
+            :class="{ 'avatar-option--active': newCircleAvatar === emoji }"
+            @tap="newCircleAvatar = emoji"
+          >
+            <text class="avatar-option-text">{{ emoji }}</text>
+          </view>
+        </view>
         <input class="modal-input" v-model="newCircleName" placeholder="圈子名称" placeholder-class="placeholder" maxlength="20" />
         <view class="modal-actions">
           <view class="modal-btn-cancel" @tap="showCreateModal = false">
@@ -271,6 +284,33 @@
         </view>
       </view>
     </view>
+
+    <!-- Avatar Picker Modal (Owner Only) -->
+    <view v-if="showAvatarPicker" class="modal-mask" @tap="showAvatarPicker = false">
+      <view class="modal" @tap.stop>
+        <text class="modal-title">修改圈子头像</text>
+        <text class="modal-desc">选择一个新头像</text>
+        <view class="avatar-picker-row">
+          <view
+            v-for="emoji in avatarOptions"
+            :key="emoji"
+            class="avatar-option"
+            :class="{ 'avatar-option--active': newCircleAvatar === emoji }"
+            @tap="newCircleAvatar = emoji"
+          >
+            <text class="avatar-option-text">{{ emoji }}</text>
+          </view>
+        </view>
+        <view class="modal-actions">
+          <view class="modal-btn-cancel" @tap="showAvatarPicker = false">
+            <text class="modal-btn-cancel-text">取消</text>
+          </view>
+          <view class="modal-btn-confirm" @tap="handleChangeAvatar(newCircleAvatar)">
+            <text class="modal-btn-confirm-text">确定</text>
+          </view>
+        </view>
+      </view>
+    </view>
   </view>
 </template>
 
@@ -278,8 +318,8 @@
 import { ref, computed } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import {
-  getCircles, createCircle, joinCircle, getCircleDetail, leaveCircle,
-  isLoggedIn, type Circle, type CircleMember,
+  getCircles, createCircle, joinCircle, getCircleDetail, leaveCircle, updateCircleAvatar,
+  isLoggedIn, getUid, type Circle, type CircleMember,
 } from '../../utils/api'
 
 const loading = ref(false)
@@ -295,6 +335,10 @@ const newCircleName = ref('')
 const joinCode = ref('')
 const selectedStat = ref<'distance' | 'calories' | 'sprints' | 'duration'>('distance')
 const timePeriod = ref<'day' | 'week' | 'month' | 'year'>('week')
+const newCircleAvatar = ref('⚽')
+const showAvatarPicker = ref(false)
+
+const avatarOptions = ['⚽', '🏆', '🏃', '💪', '🔥', '⭐', '🎯', '🦁', '🐉', '🦅', '🏟️', '👟', '🥇', '🎖️', '🌟', '🤝']
 
 const timePeriodLabel = computed(() => {
   switch (timePeriod.value) {
@@ -307,6 +351,7 @@ const timePeriodLabel = computed(() => {
 
 const selectedCircle = computed(() => circles.value.find(c => c.id === selectedCircleId.value))
 const activeCount = computed(() => members.value.filter(m => m.totalDistanceMeters > 0 || m.totalCalories > 0).length)
+const isOwner = computed(() => selectedCircle.value && selectedCircle.value.createdBy === getUid())
 
 const gradients = [
   'linear-gradient(135deg, #3b82f6, #8b5cf6)',
@@ -394,6 +439,25 @@ function copyCode() {
   })
 }
 
+function openAvatarPicker() {
+  if (!isOwner.value) return
+  newCircleAvatar.value = selectedCircle.value?.avatarEmoji || '⚽'
+  showAvatarPicker.value = true
+}
+
+async function handleChangeAvatar(emoji: string) {
+  if (!selectedCircle.value) return
+  try {
+    const updated = await updateCircleAvatar(selectedCircle.value.id, emoji)
+    const idx = circles.value.findIndex(c => c.id === updated.id)
+    if (idx >= 0) circles.value[idx].avatarEmoji = updated.avatarEmoji
+    showAvatarPicker.value = false
+    uni.showToast({ title: '头像已更新', icon: 'success' })
+  } catch (e: any) {
+    uni.showToast({ title: e.message, icon: 'none' })
+  }
+}
+
 async function loadData() {
   if (!isLoggedIn()) { loaded.value = true; return }
   loading.value = true
@@ -430,9 +494,10 @@ async function handleCreate() {
   if (!isLoggedIn()) { uni.navigateTo({ url: '/pages/login/index' }); return }
   if (!newCircleName.value.trim()) return
   try {
-    const circle = await createCircle(newCircleName.value.trim())
+    const circle = await createCircle(newCircleName.value.trim(), newCircleAvatar.value)
     showCreateModal.value = false
     newCircleName.value = ''
+    newCircleAvatar.value = '⚽'
     await loadData()
     selectedCircleId.value = circle.id
     uni.showToast({ title: '创建成功', icon: 'success' })
@@ -831,8 +896,22 @@ $textMuted: #666;
   color: rgba(255, 255, 255, 0.8);
 }
 
-.info-trophy {
-  font-size: 48rpx;
+.info-avatar {
+  width: 80rpx;
+  height: 80rpx;
+  border-radius: 20rpx;
+  background: rgba(255, 255, 255, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.info-avatar--editable {
+  border: 2rpx dashed rgba(255, 255, 255, 0.4);
+}
+
+.info-avatar-emoji {
+  font-size: 40rpx;
 }
 
 .info-stats {
@@ -1186,6 +1265,34 @@ $textMuted: #666;
   color: $textSecondary;
   display: block;
   margin-bottom: 28rpx;
+}
+
+.avatar-picker-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12rpx;
+  margin-bottom: 24rpx;
+}
+
+.avatar-option {
+  width: 80rpx;
+  height: 80rpx;
+  border-radius: 20rpx;
+  background: $cardBgLight;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2rpx solid transparent;
+}
+
+.avatar-option--active {
+  border-color: $green;
+  background: rgba(7, 193, 96, 0.15);
+  box-shadow: 0 0 12rpx rgba(7, 193, 96, 0.3);
+}
+
+.avatar-option-text {
+  font-size: 36rpx;
 }
 
 .modal-input {

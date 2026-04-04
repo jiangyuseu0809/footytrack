@@ -303,6 +303,7 @@ export async function getMatchSummary(matchId: string): Promise<{ summary: strin
 export interface Circle {
   id: string
   name: string
+  avatarEmoji: string
   inviteCode: string
   createdBy: string
   createdAt: number
@@ -325,8 +326,8 @@ export async function getCircles(): Promise<{ circles: Circle[] }> {
   return request('/api/circles')
 }
 
-export async function createCircle(name: string): Promise<Circle> {
-  return request<Circle>('/api/circles', { method: 'POST', data: { name } })
+export async function createCircle(name: string, avatarEmoji: string = '⚽'): Promise<Circle> {
+  return request<Circle>('/api/circles', { method: 'POST', data: { name, avatarEmoji } })
 }
 
 export async function joinCircle(inviteCode: string): Promise<Circle> {
@@ -340,6 +341,10 @@ export async function getCircleDetail(circleId: string, period?: string): Promis
 
 export async function leaveCircle(circleId: string): Promise<void> {
   await request(`/api/circles/${circleId}/leave`, { method: 'POST' })
+}
+
+export async function updateCircleAvatar(circleId: string, avatarEmoji: string): Promise<Circle> {
+  return request<Circle>(`/api/circles/${circleId}/avatar`, { method: 'PUT', data: { avatarEmoji } })
 }
 
 // --- Badges ---

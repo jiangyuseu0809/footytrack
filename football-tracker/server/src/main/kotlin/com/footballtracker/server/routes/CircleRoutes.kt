@@ -10,15 +10,19 @@ import kotlinx.serialization.Serializable
 import java.util.*
 
 @Serializable
-data class CreateCircleRequest(val name: String)
+data class CreateCircleRequest(val name: String, val avatarEmoji: String = "⚽")
 
 @Serializable
 data class JoinCircleRequest(val inviteCode: String)
 
 @Serializable
+data class UpdateCircleAvatarRequest(val avatarEmoji: String)
+
+@Serializable
 data class CircleResponse(
     val id: String,
     val name: String,
+    val avatarEmoji: String,
     val inviteCode: String,
     val createdBy: String,
     val createdAt: Long,
@@ -56,7 +60,7 @@ fun Route.circleRoutes(circleService: CircleService) {
             if (req.name.isBlank()) {
                 return@post call.respond(HttpStatusCode.BadRequest, mapOf("error" to "圈子名称不能为空"))
             }
-            val circle = circleService.createCircle(req.name.trim(), uid)
+            val circle = circleService.createCircle(req.name.trim(), uid, req.avatarEmoji)
             call.respond(HttpStatusCode.Created, circle.toResponse())
         }
 
@@ -104,6 +108,21 @@ fun Route.circleRoutes(circleService: CircleService) {
             }
         }
 
+        // Update circle avatar (owner only)
+        put("/{circleId}/avatar") {
+            val uid = UUID.fromString(call.jwtUid())
+            val circleId = UUID.fromString(call.parameters["circleId"])
+            val circle = circleService.getCircleById(circleId)
+                ?: return@put call.respond(HttpStatusCode.NotFound, mapOf("error" to "圈子不存在"))
+            if (circle.createdBy != uid) {
+                return@put call.respond(HttpStatusCode.Forbidden, mapOf("error" to "只有圈主可以修改头像"))
+            }
+            val req = call.receive<UpdateCircleAvatarRequest>()
+            circleService.updateCircleAvatar(circleId, req.avatarEmoji)
+            val updated = circleService.getCircleById(circleId)!!
+            call.respond(updated.toResponse())
+        }
+
         // Leave circle
         post("/{circleId}/leave") {
             val uid = UUID.fromString(call.jwtUid())
@@ -121,6 +140,7 @@ fun Route.circleRoutes(circleService: CircleService) {
 private fun com.footballtracker.server.service.CircleRow.toResponse() = CircleResponse(
     id = id.toString(),
     name = name,
+    avatarEmoji = avatarEmoji,
     inviteCode = inviteCode,
     createdBy = createdBy.toString(),
     createdAt = createdAt,
