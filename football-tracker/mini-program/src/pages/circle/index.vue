@@ -481,7 +481,7 @@ $textMuted: #666;
 .fab {
   position: fixed;
   right: 40rpx;
-  bottom: calc(env(safe-area-inset-bottom) + 180rpx);
+  bottom: calc(env(safe-area-inset-bottom) + 40rpx);
   width: 96rpx;
   height: 96rpx;
   border-radius: 50%;
