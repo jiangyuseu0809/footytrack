@@ -89,7 +89,7 @@
               <view class="menu-icon-box blue-icon">
                 <text class="menu-icon-text">🧠</text>
               </view>
-              <text class="menu-label">AI 球风分析</text>
+              <text class="menu-label">球风分析</text>
               <text class="menu-chevron">›</text>
             </view>
 
@@ -138,7 +138,7 @@
               <view class="menu-icon-box green-icon">
                 <text class="menu-icon-text">⌚</text>
               </view>
-              <text class="menu-label">绑定 Watch</text>
+              <text class="menu-label">绑定手表</text>
               <text class="menu-chevron">›</text>
             </view>
 
