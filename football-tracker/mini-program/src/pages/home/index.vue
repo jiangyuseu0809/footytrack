@@ -73,8 +73,30 @@
             <text class="match-count-label">{{ timeRange === 'week' ? '本周' : '今日' }}踢球次数</text>
             <text class="match-count-value">{{ currentStats.matches }}</text>
           </view>
-          <view class="match-count-icon">
-            <text class="match-count-emoji">📅</text>
+          <!-- Mini Calendar -->
+          <view class="mini-cal">
+            <view class="mini-cal-header">
+              <text class="mini-cal-month">{{ calendarMonth }}</text>
+            </view>
+            <view class="mini-cal-weekdays">
+              <text v-for="d in ['一','二','三','四','五','六','日']" :key="d" class="mini-cal-wd">{{ d }}</text>
+            </view>
+            <view class="mini-cal-grid">
+              <view
+                v-for="day in calendarDays"
+                :key="day.key"
+                class="mini-cal-cell"
+              >
+                <text
+                  class="mini-cal-day"
+                  :class="{
+                    'mini-cal-day--today': day.isToday,
+                    'mini-cal-day--other': !day.currentMonth
+                  }"
+                >{{ day.date }}</text>
+                <view v-if="day.hasSession" class="mini-cal-dot" />
+              </view>
+            </view>
           </view>
         </view>
       </view>
@@ -259,6 +281,82 @@ const currentStats = computed(() => {
     maxHeartRate: maxHR,
     avgHeartRate: avgHR,
   }
+})
+
+// Mini calendar
+const calendarMonth = computed(() => {
+  const now = new Date()
+  return `${now.getFullYear()}年${now.getMonth() + 1}月`
+})
+
+const sessionDaySet = computed(() => {
+  const set = new Set<string>()
+  for (const s of sessions.value) {
+    const d = new Date(s.startTime)
+    set.add(`${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`)
+  }
+  return set
+})
+
+const calendarDays = computed(() => {
+  const now = new Date()
+  const year = now.getFullYear()
+  const month = now.getMonth()
+  const today = now.getDate()
+
+  const firstDay = new Date(year, month, 1)
+  // Monday = 0, Sunday = 6
+  let startWeekday = firstDay.getDay() - 1
+  if (startWeekday < 0) startWeekday = 6
+
+  const daysInMonth = new Date(year, month + 1, 0).getDate()
+  const daysInPrevMonth = new Date(year, month, 0).getDate()
+
+  const days: { key: string; date: number; isToday: boolean; currentMonth: boolean; hasSession: boolean }[] = []
+
+  // Previous month fill
+  for (let i = startWeekday - 1; i >= 0; i--) {
+    const d = daysInPrevMonth - i
+    const m = month - 1
+    const y = m < 0 ? year - 1 : year
+    const rm = m < 0 ? 11 : m
+    days.push({
+      key: `p${d}`,
+      date: d,
+      isToday: false,
+      currentMonth: false,
+      hasSession: sessionDaySet.value.has(`${y}-${rm}-${d}`),
+    })
+  }
+
+  // Current month
+  for (let d = 1; d <= daysInMonth; d++) {
+    days.push({
+      key: `c${d}`,
+      date: d,
+      isToday: d === today,
+      currentMonth: true,
+      hasSession: sessionDaySet.value.has(`${year}-${month}-${d}`),
+    })
+  }
+
+  // Next month fill to complete grid (total rows * 7)
+  const rows = Math.ceil(days.length / 7)
+  const total = rows * 7
+  for (let d = 1; days.length < total; d++) {
+    const nm = month + 1
+    const y = nm > 11 ? year + 1 : year
+    const rm = nm > 11 ? 0 : nm
+    days.push({
+      key: `n${d}`,
+      date: d,
+      isToday: false,
+      currentMonth: false,
+      hasSession: sessionDaySet.value.has(`${y}-${rm}-${d}`),
+    })
+  }
+
+  return days
 })
 
 const abilityData = computed(() => {
@@ -1364,19 +1462,73 @@ $textMuted: #666;
   line-height: 1;
 }
 
-.match-count-icon {
-  width: 112rpx;
-  height: 112rpx;
-  border-radius: 32rpx;
-  background: linear-gradient(135deg, $green, $greenDark);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 8rpx 24rpx rgba(7, 193, 96, 0.3);
+.mini-cal {
+  flex-shrink: 0;
+  width: 280rpx;
 }
 
-.match-count-emoji {
-  font-size: 56rpx;
+.mini-cal-header {
+  margin-bottom: 8rpx;
+  text-align: center;
+}
+
+.mini-cal-month {
+  font-size: 20rpx;
+  font-weight: 600;
+  color: $textSecondary;
+}
+
+.mini-cal-weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  margin-bottom: 4rpx;
+}
+
+.mini-cal-wd {
+  font-size: 16rpx;
+  color: $textMuted;
+  text-align: center;
+}
+
+.mini-cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  row-gap: 2rpx;
+}
+
+.mini-cal-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 4rpx 0;
+}
+
+.mini-cal-day {
+  font-size: 18rpx;
+  color: $textPrimary;
+  width: 32rpx;
+  height: 32rpx;
+  line-height: 32rpx;
+  text-align: center;
+  border-radius: 50%;
+}
+
+.mini-cal-day--today {
+  background: $green;
+  color: $textPrimary;
+  font-weight: 700;
+}
+
+.mini-cal-day--other {
+  color: #444;
+}
+
+.mini-cal-dot {
+  width: 6rpx;
+  height: 6rpx;
+  border-radius: 50%;
+  background: $green;
+  margin-top: 2rpx;
 }
 
 // ============================================================
