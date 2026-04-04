@@ -91,8 +91,11 @@
                 <text class="info-stat-value" @tap.stop="copyCode">{{ selectedCircle.inviteCode }}</text>
               </view>
             </view>
-            <view class="info-invite-btn" @tap="showInviteInfo = true">
-              <text class="info-invite-text">📤 邀请好友加入</text>
+            <view class="share-btn" @tap="showInviteInfo = true">
+              <view class="share-btn-icon">
+                <image src="/static/icons/share.svg" class="share-btn-svg" />
+              </view>
+              <text class="share-btn-text">邀请好友加入</text>
             </view>
           </view>
         </view>
@@ -207,11 +210,6 @@
           <text class="empty-rank-text">暂无{{ timePeriodLabel }}数据</text>
         </view>
 
-        <!-- Tip -->
-        <view class="tip-card">
-          <text class="tip-text">💡 <text class="tip-highlight">温馨提示：</text>{{ timePeriodTip }}</text>
-        </view>
-
         <!-- Leave circle -->
         <view v-if="selectedCircle" class="leave-btn" @tap="handleLeave">
           <text class="leave-btn-text">退出圈子</text>
@@ -304,15 +302,6 @@ const timePeriodLabel = computed(() => {
     case 'week': return '本周'
     case 'month': return '本月'
     case 'year': return '本年'
-  }
-})
-
-const timePeriodTip = computed(() => {
-  switch (timePeriod.value) {
-    case 'day': return '每日24:00排行榜将重置，快邀请好友一起运动吧！'
-    case 'week': return '每周日24:00排行榜将重置，快邀请好友一起运动吧！'
-    case 'month': return '每月1日排行榜将重置，快邀请好友一起运动吧！'
-    case 'year': return '每年1月1日排行榜将重置，快邀请好友一起运动吧！'
   }
 })
 
@@ -872,19 +861,31 @@ $textMuted: #666;
   margin-top: 2rpx;
 }
 
-.info-invite-btn {
-  background: rgba(255, 255, 255, 0.2);
-  border: 1rpx solid rgba(255, 255, 255, 0.3);
+.share-btn {
+  background: linear-gradient(135deg, $green, $greenDark);
   border-radius: 100rpx;
-  padding: 20rpx 0;
+  padding: 24rpx 40rpx;
   display: flex;
   align-items: center;
   justify-content: center;
+  gap: 14rpx;
+  box-shadow: 0 8rpx 32rpx rgba(7, 193, 96, 0.3);
 }
 
-.info-invite-text {
-  font-size: 28rpx;
-  font-weight: 600;
+.share-btn-icon {
+  width: 36rpx;
+  height: 36rpx;
+  flex-shrink: 0;
+}
+
+.share-btn-svg {
+  width: 36rpx;
+  height: 36rpx;
+}
+
+.share-btn-text {
+  font-size: 30rpx;
+  font-weight: 500;
   color: $textPrimary;
 }
 
@@ -1126,29 +1127,6 @@ $textMuted: #666;
 .empty-rank-text {
   font-size: 26rpx;
   color: $textMuted;
-}
-
-// ============================================================
-// Tip
-// ============================================================
-.tip-card {
-  margin-top: 24rpx;
-  background: #1a2428;
-  border-radius: 32rpx;
-  padding: 24rpx 28rpx;
-  border: 1rpx solid rgba(59, 130, 246, 0.2);
-  box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.2);
-}
-
-.tip-text {
-  font-size: 24rpx;
-  color: #d1d5db;
-  line-height: 1.5;
-}
-
-.tip-highlight {
-  font-weight: 600;
-  color: #60a5fa;
 }
 
 // ============================================================
