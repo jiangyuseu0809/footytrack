@@ -3,9 +3,6 @@
     <!-- Header -->
     <view class="header">
       <text class="header-title">圈子</text>
-      <view class="header-add" @tap="showCreateModal = true">
-        <text class="header-add-icon">+</text>
-      </view>
     </view>
 
     <!-- Empty State -->
@@ -195,6 +192,11 @@
         </view>
       </view>
     </scroll-view>
+
+    <!-- FAB: Create Circle -->
+    <view v-if="loaded && circles.length > 0" class="fab" @tap="showCreateModal = true">
+      <text class="fab-icon">+</text>
+    </view>
 
     <!-- Create Modal -->
     <view v-if="showCreateModal" class="modal-mask" @tap="showCreateModal = false">
@@ -463,7 +465,6 @@ $textMuted: #666;
   background: $cardBg;
   padding: 120rpx 32rpx 28rpx;
   border-bottom: $border;
-  position: relative;
 }
 
 .header-title {
@@ -474,25 +475,29 @@ $textMuted: #666;
   text-align: center;
 }
 
-.header-add {
-  width: 64rpx;
-  height: 64rpx;
+// ============================================================
+// FAB (Floating Action Button)
+// ============================================================
+.fab {
+  position: fixed;
+  right: 40rpx;
+  bottom: calc(env(safe-area-inset-bottom) + 180rpx);
+  width: 96rpx;
+  height: 96rpx;
   border-radius: 50%;
   background: linear-gradient(135deg, $green, $greenDark);
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 4rpx 16rpx rgba(7, 193, 96, 0.3);
-  position: absolute;
-  right: 32rpx;
-  bottom: 14rpx;
+  box-shadow: 0 8rpx 24rpx rgba(7, 193, 96, 0.4);
+  z-index: 100;
 }
 
-.header-add-icon {
-  font-size: 36rpx;
+.fab-icon {
+  font-size: 48rpx;
   font-weight: 300;
   color: $textPrimary;
-  margin-top: -2rpx;
+  margin-top: -4rpx;
 }
 
 // ============================================================
