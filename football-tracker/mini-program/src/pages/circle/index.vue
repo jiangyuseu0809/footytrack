@@ -28,7 +28,7 @@
       <view class="section">
         <view class="circle-selector" @tap="showCircleList = !showCircleList">
           <view class="selector-row">
-            <view class="selector-avatar" :style="{ background: selectedCircle ? getCircleGradient(selectedCircleIndex) : '' }">
+            <view class="selector-avatar" :style="{ background: selectedCircle ? getCircleGradient(selectedCircle.id) : '' }">
               <text class="selector-avatar-icon">👥</text>
             </view>
             <view class="selector-info">
@@ -47,7 +47,7 @@
               :class="{ 'dropdown-item--active': circle.id === selectedCircleId }"
               @tap.stop="selectCircle(circle.id)"
             >
-              <view class="dropdown-avatar" :style="{ background: getCircleGradient(idx) }">
+              <view class="dropdown-avatar" :style="{ background: getCircleGradient(circle.id) }">
                 <text class="dropdown-avatar-icon">👥</text>
               </view>
               <view class="dropdown-info">
@@ -66,7 +66,7 @@
 
       <!-- Circle Info Card -->
       <view v-if="selectedCircle" class="section">
-        <view class="info-card" :style="{ background: getCircleGradient(selectedCircleIndex) }">
+        <view class="info-card" :style="{ background: getCircleGradient(selectedCircle.id) }">
           <view class="info-deco info-deco--tr"></view>
           <view class="info-deco info-deco--bl"></view>
           <view class="info-content">
@@ -317,7 +317,6 @@ const timePeriodTip = computed(() => {
 })
 
 const selectedCircle = computed(() => circles.value.find(c => c.id === selectedCircleId.value))
-const selectedCircleIndex = computed(() => circles.value.findIndex(c => c.id === selectedCircleId.value))
 const activeCount = computed(() => members.value.filter(m => m.totalDistanceMeters > 0 || m.totalCalories > 0).length)
 
 const gradients = [
@@ -329,8 +328,13 @@ const gradients = [
   'linear-gradient(135deg, #06b6d4, #3b82f6)',
 ]
 
-function getCircleGradient(index: number): string {
-  return gradients[index % gradients.length]
+function getCircleGradient(circleId: string): string {
+  let hash = 0
+  for (let i = 0; i < circleId.length; i++) {
+    hash = ((hash << 5) - hash) + circleId.charCodeAt(i)
+    hash |= 0
+  }
+  return gradients[Math.abs(hash) % gradients.length]
 }
 
 const rankedMembers = computed(() => {
