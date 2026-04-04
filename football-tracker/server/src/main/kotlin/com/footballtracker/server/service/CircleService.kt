@@ -12,7 +12,7 @@ import java.util.*
 data class CircleRow(
     val id: UUID,
     val name: String,
-    val avatarEmoji: String,
+    val avatarUrl: String?,
     val inviteCode: String,
     val createdBy: UUID,
     val createdAt: Long,
@@ -33,13 +33,12 @@ data class CircleMemberRow(
 
 class CircleService {
 
-    fun createCircle(name: String, ownerUid: UUID, avatarEmoji: String = "⚽"): CircleRow = transaction {
+    fun createCircle(name: String, ownerUid: UUID): CircleRow = transaction {
         val code = generateInviteCode()
         val now = System.currentTimeMillis()
 
         val circleId = CirclesTable.insert {
             it[CirclesTable.name] = name
-            it[CirclesTable.avatarEmoji] = avatarEmoji
             it[inviteCode] = code
             it[createdBy] = ownerUid
             it[createdAt] = now
@@ -52,12 +51,10 @@ class CircleService {
             it[CircleMembersTable.joinedAt] = now
         }
 
-        CircleRow(circleId, name, avatarEmoji, code, ownerUid, now, memberCount = 1)
+        CircleRow(circleId, name, null, code, ownerUid, now, memberCount = 1)
     }
 
     fun getCirclesByUser(userUid: UUID): List<CircleRow> = transaction {
-        val memberCount = CircleMembersTable.circleId.count()
-
         (CirclesTable innerJoin CircleMembersTable)
             .selectAll()
             .where { CircleMembersTable.userUid eq userUid }
@@ -71,7 +68,7 @@ class CircleService {
                 CircleRow(
                     id = circleId,
                     name = row[CirclesTable.name],
-                    avatarEmoji = row[CirclesTable.avatarEmoji],
+                    avatarUrl = row[CirclesTable.avatarUrl],
                     inviteCode = row[CirclesTable.inviteCode],
                     createdBy = row[CirclesTable.createdBy],
                     createdAt = row[CirclesTable.createdAt],
@@ -90,7 +87,7 @@ class CircleService {
                 CircleRow(
                     id = row[CirclesTable.id],
                     name = row[CirclesTable.name],
-                    avatarEmoji = row[CirclesTable.avatarEmoji],
+                    avatarUrl = row[CirclesTable.avatarUrl],
                     inviteCode = row[CirclesTable.inviteCode],
                     createdBy = row[CirclesTable.createdBy],
                     createdAt = row[CirclesTable.createdAt],
@@ -110,7 +107,7 @@ class CircleService {
                 CircleRow(
                     id = circleId,
                     name = row[CirclesTable.name],
-                    avatarEmoji = row[CirclesTable.avatarEmoji],
+                    avatarUrl = row[CirclesTable.avatarUrl],
                     inviteCode = row[CirclesTable.inviteCode],
                     createdBy = row[CirclesTable.createdBy],
                     createdAt = row[CirclesTable.createdAt],
@@ -177,9 +174,9 @@ class CircleService {
             }
     }
 
-    fun updateCircleAvatar(circleId: UUID, avatarEmoji: String): Boolean = transaction {
+    fun updateCircleAvatarUrl(circleId: UUID, avatarUrl: String): Boolean = transaction {
         CirclesTable.update({ CirclesTable.id eq circleId }) {
-            it[CirclesTable.avatarEmoji] = avatarEmoji
+            it[CirclesTable.avatarUrl] = avatarUrl
         } > 0
     }
 

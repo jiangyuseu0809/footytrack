@@ -24,46 +24,6 @@
 
     <!-- Main Content -->
     <scroll-view v-else-if="loaded && circles.length > 0" scroll-y class="scroll-area">
-      <!-- Circle Selector -->
-      <view class="section">
-        <view class="circle-selector" @tap="showCircleList = !showCircleList">
-          <view class="selector-row">
-            <view class="selector-avatar" :style="{ background: selectedCircle ? getCircleGradient(selectedCircle.id) : '' }">
-              <text class="selector-avatar-icon">{{ selectedCircle?.avatarEmoji || '⚽' }}</text>
-            </view>
-            <view class="selector-info">
-              <text class="selector-name">{{ selectedCircle?.name || '' }}</text>
-              <text class="selector-count">{{ selectedCircle?.memberCount || 0 }} 位成员</text>
-            </view>
-            <text class="selector-arrow" :class="{ 'selector-arrow--open': showCircleList }">›</text>
-          </view>
-
-          <!-- Dropdown -->
-          <view v-if="showCircleList" class="circle-dropdown">
-            <view
-              v-for="(circle, idx) in circles"
-              :key="circle.id"
-              class="dropdown-item"
-              :class="{ 'dropdown-item--active': circle.id === selectedCircleId }"
-              @tap.stop="selectCircle(circle.id)"
-            >
-              <view class="dropdown-avatar" :style="{ background: getCircleGradient(circle.id) }">
-                <text class="dropdown-avatar-icon">{{ circle.avatarEmoji || '⚽' }}</text>
-              </view>
-              <view class="dropdown-info">
-                <text class="dropdown-name" :class="{ 'dropdown-name--active': circle.id === selectedCircleId }">{{ circle.name }}</text>
-                <text class="dropdown-count">{{ circle.memberCount }} 位成员</text>
-              </view>
-            </view>
-            <view class="dropdown-actions">
-              <view class="dropdown-action" @tap.stop="showJoinModal = true; showCircleList = false">
-                <text class="dropdown-action-text">+ 加入圈子</text>
-              </view>
-            </view>
-          </view>
-        </view>
-      </view>
-
       <!-- Circle Info Card -->
       <view v-if="selectedCircle" class="section">
         <view class="info-card" :style="{ background: getCircleGradient(selectedCircle.id) }">
@@ -71,12 +31,46 @@
           <view class="info-deco info-deco--bl"></view>
           <view class="info-content">
             <view class="info-header">
-              <view>
-                <text class="info-name">{{ selectedCircle.name }}</text>
-                <text class="info-subtitle">{{ timePeriodLabel }}运动数据PK</text>
+              <view class="info-header-left">
+                <view class="info-avatar" :class="{ 'info-avatar--editable': isOwner }" @tap.stop="openAvatarPicker">
+                  <image v-if="selectedCircle.avatarUrl" :src="selectedCircle.avatarUrl" class="info-avatar-img" mode="aspectFill" />
+                  <text v-else class="info-avatar-emoji">⚽</text>
+                  <view v-if="isOwner" class="info-avatar-edit-badge">
+                    <text class="info-avatar-edit-icon">📷</text>
+                  </view>
+                </view>
+                <view class="info-title-col">
+                  <text class="info-name">{{ selectedCircle.name }}</text>
+                  <text class="info-subtitle">{{ timePeriodLabel }}运动数据PK</text>
+                </view>
               </view>
-              <view class="info-avatar" :class="{ 'info-avatar--editable': isOwner }" @tap="openAvatarPicker">
-                <text class="info-avatar-emoji">{{ selectedCircle.avatarEmoji || '⚽' }}</text>
+              <view class="info-switch-btn" @tap.stop="showCircleList = !showCircleList">
+                <text class="info-switch-icon">⇄</text>
+              </view>
+            </view>
+
+            <!-- Circle Switch Dropdown (inside card) -->
+            <view v-if="showCircleList" class="info-dropdown">
+              <view
+                v-for="circle in circles"
+                :key="circle.id"
+                class="dropdown-item"
+                :class="{ 'dropdown-item--active': circle.id === selectedCircleId }"
+                @tap.stop="selectCircle(circle.id)"
+              >
+                <view class="dropdown-avatar" :style="{ background: circle.avatarUrl ? '' : getCircleGradient(circle.id) }">
+                  <image v-if="circle.avatarUrl" :src="circle.avatarUrl" class="dropdown-avatar-img" mode="aspectFill" />
+                  <text v-else class="dropdown-avatar-icon">⚽</text>
+                </view>
+                <view class="dropdown-info">
+                  <text class="dropdown-name" :class="{ 'dropdown-name--active': circle.id === selectedCircleId }">{{ circle.name }}</text>
+                  <text class="dropdown-count">{{ circle.memberCount }} 位成员</text>
+                </view>
+              </view>
+              <view class="dropdown-actions">
+                <view class="dropdown-action" @tap.stop="showJoinModal = true; showCircleList = false">
+                  <text class="dropdown-action-text">+ 加入圈子</text>
+                </view>
               </view>
             </view>
             <view class="info-stats">
@@ -228,18 +222,7 @@
     <view v-if="showCreateModal" class="modal-mask" @tap="showCreateModal = false">
       <view class="modal" @tap.stop>
         <text class="modal-title">创建圈子</text>
-        <text class="modal-desc">选择头像并为圈子取个名字</text>
-        <view class="avatar-picker-row">
-          <view
-            v-for="emoji in avatarOptions"
-            :key="emoji"
-            class="avatar-option"
-            :class="{ 'avatar-option--active': newCircleAvatar === emoji }"
-            @tap="newCircleAvatar = emoji"
-          >
-            <text class="avatar-option-text">{{ emoji }}</text>
-          </view>
-        </view>
+        <text class="modal-desc">为圈子取个名字，创建后可设置头像</text>
         <input class="modal-input" v-model="newCircleName" placeholder="圈子名称" placeholder-class="placeholder" maxlength="20" />
         <view class="modal-actions">
           <view class="modal-btn-cancel" @tap="showCreateModal = false">
@@ -284,33 +267,6 @@
         </view>
       </view>
     </view>
-
-    <!-- Avatar Picker Modal (Owner Only) -->
-    <view v-if="showAvatarPicker" class="modal-mask" @tap="showAvatarPicker = false">
-      <view class="modal" @tap.stop>
-        <text class="modal-title">修改圈子头像</text>
-        <text class="modal-desc">选择一个新头像</text>
-        <view class="avatar-picker-row">
-          <view
-            v-for="emoji in avatarOptions"
-            :key="emoji"
-            class="avatar-option"
-            :class="{ 'avatar-option--active': newCircleAvatar === emoji }"
-            @tap="newCircleAvatar = emoji"
-          >
-            <text class="avatar-option-text">{{ emoji }}</text>
-          </view>
-        </view>
-        <view class="modal-actions">
-          <view class="modal-btn-cancel" @tap="showAvatarPicker = false">
-            <text class="modal-btn-cancel-text">取消</text>
-          </view>
-          <view class="modal-btn-confirm" @tap="handleChangeAvatar(newCircleAvatar)">
-            <text class="modal-btn-confirm-text">确定</text>
-          </view>
-        </view>
-      </view>
-    </view>
   </view>
 </template>
 
@@ -318,7 +274,7 @@
 import { ref, computed } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import {
-  getCircles, createCircle, joinCircle, getCircleDetail, leaveCircle, updateCircleAvatar,
+  getCircles, createCircle, joinCircle, getCircleDetail, leaveCircle, uploadCircleAvatar,
   isLoggedIn, getUid, type Circle, type CircleMember,
 } from '../../utils/api'
 
@@ -335,10 +291,6 @@ const newCircleName = ref('')
 const joinCode = ref('')
 const selectedStat = ref<'distance' | 'calories' | 'sprints' | 'duration'>('distance')
 const timePeriod = ref<'day' | 'week' | 'month' | 'year'>('week')
-const newCircleAvatar = ref('⚽')
-const showAvatarPicker = ref(false)
-
-const avatarOptions = ['⚽', '🏆', '🏃', '💪', '🔥', '⭐', '🎯', '🦁', '🐉', '🦅', '🏟️', '👟', '🥇', '🎖️', '🌟', '🤝']
 
 const timePeriodLabel = computed(() => {
   switch (timePeriod.value) {
@@ -440,22 +392,26 @@ function copyCode() {
 }
 
 function openAvatarPicker() {
-  if (!isOwner.value) return
-  newCircleAvatar.value = selectedCircle.value?.avatarEmoji || '⚽'
-  showAvatarPicker.value = true
-}
-
-async function handleChangeAvatar(emoji: string) {
-  if (!selectedCircle.value) return
-  try {
-    const updated = await updateCircleAvatar(selectedCircle.value.id, emoji)
-    const idx = circles.value.findIndex(c => c.id === updated.id)
-    if (idx >= 0) circles.value[idx].avatarEmoji = updated.avatarEmoji
-    showAvatarPicker.value = false
-    uni.showToast({ title: '头像已更新', icon: 'success' })
-  } catch (e: any) {
-    uni.showToast({ title: e.message, icon: 'none' })
-  }
+  if (!isOwner.value || !selectedCircle.value) return
+  uni.chooseImage({
+    count: 1,
+    sizeType: ['compressed'],
+    sourceType: ['album', 'camera'],
+    success: async (res) => {
+      const tempFilePath = res.tempFilePaths[0]
+      try {
+        uni.showLoading({ title: '上传中...' })
+        const updated = await uploadCircleAvatar(selectedCircle.value!.id, tempFilePath)
+        const idx = circles.value.findIndex(c => c.id === updated.id)
+        if (idx >= 0) circles.value[idx].avatarUrl = updated.avatarUrl
+        uni.hideLoading()
+        uni.showToast({ title: '头像已更新', icon: 'success' })
+      } catch (e: any) {
+        uni.hideLoading()
+        uni.showToast({ title: e.message, icon: 'none' })
+      }
+    },
+  })
 }
 
 async function loadData() {
@@ -482,9 +438,11 @@ async function loadCircleDetail(circleId: string) {
   try {
     const res = await getCircleDetail(circleId, timePeriod.value)
     members.value = res.members
-    // Update circle member count from detail
     const idx = circles.value.findIndex(c => c.id === circleId)
-    if (idx >= 0) circles.value[idx].memberCount = res.circle.memberCount
+    if (idx >= 0) {
+      circles.value[idx].memberCount = res.circle.memberCount
+      circles.value[idx].avatarUrl = res.circle.avatarUrl
+    }
   } catch (e) {
     console.error(e)
   }
@@ -494,10 +452,9 @@ async function handleCreate() {
   if (!isLoggedIn()) { uni.navigateTo({ url: '/pages/login/index' }); return }
   if (!newCircleName.value.trim()) return
   try {
-    const circle = await createCircle(newCircleName.value.trim(), newCircleAvatar.value)
+    const circle = await createCircle(newCircleName.value.trim())
     showCreateModal.value = false
     newCircleName.value = ''
-    newCircleAvatar.value = '⚽'
     await loadData()
     selectedCircleId.value = circle.id
     uni.showToast({ title: '创建成功', icon: 'success' })
@@ -699,147 +656,6 @@ $textMuted: #666;
 }
 
 // ============================================================
-// Circle Selector
-// ============================================================
-.circle-selector {
-  background: $cardBgLight;
-  border-radius: 32rpx;
-  padding: 24rpx 28rpx;
-  border: 1rpx solid #333;
-}
-
-.selector-row {
-  display: flex;
-  align-items: center;
-}
-
-.selector-avatar {
-  width: 80rpx;
-  height: 80rpx;
-  border-radius: 20rpx;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-right: 20rpx;
-  flex-shrink: 0;
-  box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.3);
-}
-
-.selector-avatar-icon {
-  font-size: 36rpx;
-}
-
-.selector-info {
-  flex: 1;
-}
-
-.selector-name {
-  font-size: 30rpx;
-  font-weight: 600;
-  color: $textPrimary;
-  display: block;
-}
-
-.selector-count {
-  font-size: 22rpx;
-  color: $textMuted;
-  display: block;
-  margin-top: 4rpx;
-}
-
-.selector-arrow {
-  font-size: 40rpx;
-  color: $textMuted;
-  transition: transform 0.2s;
-  transform: rotate(90deg);
-}
-
-.selector-arrow--open {
-  transform: rotate(270deg);
-}
-
-// ============================================================
-// Dropdown
-// ============================================================
-.circle-dropdown {
-  margin-top: 20rpx;
-  padding-top: 20rpx;
-  border-top: 1rpx solid #333;
-  display: flex;
-  flex-direction: column;
-  gap: 12rpx;
-}
-
-.dropdown-item {
-  display: flex;
-  align-items: center;
-  padding: 16rpx 20rpx;
-  border-radius: 20rpx;
-  border: 1rpx solid transparent;
-}
-
-.dropdown-item--active {
-  background: rgba(7, 193, 96, 0.1);
-  border-color: rgba(7, 193, 96, 0.3);
-}
-
-.dropdown-avatar {
-  width: 64rpx;
-  height: 64rpx;
-  border-radius: 16rpx;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-right: 16rpx;
-  flex-shrink: 0;
-}
-
-.dropdown-avatar-icon {
-  font-size: 28rpx;
-}
-
-.dropdown-info {
-  flex: 1;
-}
-
-.dropdown-name {
-  font-size: 26rpx;
-  font-weight: 600;
-  color: $textPrimary;
-  display: block;
-}
-
-.dropdown-name--active {
-  color: $green;
-}
-
-.dropdown-count {
-  font-size: 22rpx;
-  color: $textMuted;
-  display: block;
-  margin-top: 2rpx;
-}
-
-.dropdown-actions {
-  padding-top: 8rpx;
-}
-
-.dropdown-action {
-  padding: 16rpx 20rpx;
-  border-radius: 20rpx;
-  background: $cardBg;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.dropdown-action-text {
-  font-size: 26rpx;
-  font-weight: 600;
-  color: $green;
-}
-
-// ============================================================
 // Info Card (gradient hero)
 // ============================================================
 .info-card {
@@ -878,9 +694,21 @@ $textMuted: #666;
 
 .info-header {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   margin-bottom: 24rpx;
+}
+
+.info-header-left {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  min-width: 0;
+}
+
+.info-title-col {
+  flex: 1;
+  min-width: 0;
 }
 
 .info-name {
@@ -889,6 +717,9 @@ $textMuted: #666;
   color: $textPrimary;
   display: block;
   margin-bottom: 4rpx;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .info-subtitle {
@@ -904,14 +735,146 @@ $textMuted: #666;
   display: flex;
   align-items: center;
   justify-content: center;
+  position: relative;
+  overflow: hidden;
+  flex-shrink: 0;
+  margin-right: 20rpx;
 }
 
 .info-avatar--editable {
   border: 2rpx dashed rgba(255, 255, 255, 0.4);
 }
 
+.info-avatar-img {
+  width: 80rpx;
+  height: 80rpx;
+  border-radius: 20rpx;
+}
+
 .info-avatar-emoji {
   font-size: 40rpx;
+}
+
+.info-avatar-edit-badge {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 28rpx;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.info-avatar-edit-icon {
+  font-size: 16rpx;
+}
+
+.info-switch-btn {
+  width: 72rpx;
+  height: 72rpx;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-left: 16rpx;
+}
+
+.info-switch-icon {
+  font-size: 32rpx;
+  color: $textPrimary;
+}
+
+.info-dropdown {
+  margin-top: 20rpx;
+  padding-top: 20rpx;
+  border-top: 1rpx solid rgba(255, 255, 255, 0.15);
+  display: flex;
+  flex-direction: column;
+  gap: 12rpx;
+}
+
+// ============================================================
+// Dropdown Items (inside info card)
+// ============================================================
+.dropdown-item {
+  display: flex;
+  align-items: center;
+  padding: 16rpx 20rpx;
+  border-radius: 20rpx;
+  border: 1rpx solid transparent;
+}
+
+.dropdown-item--active {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+.dropdown-avatar {
+  width: 64rpx;
+  height: 64rpx;
+  border-radius: 16rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 16rpx;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.dropdown-avatar-img {
+  width: 64rpx;
+  height: 64rpx;
+  border-radius: 16rpx;
+}
+
+.dropdown-avatar-icon {
+  font-size: 28rpx;
+}
+
+.dropdown-info {
+  flex: 1;
+}
+
+.dropdown-name {
+  font-size: 26rpx;
+  font-weight: 600;
+  color: $textPrimary;
+  display: block;
+}
+
+.dropdown-name--active {
+  color: $textPrimary;
+  font-weight: 700;
+}
+
+.dropdown-count {
+  font-size: 22rpx;
+  color: rgba(255, 255, 255, 0.6);
+  display: block;
+  margin-top: 2rpx;
+}
+
+.dropdown-actions {
+  padding-top: 8rpx;
+}
+
+.dropdown-action {
+  padding: 16rpx 20rpx;
+  border-radius: 20rpx;
+  background: rgba(255, 255, 255, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.dropdown-action-text {
+  font-size: 26rpx;
+  font-weight: 600;
+  color: $textPrimary;
 }
 
 .info-stats {
@@ -1265,34 +1228,6 @@ $textMuted: #666;
   color: $textSecondary;
   display: block;
   margin-bottom: 28rpx;
-}
-
-.avatar-picker-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12rpx;
-  margin-bottom: 24rpx;
-}
-
-.avatar-option {
-  width: 80rpx;
-  height: 80rpx;
-  border-radius: 20rpx;
-  background: $cardBgLight;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: 2rpx solid transparent;
-}
-
-.avatar-option--active {
-  border-color: $green;
-  background: rgba(7, 193, 96, 0.15);
-  box-shadow: 0 0 12rpx rgba(7, 193, 96, 0.3);
-}
-
-.avatar-option-text {
-  font-size: 36rpx;
 }
 
 .modal-input {

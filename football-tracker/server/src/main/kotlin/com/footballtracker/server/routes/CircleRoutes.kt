@@ -1,5 +1,6 @@
 package com.footballtracker.server.routes
 
+import com.footballtracker.server.config.AvatarConfig
 import com.footballtracker.server.service.CircleService
 import io.ktor.http.*
 import io.ktor.server.application.*
@@ -7,22 +8,20 @@ import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import kotlinx.serialization.Serializable
+import java.io.File
 import java.util.*
 
 @Serializable
-data class CreateCircleRequest(val name: String, val avatarEmoji: String = "⚽")
+data class CreateCircleRequest(val name: String)
 
 @Serializable
 data class JoinCircleRequest(val inviteCode: String)
 
 @Serializable
-data class UpdateCircleAvatarRequest(val avatarEmoji: String)
-
-@Serializable
 data class CircleResponse(
     val id: String,
     val name: String,
-    val avatarEmoji: String,
+    val avatarUrl: String?,
     val inviteCode: String,
     val createdBy: String,
     val createdAt: Long,
@@ -51,7 +50,10 @@ data class CircleDetailResponse(
     val members: List<CircleMemberResponse>
 )
 
-fun Route.circleRoutes(circleService: CircleService) {
+@Serializable
+data class CircleAvatarUploadResponse(val avatarUrl: String)
+
+fun Route.circleRoutes(circleService: CircleService, avatarConfig: AvatarConfig) {
     route("/circles") {
         // Create circle
         post {
@@ -60,7 +62,7 @@ fun Route.circleRoutes(circleService: CircleService) {
             if (req.name.isBlank()) {
                 return@post call.respond(HttpStatusCode.BadRequest, mapOf("error" to "圈子名称不能为空"))
             }
-            val circle = circleService.createCircle(req.name.trim(), uid, req.avatarEmoji)
+            val circle = circleService.createCircle(req.name.trim(), uid)
             call.respond(HttpStatusCode.Created, circle.toResponse())
         }
 
@@ -108,7 +110,7 @@ fun Route.circleRoutes(circleService: CircleService) {
             }
         }
 
-        // Update circle avatar (owner only)
+        // Upload circle avatar image (owner only)
         put("/{circleId}/avatar") {
             val uid = UUID.fromString(call.jwtUid())
             val circleId = UUID.fromString(call.parameters["circleId"])
@@ -117,8 +119,25 @@ fun Route.circleRoutes(circleService: CircleService) {
             if (circle.createdBy != uid) {
                 return@put call.respond(HttpStatusCode.Forbidden, mapOf("error" to "只有圈主可以修改头像"))
             }
-            val req = call.receive<UpdateCircleAvatarRequest>()
-            circleService.updateCircleAvatar(circleId, req.avatarEmoji)
+
+            val bytes = call.receive<ByteArray>()
+            if (bytes.isEmpty()) {
+                return@put call.respond(HttpStatusCode.BadRequest, mapOf("error" to "图片不能为空"))
+            }
+            if (bytes.size.toLong() > avatarConfig.maxBytes) {
+                return@put call.respond(HttpStatusCode.PayloadTooLarge, mapOf("error" to "图片过大"))
+            }
+
+            val avatarDir = File(avatarConfig.baseDir)
+            if (!avatarDir.exists()) avatarDir.mkdirs()
+
+            val filename = "circle-${circleId}-${System.currentTimeMillis()}.jpg"
+            val target = File(avatarDir, filename)
+            target.writeBytes(bytes)
+
+            val avatarUrl = "${avatarConfig.publicBaseUrl.trimEnd('/')}/$filename"
+            circleService.updateCircleAvatarUrl(circleId, avatarUrl)
+
             val updated = circleService.getCircleById(circleId)!!
             call.respond(updated.toResponse())
         }
@@ -140,7 +159,7 @@ fun Route.circleRoutes(circleService: CircleService) {
 private fun com.footballtracker.server.service.CircleRow.toResponse() = CircleResponse(
     id = id.toString(),
     name = name,
-    avatarEmoji = avatarEmoji,
+    avatarUrl = avatarUrl,
     inviteCode = inviteCode,
     createdBy = createdBy.toString(),
     createdAt = createdAt,

@@ -37,7 +37,7 @@ fun Application.configureRouting(
                 teamRoutes(teamService)
                 badgeRoutes(badgeService)
                 matchRoutes(matchService, sessionService, matchSummaryService)
-                circleRoutes(circleService)
+                circleRoutes(circleService, avatarConfig)
 
                 // Bind code generation (requires login)
                 post("/auth/bind/generate") {
