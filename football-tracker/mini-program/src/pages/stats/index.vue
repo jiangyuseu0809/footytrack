@@ -164,13 +164,10 @@ $textMuted: #666;
 .page {
   min-height: 100vh;
   background: $pageBg;
-  display: flex;
-  flex-direction: column;
 }
 
 .scroll-area {
-  flex: 1;
-  height: 0;
+  height: calc(100vh - 200rpx);
 }
 
 // ============================================================
