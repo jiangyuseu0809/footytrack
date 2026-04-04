@@ -264,7 +264,7 @@ const currentStats = computed(() => {
 
 // Today date display
 const todayDate = computed(() => new Date().getDate())
-const todayWeekday = computed(() => ['日', '一', '二', '三', '四', '五', '六'][new Date().getDay()])
+const todayWeekday = computed(() => ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][new Date().getMonth()])
 
 const abilityData = computed(() => {
   const list = timeRange.value === 'week' ? weekSessions.value : todaySessions.value
