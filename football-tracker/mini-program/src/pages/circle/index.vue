@@ -73,7 +73,7 @@
             <view class="info-header">
               <view>
                 <text class="info-name">{{ selectedCircle.name }}</text>
-                <text class="info-subtitle">本周运动数据PK</text>
+                <text class="info-subtitle">{{ timePeriodLabel }}运动数据PK</text>
               </view>
               <text class="info-trophy">🏆</text>
             </view>
@@ -83,7 +83,7 @@
                 <text class="info-stat-value">{{ selectedCircle.memberCount }}</text>
               </view>
               <view class="info-stat-badge">
-                <text class="info-stat-label">本周活跃</text>
+                <text class="info-stat-label">{{ timePeriodLabel }}活跃</text>
                 <text class="info-stat-value">{{ activeCount }}</text>
               </view>
               <view class="info-stat-badge">
@@ -101,7 +101,33 @@
       <!-- Stats Filter -->
       <view class="section">
         <view class="filter-card">
-          <text class="filter-title">本周数据排行</text>
+          <!-- Time Period Selector -->
+          <view class="filter-period-row">
+            <text class="filter-period-label">排行榜</text>
+            <view class="filter-period-tabs">
+              <view
+                class="filter-period-tab"
+                :class="{ 'filter-period-tab--active': timePeriod === 'day' }"
+                @tap="switchPeriod('day')"
+              ><text class="filter-period-text" :class="{ 'filter-period-text--active': timePeriod === 'day' }">今日</text></view>
+              <view
+                class="filter-period-tab"
+                :class="{ 'filter-period-tab--active': timePeriod === 'week' }"
+                @tap="switchPeriod('week')"
+              ><text class="filter-period-text" :class="{ 'filter-period-text--active': timePeriod === 'week' }">本周</text></view>
+              <view
+                class="filter-period-tab"
+                :class="{ 'filter-period-tab--active': timePeriod === 'month' }"
+                @tap="switchPeriod('month')"
+              ><text class="filter-period-text" :class="{ 'filter-period-text--active': timePeriod === 'month' }">本月</text></view>
+              <view
+                class="filter-period-tab"
+                :class="{ 'filter-period-tab--active': timePeriod === 'year' }"
+                @tap="switchPeriod('year')"
+              ><text class="filter-period-text" :class="{ 'filter-period-text--active': timePeriod === 'year' }">本年</text></view>
+            </view>
+          </view>
+          <text class="filter-title">{{ timePeriodLabel }}数据排行</text>
           <view class="filter-grid">
             <view
               class="filter-btn"
@@ -178,12 +204,12 @@
 
         <!-- No members -->
         <view v-if="rankedMembers.length === 0" class="empty-rank">
-          <text class="empty-rank-text">暂无本周数据</text>
+          <text class="empty-rank-text">暂无{{ timePeriodLabel }}数据</text>
         </view>
 
         <!-- Tip -->
         <view class="tip-card">
-          <text class="tip-text">💡 <text class="tip-highlight">温馨提示：</text>每周日24:00排行榜将重置，快邀请好友一起运动吧！</text>
+          <text class="tip-text">💡 <text class="tip-highlight">温馨提示：</text>{{ timePeriodTip }}</text>
         </view>
 
         <!-- Leave circle -->
@@ -270,6 +296,25 @@ const showInviteInfo = ref(false)
 const newCircleName = ref('')
 const joinCode = ref('')
 const selectedStat = ref<'distance' | 'calories' | 'sprints' | 'duration'>('distance')
+const timePeriod = ref<'day' | 'week' | 'month' | 'year'>('week')
+
+const timePeriodLabel = computed(() => {
+  switch (timePeriod.value) {
+    case 'day': return '今日'
+    case 'week': return '本周'
+    case 'month': return '本月'
+    case 'year': return '本年'
+  }
+})
+
+const timePeriodTip = computed(() => {
+  switch (timePeriod.value) {
+    case 'day': return '每日24:00排行榜将重置，快邀请好友一起运动吧！'
+    case 'week': return '每周日24:00排行榜将重置，快邀请好友一起运动吧！'
+    case 'month': return '每月1日排行榜将重置，快邀请好友一起运动吧！'
+    case 'year': return '每年1月1日排行榜将重置，快邀请好友一起运动吧！'
+  }
+})
 
 const selectedCircle = computed(() => circles.value.find(c => c.id === selectedCircleId.value))
 const selectedCircleIndex = computed(() => circles.value.findIndex(c => c.id === selectedCircleId.value))
@@ -343,6 +388,11 @@ function selectCircle(id: string) {
   loadCircleDetail(id)
 }
 
+function switchPeriod(period: 'day' | 'week' | 'month' | 'year') {
+  timePeriod.value = period
+  if (selectedCircleId.value) loadCircleDetail(selectedCircleId.value)
+}
+
 function copyCode() {
   if (!selectedCircle.value) return
   uni.setClipboardData({
@@ -373,7 +423,7 @@ async function loadData() {
 
 async function loadCircleDetail(circleId: string) {
   try {
-    const res = await getCircleDetail(circleId)
+    const res = await getCircleDetail(circleId, timePeriod.value)
     members.value = res.members
     // Update circle member count from detail
     const idx = circles.value.findIndex(c => c.id === circleId)
@@ -843,6 +893,48 @@ $textMuted: #666;
   padding: 28rpx;
   border: $border;
   box-shadow: 0 4rpx 24rpx rgba(0, 0, 0, 0.3);
+}
+
+.filter-period-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24rpx;
+}
+
+.filter-period-label {
+  font-size: 24rpx;
+  color: $textSecondary;
+}
+
+.filter-period-tabs {
+  display: flex;
+  align-items: center;
+  background: $cardBgLight;
+  border-radius: 20rpx;
+  padding: 4rpx;
+  border: 1rpx solid #333;
+}
+
+.filter-period-tab {
+  padding: 8rpx 20rpx;
+  border-radius: 16rpx;
+}
+
+.filter-period-tab--active {
+  background: $green;
+  box-shadow: 0 4rpx 12rpx rgba(7, 193, 96, 0.3);
+}
+
+.filter-period-text {
+  font-size: 22rpx;
+  font-weight: 500;
+  color: $textSecondary;
+}
+
+.filter-period-text--active {
+  color: $textPrimary;
+  font-weight: 600;
 }
 
 .filter-title {

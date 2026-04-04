@@ -333,8 +333,9 @@ export async function joinCircle(inviteCode: string): Promise<Circle> {
   return request<Circle>('/api/circles/join', { method: 'POST', data: { inviteCode } })
 }
 
-export async function getCircleDetail(circleId: string): Promise<{ circle: Circle; members: CircleMember[] }> {
-  return request(`/api/circles/${circleId}`)
+export async function getCircleDetail(circleId: string, period?: string): Promise<{ circle: Circle; members: CircleMember[] }> {
+  const query = period ? `?period=${period}` : ''
+  return request(`/api/circles/${circleId}${query}`)
 }
 
 export async function leaveCircle(circleId: string): Promise<void> {

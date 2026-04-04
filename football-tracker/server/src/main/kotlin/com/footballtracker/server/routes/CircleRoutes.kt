@@ -67,12 +67,13 @@ fun Route.circleRoutes(circleService: CircleService) {
             call.respond(CircleListResponse(circles))
         }
 
-        // Get circle detail with members (weekly stats)
+        // Get circle detail with members (period-based stats)
         get("/{circleId}") {
             val circleId = UUID.fromString(call.parameters["circleId"])
+            val period = call.request.queryParameters["period"] ?: "week"
             val circle = circleService.getCircleById(circleId)
                 ?: return@get call.respond(HttpStatusCode.NotFound, mapOf("error" to "圈子不存在"))
-            val members = circleService.getCircleMembers(circleId).map { member ->
+            val members = circleService.getCircleMembers(circleId, period).map { member ->
                 CircleMemberResponse(
                     userUid = member.userUid.toString(),
                     nickname = member.nickname,

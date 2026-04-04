@@ -115,11 +115,16 @@ class CircleService {
     }
 
     /**
-     * Returns circle members with their aggregated weekly stats
-     * (sessions from the last 7 days).
+     * Returns circle members with their aggregated stats for a given time period.
      */
-    fun getCircleMembers(circleId: UUID): List<CircleMemberRow> = transaction {
-        val weekAgo = System.currentTimeMillis() - 7 * 24 * 60 * 60 * 1000L
+    fun getCircleMembers(circleId: UUID, period: String = "week"): List<CircleMemberRow> = transaction {
+        val now = System.currentTimeMillis()
+        val sinceMs = when (period) {
+            "day" -> now - 24 * 60 * 60 * 1000L
+            "month" -> now - 30L * 24 * 60 * 60 * 1000L
+            "year" -> now - 365L * 24 * 60 * 60 * 1000L
+            else -> now - 7 * 24 * 60 * 60 * 1000L // week
+        }
 
         val totalDistance = SessionsTable.totalDistanceMeters.sum()
         val totalCalories = SessionsTable.caloriesBurned.sum()
@@ -130,7 +135,7 @@ class CircleService {
             .join(
                 SessionsTable, JoinType.LEFT,
                 CircleMembersTable.userUid, SessionsTable.ownerUid,
-                additionalConstraint = { SessionsTable.startTime greaterEq weekAgo }
+                additionalConstraint = { SessionsTable.startTime greaterEq sinceMs }
             )
             .select(
                 CircleMembersTable.userUid,
