@@ -2,16 +2,14 @@
   <view class="page">
     <!-- Header -->
     <view class="header">
-      <view class="header-row">
-        <text class="header-title">圈子</text>
-        <view class="header-add" @tap="showCreateModal = true">
-          <text class="header-add-icon">+</text>
-        </view>
+      <text class="header-title">圈子</text>
+      <view class="header-add" @tap="showCreateModal = true">
+        <text class="header-add-icon">+</text>
       </view>
     </view>
 
     <!-- Empty State -->
-    <scroll-view v-if="circles.length === 0 && !loading" scroll-y class="scroll-area">
+    <scroll-view v-if="loaded && circles.length === 0" scroll-y class="scroll-area">
       <view class="empty-state">
         <view class="empty-icon-wrap">
           <text class="empty-icon">👥</text>
@@ -28,7 +26,7 @@
     </scroll-view>
 
     <!-- Main Content -->
-    <scroll-view v-else scroll-y class="scroll-area">
+    <scroll-view v-else-if="loaded && circles.length > 0" scroll-y class="scroll-area">
       <!-- Circle Selector -->
       <view class="section">
         <view class="circle-selector" @tap="showCircleList = !showCircleList">
@@ -259,6 +257,7 @@ import {
 } from '../../utils/api'
 
 const loading = ref(false)
+const loaded = ref(false)
 const circles = ref<Circle[]>([])
 const selectedCircleId = ref('')
 const members = ref<CircleMember[]>([])
@@ -351,7 +350,7 @@ function copyCode() {
 }
 
 async function loadData() {
-  if (!isLoggedIn()) return
+  if (!isLoggedIn()) { loaded.value = true; return }
   loading.value = true
   try {
     const res = await getCircles()
@@ -366,6 +365,7 @@ async function loadData() {
     console.error(e)
   } finally {
     loading.value = false
+    loaded.value = true
   }
 }
 
@@ -456,7 +456,7 @@ $textMuted: #666;
 
 .scroll-area {
   flex: 1;
-  height: calc(100vh - 170rpx);
+  height: 0;
 }
 
 // ============================================================
@@ -464,20 +464,17 @@ $textMuted: #666;
 // ============================================================
 .header {
   background: $cardBg;
-  padding: 100rpx 32rpx 24rpx;
+  padding: 120rpx 32rpx 28rpx;
   border-bottom: $border;
-}
-
-.header-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+  position: relative;
 }
 
 .header-title {
-  font-size: 40rpx;
+  font-size: 34rpx;
   font-weight: 700;
   color: $textPrimary;
+  display: block;
+  text-align: center;
 }
 
 .header-add {
@@ -489,6 +486,9 @@ $textMuted: #666;
   align-items: center;
   justify-content: center;
   box-shadow: 0 4rpx 16rpx rgba(7, 193, 96, 0.3);
+  position: absolute;
+  right: 32rpx;
+  bottom: 14rpx;
 }
 
 .header-add-icon {
