@@ -298,6 +298,49 @@ export async function getMatchSummary(matchId: string): Promise<{ summary: strin
   return request(`/api/matches/${matchId}/summary`)
 }
 
+// --- Circles ---
+
+export interface Circle {
+  id: string
+  name: string
+  inviteCode: string
+  createdBy: string
+  createdAt: number
+  memberCount: number
+}
+
+export interface CircleMember {
+  userUid: string
+  nickname: string
+  avatarUrl?: string
+  role: string
+  joinedAt: number
+  totalDistanceMeters: number
+  totalCalories: number
+  sprintCount: number
+  totalDurationMinutes: number
+}
+
+export async function getCircles(): Promise<{ circles: Circle[] }> {
+  return request('/api/circles')
+}
+
+export async function createCircle(name: string): Promise<Circle> {
+  return request<Circle>('/api/circles', { method: 'POST', data: { name } })
+}
+
+export async function joinCircle(inviteCode: string): Promise<Circle> {
+  return request<Circle>('/api/circles/join', { method: 'POST', data: { inviteCode } })
+}
+
+export async function getCircleDetail(circleId: string): Promise<{ circle: Circle; members: CircleMember[] }> {
+  return request(`/api/circles/${circleId}`)
+}
+
+export async function leaveCircle(circleId: string): Promise<void> {
+  await request(`/api/circles/${circleId}/leave`, { method: 'POST' })
+}
+
 // --- Badges ---
 
 export interface Badge {

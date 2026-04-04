@@ -2,7 +2,7 @@
   "pages": [
     { "path": "pages/home/index", "style": { "navigationStyle": "custom" } },
     { "path": "pages/stats/index", "style": { "navigationStyle": "custom" } },
-    { "path": "pages/create-match/index", "style": { "navigationStyle": "custom" } },
+    { "path": "pages/circle/index", "style": { "navigationStyle": "custom" } },
     { "path": "pages/profile/index", "style": { "navigationStyle": "custom" } },
     { "path": "pages/login/index", "style": { "navigationStyle": "custom" } },
     { "path": "pages/session-detail/index", "style": { "navigationStyle": "custom" } },
@@ -27,7 +27,7 @@
     "list": [
       { "pagePath": "pages/home/index", "text": "首页", "iconPath": "static/tab-home.png", "selectedIconPath": "static/tab-home-active.png" },
       { "pagePath": "pages/stats/index", "text": "历史", "iconPath": "static/tab-history.png", "selectedIconPath": "static/tab-history-active.png" },
-      { "pagePath": "pages/create-match/index", "text": "创建", "iconPath": "static/tab-create.png", "selectedIconPath": "static/tab-create-active.png" },
+      { "pagePath": "pages/circle/index", "text": "圈子", "iconPath": "static/tab-team.png", "selectedIconPath": "static/tab-team-active.png" },
       { "pagePath": "pages/profile/index", "text": "我的", "iconPath": "static/tab-profile.png", "selectedIconPath": "static/tab-profile-active.png" }
     ]
   }
