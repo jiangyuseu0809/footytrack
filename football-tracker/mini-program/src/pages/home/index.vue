@@ -7,7 +7,7 @@
         <text class="watch-badge-text">⌚ 已连接</text>
       </view>
       <view v-else class="watch-badge disconnected" @tap="goBindWatch">
-        <text class="watch-badge-text">⌚ 连接 Watch</text>
+        <text class="watch-badge-text">⌚ 连接手表</text>
       </view>
     </view>
 

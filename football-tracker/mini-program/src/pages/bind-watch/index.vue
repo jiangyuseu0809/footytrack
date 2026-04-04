@@ -12,7 +12,7 @@
             <image class="capsule-home-img" src="/static/icon-home-white.png" mode="aspectFit" />
           </view>
         </view>
-        <text class="nav-title">绑定 Watch</text>
+        <text class="nav-title">绑定手表</text>
         <view class="nav-right" />
       </view>
     </view>
@@ -24,8 +24,8 @@
           <view class="hero-icon-row">
             <text class="hero-icon">⌚</text>
           </view>
-          <text class="hero-title">绑定你的 Watch</text>
-          <text class="hero-subtitle">在 Apple Watch 上输入下方绑定码，即可将手表与你的账号关联</text>
+          <text class="hero-title">绑定你的手表</text>
+          <text class="hero-subtitle">在手表上输入下方绑定码，即可将手表与你的账号关联</text>
         </view>
       </view>
 
@@ -38,7 +38,7 @@
           </view>
           <view class="step-row">
             <view class="step-num"><text class="step-num-text">2</text></view>
-            <text class="step-text">在 Apple Watch 上打开野球记 App</text>
+            <text class="step-text">在手表上打开野球记 App</text>
           </view>
           <view class="step-row">
             <view class="step-num"><text class="step-num-text">3</text></view>
