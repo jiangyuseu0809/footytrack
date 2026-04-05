@@ -44,6 +44,7 @@
 		EAD17DD90BDF6722DE9C2806 /* ApiClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 81D2A5230ED4A84374356B09 /* ApiClient.swift */; };
 		WN01A2B3C4D5E6F708992001 /* WatchApiClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = WN02A2B3C4D5E6F708992001 /* WatchApiClient.swift */; };
 		WN03A2B3C4D5E6F708992001 /* WatchSessionQueue.swift in Sources */ = {isa = PBXBuildFile; fileRef = WN04A2B3C4D5E6F708992001 /* WatchSessionQueue.swift */; };
+		WB01A2B3C4D5E6F708992001 /* WatchBindView.swift in Sources */ = {isa = PBXBuildFile; fileRef = WB02A2B3C4D5E6F708992001 /* WatchBindView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -110,6 +111,7 @@
 		W4D5E6F70819A1B2C3D4E5F6 /* FootballTrackerWatch.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = FootballTrackerWatch.entitlements; sourceTree = "<group>"; };
 		WN02A2B3C4D5E6F708992001 /* WatchApiClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchApiClient.swift; sourceTree = "<group>"; };
 		WN04A2B3C4D5E6F708992001 /* WatchSessionQueue.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchSessionQueue.swift; sourceTree = "<group>"; };
+		WB02A2B3C4D5E6F708992001 /* WatchBindView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchBindView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -149,6 +151,7 @@
 				WN05A2B3C4D5E6F708992001 /* Network */,
 				DD8DB8BCDA2179FCD4B5AAAF /* Sync */,
 				CC0E03DF13339C62F81195A7 /* Tracking */,
+				WB03A2B3C4D5E6F708992001 /* Views */,
 			);
 			path = FootballTrackerWatch;
 			sourceTree = "<group>";
@@ -251,6 +254,14 @@
 				WN04A2B3C4D5E6F708992001 /* WatchSessionQueue.swift */,
 			);
 			path = Network;
+			sourceTree = "<group>";
+		};
+		WB03A2B3C4D5E6F708992001 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				WB02A2B3C4D5E6F708992001 /* WatchBindView.swift */,
+			);
+			path = Views;
 			sourceTree = "<group>";
 		};
 		EDCFE626AD020BF2048548E8 = {
@@ -407,6 +418,7 @@
 				WN03A2B3C4D5E6F708992001 /* WatchSessionQueue.swift in Sources */,
 				31AB697318E8974368D10964 /* WatchSummaryView.swift in Sources */,
 				9AFC3F692DA6EC3EEA478453 /* WatchTrackingView.swift in Sources */,
+				WB01A2B3C4D5E6F708992001 /* WatchBindView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

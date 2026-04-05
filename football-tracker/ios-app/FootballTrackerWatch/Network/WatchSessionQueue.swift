@@ -59,6 +59,3 @@ class WatchSessionQueue {
         }
     }
 }
-
-// Make WatchSessionDto Codable for persistence
-extension WatchApiClient.WatchSessionDto: Decodable {}

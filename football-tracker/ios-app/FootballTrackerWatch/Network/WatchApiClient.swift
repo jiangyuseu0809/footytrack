@@ -38,7 +38,7 @@ class WatchApiClient {
         let sessions: [WatchSessionDto]
     }
 
-    struct WatchSessionDto: Encodable {
+    struct WatchSessionDto: Codable {
         let id: String
         let startTime: Int64
         let endTime: Int64
