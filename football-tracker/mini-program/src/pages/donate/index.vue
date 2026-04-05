@@ -1,15 +1,13 @@
 <template>
   <view class="page">
-    <!-- Nav Bar -->
-    <view class="nav-bar">
-      <view class="nav-back" @tap="goBack">
-        <text class="nav-back-icon">&lt;</text>
+    <!-- Header -->
+    <view class="header" :style="{ paddingTop: statusBarHeight + 'px' }">
+      <view class="header-inner" :style="{ height: navBarHeight + 'px' }">
+        <text class="header-title">打赏支持</text>
       </view>
-      <text class="nav-title">打赏支持</text>
-      <view class="nav-placeholder" />
     </view>
 
-    <scroll-view scroll-y class="scroll-area">
+    <scroll-view scroll-y class="scroll-area" :style="{ height: 'calc(100vh - ' + (statusBarHeight + navBarHeight) + 'px)' }">
       <!-- Header -->
       <view class="hero">
         <text class="hero-emoji">&#x2615;</text>
@@ -51,6 +49,11 @@
 import { ref } from 'vue'
 import { createDonation } from '../../utils/api'
 
+const menuBtn = uni.getMenuButtonBoundingClientRect()
+const sysInfo = uni.getSystemInfoSync()
+const statusBarHeight = sysInfo.statusBarHeight || 44
+const navBarHeight = (menuBtn.top - statusBarHeight) * 2 + menuBtn.height
+
 const amounts = [
   { cents: 100, label: '1' },
   { cents: 200, label: '2' },
@@ -62,10 +65,6 @@ const amounts = [
 
 const selected = ref(500)
 const paying = ref(false)
-
-function goBack() {
-  uni.navigateBack()
-}
 
 async function handlePay() {
   if (paying.value) return
@@ -116,40 +115,23 @@ $textMuted: #666;
   background: $pageBg;
 }
 
-.nav-bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 100rpx 32rpx 24rpx;
-  background: $pageBg;
+.header {
+  background: $cardBg;
+  padding-left: 32rpx;
+  padding-right: 32rpx;
+  border-bottom: $border;
 }
 
-.nav-back {
-  width: 64rpx;
-  height: 64rpx;
+.header-inner {
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-.nav-back-icon {
-  font-size: 36rpx;
-  color: $textPrimary;
-  font-weight: 700;
-}
-
-.nav-title {
+.header-title {
   font-size: 34rpx;
   font-weight: 700;
   color: $textPrimary;
-}
-
-.nav-placeholder {
-  width: 64rpx;
-}
-
-.scroll-area {
-  height: calc(100vh - 188rpx);
 }
 
 .hero {
