@@ -51,17 +51,17 @@
         <view class="toggle-bar">
           <view
             class="toggle-item"
-            :class="{ active: timeRange === 'week' }"
-            @tap="timeRange = 'week'"
-          >
-            <text class="toggle-text" :class="{ active: timeRange === 'week' }">本周数据</text>
-          </view>
-          <view
-            class="toggle-item"
             :class="{ active: timeRange === 'today' }"
             @tap="timeRange = 'today'"
           >
             <text class="toggle-text" :class="{ active: timeRange === 'today' }">今日数据</text>
+          </view>
+          <view
+            class="toggle-item"
+            :class="{ active: timeRange === 'week' }"
+            @tap="timeRange = 'week'"
+          >
+            <text class="toggle-text" :class="{ active: timeRange === 'week' }">本周数据</text>
           </view>
         </view>
       </view>
@@ -288,7 +288,7 @@ import { getSessions, getMatches, getProfile, isLoggedIn, type SessionDto, type 
 import { formatDateTime, formatWeekday } from '../../utils/format'
 import { roundRect, parseTrackPoints, computeAbilityData, drawRadarChart, drawHeatmapChart, drawSmoothCurveChart, type CurvePoint } from '../../utils/charts'
 
-const timeRange = ref<'week' | 'today'>('week')
+const timeRange = ref<'week' | 'today'>('today')
 const sessions = ref<SessionDto[]>([])
 const upcomingMatches = ref<Match[]>([])
 const isWatchConnected = ref(false)
