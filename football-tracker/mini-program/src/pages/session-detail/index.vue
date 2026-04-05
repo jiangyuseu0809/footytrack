@@ -74,16 +74,39 @@
               <text class="stat-tiny-unit">bpm</text>
             </view>
           </view>
+          <view class="stats-row">
+            <view class="stat-cell">
+              <view class="stat-icon-box green-teal">
+                <text class="stat-icon">❤️</text>
+              </view>
+              <text class="stat-sub-label">平均心率</text>
+              <text class="stat-big-value">{{ session.avgHeartRate || '-' }}</text>
+              <text class="stat-tiny-unit">bpm</text>
+            </view>
+            <view class="stat-cell">
+              <view class="stat-icon-box cyan">
+                <text class="stat-icon">🏃</text>
+              </view>
+              <text class="stat-sub-label">平均时速</text>
+              <text class="stat-big-value">{{ (session.avgSpeedKmh || 0).toFixed(1) }}</text>
+              <text class="stat-tiny-unit">km/h</text>
+            </view>
+            <view class="stat-cell">
+              <view class="stat-icon-box red-deep">
+                <text class="stat-icon">💨</text>
+              </view>
+              <text class="stat-sub-label">最高时速</text>
+              <text class="stat-big-value">{{ (session.maxSpeedKmh || 0).toFixed(1) }}</text>
+              <text class="stat-tiny-unit">km/h</text>
+            </view>
+          </view>
         </view>
       </view>
 
       <!-- Heart Rate Smooth Curve -->
       <view v-if="session.avgHeartRate" class="section">
         <view class="chart-card">
-          <view class="chart-header">
-            <text class="chart-header-icon">❤️</text>
-            <text class="chart-header-title">心率变化曲线</text>
-          </view>
+          <text class="chart-card-title">心率变化曲线</text>
           <view class="curve-chart-wrap">
             <image v-if="hrCurveImage" :src="hrCurveImage" class="curve-chart-img" mode="aspectFit" />
             <view v-else class="curve-placeholder">
@@ -99,10 +122,7 @@
       <!-- Speed Smooth Curve -->
       <view v-if="session.avgSpeedKmh" class="section">
         <view class="chart-card">
-          <view class="chart-header">
-            <text class="chart-header-icon">🏃</text>
-            <text class="chart-header-title">速度变化曲线</text>
-          </view>
+          <text class="chart-card-title">速度变化曲线</text>
           <view class="curve-chart-wrap">
             <image v-if="speedCurveImage" :src="speedCurveImage" class="curve-chart-img" mode="aspectFit" />
             <view v-else class="curve-placeholder">
@@ -118,10 +138,7 @@
       <!-- Ability Spider Chart -->
       <view class="section">
         <view class="chart-card">
-          <view class="chart-header">
-            <text class="chart-header-icon">🎯</text>
-            <text class="chart-header-title">能力分析图</text>
-          </view>
+          <text class="chart-card-title">能力分析图</text>
           <view class="radar-canvas-wrap">
             <image v-if="radarImage" :src="radarImage" class="radar-image" mode="aspectFit" />
             <view v-else class="radar-placeholder">
@@ -156,10 +173,7 @@
       <!-- Slack Index -->
       <view v-if="session.slackIndex != null" class="section">
         <view class="chart-card">
-          <view class="chart-header">
-            <text class="chart-header-icon">🐟</text>
-            <text class="chart-header-title">摸鱼指数</text>
-          </view>
+          <text class="chart-card-title">摸鱼指数</text>
           <view class="slack-content">
             <view class="slack-bar-track">
               <view class="slack-bar-fill" :style="{ width: (session.slackIndex || 0) + '%' }" />
@@ -471,6 +485,8 @@ $textMuted: #666;
 .purple { background: linear-gradient(135deg, #a78bfa, #7c3aed); }
 .pink-red { background: linear-gradient(135deg, #f472b6, #ef4444); }
 .green-teal { background: linear-gradient(135deg, #4ade80, #14b8a6); }
+.cyan { background: linear-gradient(135deg, #22d3ee, #0891b2); }
+.red-deep { background: linear-gradient(135deg, #f87171, #dc2626); }
 
 .stat-icon {
   font-size: 36rpx;
