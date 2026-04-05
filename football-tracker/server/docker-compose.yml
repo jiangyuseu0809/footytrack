@@ -34,3 +34,5 @@ services:
 
 volumes:
   pgdata:
+    name: football-tracker-server_pgdata
+    external: true
