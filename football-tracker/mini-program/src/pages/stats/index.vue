@@ -47,10 +47,7 @@
                 <view class="match-info">
                   <text class="match-name">{{ day.dateStr }} {{ day.weekday }}</text>
                   <view class="match-meta">
-                    <text class="match-meta-icon">📅</text>
-                    <text class="match-meta-text">{{ day.dateStr }}</text>
-                    <text class="match-meta-icon" style="margin-left: 16rpx;">📍</text>
-                    <text class="match-meta-text">{{ day.sessions.length }}场训练</text>
+                  <text class="match-meta-text">{{ day.sessions.length }}场训练</text>
                   </view>
                 </view>
                 <text class="match-chevron">›</text>
