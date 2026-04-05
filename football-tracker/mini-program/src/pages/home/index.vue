@@ -69,43 +69,59 @@
       <!-- Core Stats Panel -->
       <view class="section">
         <view class="core-panel">
-          <text class="core-panel-title">核心指标</text>
+          <view class="core-panel-header">
+            <text class="core-panel-title">核心指标</text>
+          </view>
           <view class="core-grid">
-            <view class="core-item">
+            <view class="core-item" :class="'core-item--' + getLevel('matches', currentStats.matches)">
               <text class="core-item-value">{{ currentStats.matches }}</text>
               <text class="core-item-label">运动场次</text>
             </view>
-            <view class="core-item">
+            <view class="core-item" :class="'core-item--' + getLevel('calories', currentStats.calories)">
               <text class="core-item-value">{{ currentStats.calories }}</text>
               <text class="core-item-label">热量(kcal)</text>
             </view>
-            <view class="core-item">
+            <view class="core-item" :class="'core-item--' + getLevel('distance', currentStats.distance)">
               <text class="core-item-value">{{ currentStats.distance }}</text>
               <text class="core-item-label">距离(km)</text>
             </view>
-            <view class="core-item">
+            <view class="core-item" :class="'core-item--' + getLevel('sprints', currentStats.sprints)">
               <text class="core-item-value">{{ currentStats.sprints }}</text>
               <text class="core-item-label">冲刺次数</text>
             </view>
-            <view class="core-item">
+            <view class="core-item" :class="'core-item--' + getLevel('duration', currentStats.duration)">
               <text class="core-item-value">{{ currentStats.duration }}</text>
               <text class="core-item-label">时长(分钟)</text>
             </view>
-            <view class="core-item">
+            <view class="core-item" :class="'core-item--' + getLevel('maxHeartRate', currentStats.maxHeartRate)">
               <text class="core-item-value">{{ currentStats.maxHeartRate }}</text>
               <text class="core-item-label">最高心率</text>
             </view>
-            <view class="core-item">
+            <view class="core-item" :class="'core-item--' + getLevel('avgHeartRate', currentStats.avgHeartRate)">
               <text class="core-item-value">{{ currentStats.avgHeartRate }}</text>
               <text class="core-item-label">平均心率</text>
             </view>
-            <view class="core-item">
+            <view class="core-item" :class="'core-item--' + getLevel('maxSpeed', currentStats.maxSpeed)">
               <text class="core-item-value">{{ currentStats.maxSpeed }}</text>
               <text class="core-item-label">最高时速</text>
             </view>
-            <view class="core-item">
+            <view class="core-item" :class="'core-item--' + getLevel('avgSpeed', currentStats.avgSpeed)">
               <text class="core-item-value">{{ currentStats.avgSpeed }}</text>
               <text class="core-item-label">平均时速</text>
+            </view>
+          </view>
+          <view class="core-legend">
+            <view class="core-legend-item">
+              <view class="core-legend-dot core-legend-dot--good" />
+              <text class="core-legend-text">出色</text>
+            </view>
+            <view class="core-legend-item">
+              <view class="core-legend-dot core-legend-dot--normal" />
+              <text class="core-legend-text">一般</text>
+            </view>
+            <view class="core-legend-item">
+              <view class="core-legend-dot core-legend-dot--low" />
+              <text class="core-legend-text">待提升</text>
             </view>
           </view>
         </view>
@@ -114,10 +130,7 @@
       <!-- Ability Radar Placeholder -->
       <view class="section">
         <view class="chart-card">
-          <view class="chart-header">
-            <text class="chart-header-icon">🎯</text>
-            <text class="chart-header-title">{{ timeRange === 'week' ? '本周能力分析' : '今日能力分析' }}</text>
-          </view>
+          <text class="chart-card-title">{{ timeRange === 'week' ? '本周能力分析' : '今日能力分析' }}</text>
           <view class="radar-canvas-wrap">
             <image v-if="radarImage" :src="radarImage" class="radar-image" mode="aspectFit" />
           </view>
@@ -252,6 +265,37 @@ const abilityData = computed(() => {
   const list = timeRange.value === 'week' ? weekSessions.value : todaySessions.value
   return computeAbilityData(list)
 })
+
+function getLevel(metric: string, value: number | string): string {
+  const v = typeof value === 'string' ? parseFloat(value) : value
+  if (!v) return 'low'
+  const isWeek = timeRange.value === 'week'
+  const thresholds: Record<string, [number, number]> = isWeek ? {
+    matches:      [3, 1],
+    calories:     [1500, 500],
+    distance:     [15, 5],
+    sprints:      [30, 10],
+    duration:     [180, 60],
+    maxHeartRate: [170, 140],
+    avgHeartRate: [140, 110],
+    maxSpeed:     [20, 12],
+    avgSpeed:     [8, 4],
+  } : {
+    matches:      [1, 1],
+    calories:     [300, 100],
+    distance:     [3, 1],
+    sprints:      [8, 3],
+    duration:     [45, 15],
+    maxHeartRate: [170, 140],
+    avgHeartRate: [140, 110],
+    maxSpeed:     [20, 12],
+    avgSpeed:     [8, 4],
+  }
+  const [good, normal] = thresholds[metric] || [1, 0]
+  if (v >= good) return 'good'
+  if (v >= normal) return 'normal'
+  return 'low'
+}
 
 async function loadData() {
   if (!isLoggedIn()) return
@@ -1107,29 +1151,53 @@ $textMuted: #666;
   box-shadow: 0 4rpx 24rpx rgba(0, 0, 0, 0.3);
 }
 
+.core-panel-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 24rpx;
+  padding-left: 4rpx;
+}
+
+.core-panel-icon {
+  font-size: 32rpx;
+  margin-right: 10rpx;
+}
+
 .core-panel-title {
   font-size: 30rpx;
   font-weight: 600;
   color: $textPrimary;
-  display: block;
-  margin-bottom: 24rpx;
-  padding-left: 4rpx;
 }
 
 .core-grid {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
-  gap: 20rpx 0;
+  gap: 16rpx;
 }
 
 .core-item {
   display: flex;
   flex-direction: column;
   align-items: center;
+  padding: 16rpx 8rpx;
+  border-radius: 16rpx;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.core-item--good {
+  background: rgba(7, 193, 96, 0.15);
+}
+
+.core-item--normal {
+  background: rgba(250, 204, 21, 0.12);
+}
+
+.core-item--low {
+  background: rgba(239, 68, 68, 0.12);
 }
 
 .core-item-value {
-  font-size: 40rpx;
+  font-size: 38rpx;
   font-weight: 700;
   color: $textPrimary;
   line-height: 1.1;
@@ -1139,6 +1207,44 @@ $textMuted: #666;
   font-size: 22rpx;
   color: $textMuted;
   margin-top: 6rpx;
+}
+
+.core-legend {
+  display: flex;
+  justify-content: center;
+  gap: 32rpx;
+  margin-top: 20rpx;
+  padding-top: 16rpx;
+  border-top: 1rpx solid #2a2a2a;
+}
+
+.core-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+}
+
+.core-legend-dot {
+  width: 16rpx;
+  height: 16rpx;
+  border-radius: 4rpx;
+}
+
+.core-legend-dot--good {
+  background: rgba(7, 193, 96, 0.5);
+}
+
+.core-legend-dot--normal {
+  background: rgba(250, 204, 21, 0.4);
+}
+
+.core-legend-dot--low {
+  background: rgba(239, 68, 68, 0.4);
+}
+
+.core-legend-text {
+  font-size: 22rpx;
+  color: $textMuted;
 }
 
 // ============================================================
