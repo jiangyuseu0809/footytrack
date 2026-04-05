@@ -66,70 +66,47 @@
         </view>
       </view>
 
-      <!-- Matches Count -->
+      <!-- Core Stats Panel -->
       <view class="section">
-        <view class="match-count-card">
-          <view class="match-count-left">
-            <text class="match-count-label">{{ timeRange === 'week' ? '本周' : '今日' }}踢球次数</text>
-            <text class="match-count-value">{{ currentStats.matches }}</text>
-          </view>
-          <view class="match-count-icon">
-            <text class="match-count-weekday">{{ todayWeekday }}</text>
-            <text class="match-count-date">{{ todayDate }}</text>
-          </view>
-        </view>
-      </view>
-
-      <!-- Core Stats Grid -->
-      <view class="section">
-        <view class="stats-grid">
-          <view class="stats-card">
-            <view class="stats-icon-box orange-red">
-              <text class="stats-icon">🔥</text>
+        <view class="core-panel">
+          <text class="core-panel-title">核心指标</text>
+          <view class="core-grid">
+            <view class="core-item">
+              <text class="core-item-value">{{ currentStats.matches }}</text>
+              <text class="core-item-label">运动场次</text>
             </view>
-            <text class="stats-label">热量消耗</text>
-            <text class="stats-value">{{ currentStats.calories }}</text>
-            <text class="stats-unit">kcal</text>
-          </view>
-          <view class="stats-card">
-            <view class="stats-icon-box blue">
-              <text class="stats-icon">📍</text>
+            <view class="core-item">
+              <text class="core-item-value">{{ currentStats.calories }}</text>
+              <text class="core-item-label">热量(kcal)</text>
             </view>
-            <text class="stats-label">跑动距离</text>
-            <text class="stats-value">{{ currentStats.distance }}</text>
-            <text class="stats-unit">km</text>
-          </view>
-          <view class="stats-card">
-            <view class="stats-icon-box yellow-orange">
-              <text class="stats-icon">⚡</text>
+            <view class="core-item">
+              <text class="core-item-value">{{ currentStats.distance }}</text>
+              <text class="core-item-label">距离(km)</text>
             </view>
-            <text class="stats-label">冲刺次数</text>
-            <text class="stats-value">{{ currentStats.sprints }}</text>
-            <text class="stats-unit">次</text>
-          </view>
-          <view class="stats-card">
-            <view class="stats-icon-box purple">
-              <text class="stats-icon">⏱️</text>
+            <view class="core-item">
+              <text class="core-item-value">{{ currentStats.sprints }}</text>
+              <text class="core-item-label">冲刺次数</text>
             </view>
-            <text class="stats-label">运动时间</text>
-            <text class="stats-value">{{ currentStats.duration }}</text>
-            <text class="stats-unit">分钟</text>
-          </view>
-          <view class="stats-card">
-            <view class="stats-icon-box pink-red">
-              <text class="stats-icon">❤️</text>
+            <view class="core-item">
+              <text class="core-item-value">{{ currentStats.duration }}</text>
+              <text class="core-item-label">时长(分钟)</text>
             </view>
-            <text class="stats-label">最高心率</text>
-            <text class="stats-value">{{ currentStats.maxHeartRate }}</text>
-            <text class="stats-unit">bpm</text>
-          </view>
-          <view class="stats-card">
-            <view class="stats-icon-box green-teal">
-              <text class="stats-icon">❤️</text>
+            <view class="core-item">
+              <text class="core-item-value">{{ currentStats.maxHeartRate }}</text>
+              <text class="core-item-label">最高心率</text>
             </view>
-            <text class="stats-label">平均心率</text>
-            <text class="stats-value">{{ currentStats.avgHeartRate }}</text>
-            <text class="stats-unit">bpm</text>
+            <view class="core-item">
+              <text class="core-item-value">{{ currentStats.avgHeartRate }}</text>
+              <text class="core-item-label">平均心率</text>
+            </view>
+            <view class="core-item">
+              <text class="core-item-value">{{ currentStats.maxSpeed }}</text>
+              <text class="core-item-label">最高时速</text>
+            </view>
+            <view class="core-item">
+              <text class="core-item-value">{{ currentStats.avgSpeed }}</text>
+              <text class="core-item-label">平均时速</text>
+            </view>
           </view>
         </view>
       </view>
@@ -252,6 +229,8 @@ const currentStats = computed(() => {
   const totalDuration = Math.round(list.reduce((sum, s) => sum + ((s.endTime - s.startTime) / 60000), 0))
   const maxHR = list.length ? Math.max(...list.map(s => s.maxHeartRate || 0)) : 0
   const avgHR = list.length ? Math.round(list.reduce((sum, s) => sum + (s.avgHeartRate || 0), 0) / list.length) : 0
+  const maxSpeed = list.length ? Math.max(...list.map(s => s.maxSpeedKmh || 0)) : 0
+  const avgSpeed = list.length ? list.reduce((sum, s) => sum + (s.avgSpeedKmh || 0), 0) / list.length : 0
   return {
     matches: list.length,
     calories: totalCalories,
@@ -260,6 +239,8 @@ const currentStats = computed(() => {
     duration: totalDuration,
     maxHeartRate: maxHR,
     avgHeartRate: avgHR,
+    maxSpeed: maxSpeed ? maxSpeed.toFixed(1) : '0',
+    avgSpeed: avgSpeed ? avgSpeed.toFixed(1) : '0',
   }
 })
 
@@ -1116,121 +1097,48 @@ $textMuted: #666;
 }
 
 // ============================================================
-// Match Count Card
+// Core Stats Panel
 // ============================================================
-.match-count-card {
+.core-panel {
   background: $cardBg;
   border-radius: 32rpx;
-  padding: 36rpx 32rpx;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+  padding: 28rpx 24rpx;
   border: $border;
   box-shadow: 0 4rpx 24rpx rgba(0, 0, 0, 0.3);
 }
 
-.match-count-left {
-  display: flex;
-  flex-direction: column;
-}
-
-.match-count-label {
-  font-size: 28rpx;
-  color: #ccc;
-  margin-bottom: 8rpx;
-}
-
-.match-count-value {
-  font-size: 72rpx;
-  font-weight: 700;
-  color: $green;
-  line-height: 1;
-}
-
-.match-count-icon {
-  width: 112rpx;
-  height: 112rpx;
-  border-radius: 32rpx;
-  background: linear-gradient(135deg, $green, $greenDark);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 8rpx 24rpx rgba(7, 193, 96, 0.3);
-}
-
-.match-count-weekday {
-  font-size: 22rpx;
-  color: rgba(255, 255, 255, 0.85);
-  font-weight: 500;
-  line-height: 1;
-}
-
-.match-count-date {
-  font-size: 48rpx;
-  font-weight: 700;
+.core-panel-title {
+  font-size: 30rpx;
+  font-weight: 600;
   color: $textPrimary;
-  line-height: 1.1;
+  display: block;
+  margin-bottom: 24rpx;
+  padding-left: 4rpx;
 }
 
-// ============================================================
-// Stats Grid
-// ============================================================
-.stats-grid {
+.core-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16rpx;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 20rpx 0;
 }
 
-.stats-card {
-  background: $cardBg;
-  border-radius: 32rpx;
-  padding: 24rpx;
+.core-item {
   display: flex;
   flex-direction: column;
-  border: $border;
-  box-shadow: 0 4rpx 24rpx rgba(0, 0, 0, 0.3);
-}
-
-.stats-icon-box {
-  width: 72rpx;
-  height: 72rpx;
-  border-radius: 20rpx;
-  display: flex;
   align-items: center;
-  justify-content: center;
-  margin-bottom: 16rpx;
-  box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.2);
 }
 
-.orange-red { background: linear-gradient(135deg, #fb923c, #ef4444); }
-.blue { background: linear-gradient(135deg, #60a5fa, #3b82f6); }
-.yellow-orange { background: linear-gradient(135deg, #facc15, #f97316); }
-.purple { background: linear-gradient(135deg, #a78bfa, #7c3aed); }
-.pink-red { background: linear-gradient(135deg, #f472b6, #ef4444); }
-.green-teal { background: linear-gradient(135deg, #4ade80, #14b8a6); }
-
-.stats-icon {
-  font-size: 36rpx;
-}
-
-.stats-label {
-  font-size: 24rpx;
-  color: $textSecondary;
-  margin-bottom: 8rpx;
-}
-
-.stats-value {
-  font-size: 44rpx;
+.core-item-value {
+  font-size: 40rpx;
   font-weight: 700;
   color: $textPrimary;
   line-height: 1.1;
 }
 
-.stats-unit {
+.core-item-label {
   font-size: 22rpx;
   color: $textMuted;
-  margin-top: 4rpx;
+  margin-top: 6rpx;
 }
 
 // ============================================================
