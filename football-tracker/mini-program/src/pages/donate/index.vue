@@ -3,6 +3,9 @@
     <!-- Header -->
     <view class="header" :style="{ paddingTop: statusBarHeight + 'px' }">
       <view class="header-inner" :style="{ height: navBarHeight + 'px' }">
+        <view class="header-back" @tap="goBack">
+          <text class="header-back-icon">&#x2039;</text>
+        </view>
         <text class="header-title">打赏支持</text>
       </view>
     </view>
@@ -66,6 +69,10 @@ const amounts = [
 const selected = ref(500)
 const paying = ref(false)
 
+function goBack() {
+  uni.navigateBack()
+}
+
 async function handlePay() {
   if (paying.value) return
   paying.value = true
@@ -126,6 +133,23 @@ $textMuted: #666;
   display: flex;
   align-items: center;
   justify-content: center;
+  position: relative;
+}
+
+.header-back {
+  position: absolute;
+  left: 0;
+  width: 64rpx;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.header-back-icon {
+  font-size: 48rpx;
+  color: $textPrimary;
+  font-weight: 300;
 }
 
 .header-title {
