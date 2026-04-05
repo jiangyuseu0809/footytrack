@@ -217,7 +217,7 @@
         <!-- About -->
         <view class="about-section section--last">
           <text class="about-text">FootyTrack v1.0.0</text>
-          <text class="about-sub">记录每一次精彩瞬间</text>
+          <text class="about-sub">记录你的每一场球</text>
         </view>
       </template>
     </scroll-view>
