@@ -27,7 +27,7 @@ az vm run-command invoke \
     --resource-group "$RESOURCE_GROUP" \
     --name "$VM_NAME" \
     --command-id RunShellScript \
-    --scripts "cd /home/azureuser/football-tracker-server && docker compose up -d --build 2>&1 | tail -20" \
+    --scripts "cd /home/azureuser/footytrack-repo/server && docker compose up -d --build 2>&1 | tail -20" \
     --query "value[0].message" -o tsv
 
 echo "=== 部署完成 ==="
