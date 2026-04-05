@@ -60,15 +60,82 @@
 
         <!-- Monthly Goal -->
         <view class="section">
-          <view class="goal-card">
+          <!-- No goals set: prompt -->
+          <view v-if="!hasGoals" class="goal-card goal-prompt" @tap="openGoalModal">
+            <text class="goal-prompt-text">设置你的月度运动目标</text>
+            <view class="goal-prompt-btn">
+              <text class="goal-prompt-btn-text">设置目标</text>
+            </view>
+          </view>
+
+          <!-- Goals set: progress bars -->
+          <view v-else class="goal-card">
             <view class="goal-header">
               <text class="goal-title">本月目标</text>
-              <text class="goal-percent">{{ monthGoalPercent }}%</text>
+              <text class="goal-edit" @tap="openGoalModal">编辑</text>
             </view>
-            <view class="goal-bar-track">
-              <view class="goal-bar-fill" :style="{ width: monthGoalPercent + '%' }" />
+
+            <view v-if="goals.distance > 0" class="goal-row">
+              <view class="goal-row-top">
+                <text class="goal-row-label">距离</text>
+                <text class="goal-row-value">{{ monthDistance.toFixed(1) }}/{{ goals.distance }} km</text>
+              </view>
+              <view class="goal-bar-track">
+                <view class="goal-bar-fill" :style="{ width: goalPercent(monthDistance, goals.distance) + '%' }" />
+              </view>
+              <text class="goal-row-percent">{{ goalPercent(monthDistance, goals.distance) }}%</text>
             </view>
-            <text class="goal-desc">已完成 {{ monthSessions }}/{{ monthGoalTarget }} 场比赛，继续加油！</text>
+
+            <view v-if="goals.calories > 0" class="goal-row">
+              <view class="goal-row-top">
+                <text class="goal-row-label">热量</text>
+                <text class="goal-row-value">{{ Math.round(monthCalories) }}/{{ goals.calories }} kcal</text>
+              </view>
+              <view class="goal-bar-track">
+                <view class="goal-bar-fill" :style="{ width: goalPercent(monthCalories, goals.calories) + '%' }" />
+              </view>
+              <text class="goal-row-percent">{{ goalPercent(monthCalories, goals.calories) }}%</text>
+            </view>
+
+            <view v-if="goals.matches > 0" class="goal-row">
+              <view class="goal-row-top">
+                <text class="goal-row-label">场次</text>
+                <text class="goal-row-value">{{ monthSessions }}/{{ goals.matches }} 场</text>
+              </view>
+              <view class="goal-bar-track">
+                <view class="goal-bar-fill" :style="{ width: goalPercent(monthSessions, goals.matches) + '%' }" />
+              </view>
+              <text class="goal-row-percent">{{ goalPercent(monthSessions, goals.matches) }}%</text>
+            </view>
+          </view>
+        </view>
+
+        <!-- Goal Setting Modal -->
+        <view v-if="showGoalModal" class="modal-mask" @tap="showGoalModal = false">
+          <view class="modal-box" @tap.stop>
+            <text class="modal-title">设置月度目标</text>
+
+            <view class="modal-field">
+              <text class="modal-label">距离目标 (km)</text>
+              <input class="modal-input" type="digit" v-model="goalForm.distance" placeholder="0" />
+            </view>
+            <view class="modal-field">
+              <text class="modal-label">热量目标 (kcal)</text>
+              <input class="modal-input" type="digit" v-model="goalForm.calories" placeholder="0" />
+            </view>
+            <view class="modal-field">
+              <text class="modal-label">场次目标</text>
+              <input class="modal-input" type="number" v-model="goalForm.matches" placeholder="0" />
+            </view>
+
+            <view class="modal-actions">
+              <view class="modal-btn modal-btn--cancel" @tap="showGoalModal = false">
+                <text class="modal-btn-text">取消</text>
+              </view>
+              <view class="modal-btn modal-btn--confirm" @tap="saveGoals">
+                <text class="modal-btn-text modal-btn-text--confirm">确定</text>
+              </view>
+            </view>
           </view>
         </view>
 
@@ -158,7 +225,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, reactive, computed } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import {
   getProfile, getSessions, getPlayerAnalysis, getEarnedBadges,
@@ -169,6 +236,7 @@ import { formatDistance } from '../../utils/format'
 
 const CACHE_PROFILE = 'cache_profile'
 const CACHE_PROFILE_SESSIONS = 'cache_profile_sessions'
+const GOAL_KEY = 'monthly_goals'
 
 const profile = ref<UserProfile | null>(null)
 const sessions = ref<SessionDto[]>([])
@@ -206,8 +274,49 @@ const monthSessions = computed(() => {
   return sessions.value.filter(s => s.startTime >= monthStart).length
 })
 
-const monthGoalTarget = 12
-const monthGoalPercent = computed(() => Math.min(100, Math.round((monthSessions.value / monthGoalTarget) * 100)))
+const monthDistance = computed(() => {
+  const now = new Date()
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).getTime()
+  const meters = sessions.value.filter(s => s.startTime >= monthStart).reduce((sum, s) => sum + (s.totalDistanceMeters || 0), 0)
+  return meters / 1000
+})
+
+const monthCalories = computed(() => {
+  const now = new Date()
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).getTime()
+  return sessions.value.filter(s => s.startTime >= monthStart).reduce((sum, s) => sum + (s.caloriesBurned || 0), 0)
+})
+
+// Monthly goals
+const savedGoals = uni.getStorageSync(GOAL_KEY)
+const goals = ref<{ distance: number; calories: number; matches: number }>(
+  savedGoals ? savedGoals : { distance: 0, calories: 0, matches: 0 }
+)
+const hasGoals = computed(() => goals.value.distance > 0 || goals.value.calories > 0 || goals.value.matches > 0)
+const showGoalModal = ref(false)
+const goalForm = reactive({ distance: 0, calories: 0, matches: 0 })
+
+function goalPercent(current: number, target: number) {
+  if (target <= 0) return 0
+  return Math.min(100, Math.round((current / target) * 100))
+}
+
+function openGoalModal() {
+  goalForm.distance = goals.value.distance
+  goalForm.calories = goals.value.calories
+  goalForm.matches = goals.value.matches
+  showGoalModal.value = true
+}
+
+function saveGoals() {
+  goals.value = {
+    distance: Number(goalForm.distance) || 0,
+    calories: Number(goalForm.calories) || 0,
+    matches: Number(goalForm.matches) || 0,
+  }
+  uni.setStorageSync(GOAL_KEY, goals.value)
+  showGoalModal.value = false
+}
 
 const earnedCount = computed(() => earnedBadges.value.length)
 const totalBadges = computed(() => allBadges.value.length)
@@ -487,11 +596,35 @@ $textMuted: #666;
   box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.2);
 }
 
+.goal-prompt {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24rpx;
+}
+
+.goal-prompt-text {
+  font-size: 28rpx;
+  color: $textSecondary;
+}
+
+.goal-prompt-btn {
+  background: linear-gradient(135deg, $green, $greenDark);
+  padding: 16rpx 48rpx;
+  border-radius: 100rpx;
+}
+
+.goal-prompt-btn-text {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #FFFFFF;
+}
+
 .goal-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 16rpx;
+  margin-bottom: 24rpx;
 }
 
 .goal-title {
@@ -500,7 +633,30 @@ $textMuted: #666;
   color: $textPrimary;
 }
 
-.goal-percent {
+.goal-edit {
+  font-size: 24rpx;
+  color: $green;
+}
+
+.goal-row {
+  margin-bottom: 20rpx;
+  &:last-child { margin-bottom: 0; }
+}
+
+.goal-row-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8rpx;
+}
+
+.goal-row-label {
+  font-size: 26rpx;
+  color: $textPrimary;
+  font-weight: 500;
+}
+
+.goal-row-value {
   font-size: 24rpx;
   color: $textSecondary;
 }
@@ -511,7 +667,7 @@ $textMuted: #666;
   background: #2a2a2a;
   border-radius: 6rpx;
   overflow: hidden;
-  margin-bottom: 12rpx;
+  margin-bottom: 4rpx;
 }
 
 .goal-bar-fill {
@@ -519,11 +675,104 @@ $textMuted: #666;
   background: linear-gradient(90deg, $green, $greenDark);
   border-radius: 6rpx;
   box-shadow: 0 0 12rpx rgba(7, 193, 96, 0.5);
+  transition: width 0.3s;
 }
 
-.goal-desc {
-  font-size: 24rpx;
+.goal-row-percent {
+  font-size: 22rpx;
+  color: $textMuted;
+  display: block;
+  text-align: right;
+}
+
+// ============================================================
+// Goal Modal
+// ============================================================
+.modal-mask {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+}
+
+.modal-box {
+  width: 600rpx;
+  background: $cardBg;
+  border-radius: 32rpx;
+  padding: 40rpx;
+  border: 1rpx solid #2a2a2a;
+}
+
+.modal-title {
+  font-size: 32rpx;
+  font-weight: 700;
+  color: $textPrimary;
+  display: block;
+  text-align: center;
+  margin-bottom: 32rpx;
+}
+
+.modal-field {
+  margin-bottom: 24rpx;
+}
+
+.modal-label {
+  font-size: 26rpx;
   color: $textSecondary;
+  display: block;
+  margin-bottom: 8rpx;
+}
+
+.modal-input {
+  width: 100%;
+  height: 80rpx;
+  background: $pageBg;
+  border: 1rpx solid #2a2a2a;
+  border-radius: 16rpx;
+  padding: 0 24rpx;
+  font-size: 28rpx;
+  color: $textPrimary;
+  box-sizing: border-box;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 16rpx;
+  margin-top: 32rpx;
+}
+
+.modal-btn {
+  flex: 1;
+  height: 80rpx;
+  border-radius: 100rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-btn--cancel {
+  background: #252525;
+  border: 1rpx solid #2a2a2a;
+}
+
+.modal-btn--confirm {
+  background: linear-gradient(135deg, $green, $greenDark);
+}
+
+.modal-btn-text {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: $textSecondary;
+}
+
+.modal-btn-text--confirm {
+  color: #FFFFFF;
 }
 
 // ============================================================
