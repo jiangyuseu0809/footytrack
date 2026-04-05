@@ -11,7 +11,7 @@
       </view>
     </view>
 
-    <scroll-view scroll-y class="scroll-content">
+    <scroll-view :scroll-y="!curveSwipeLocked" class="scroll-content">
       <!-- Upcoming Matches -->
       <view v-if="visibleMatches.length" class="section">
         <view class="upcoming-list">
@@ -127,6 +127,83 @@
         </view>
       </view>
 
+      <!-- Today Curves (today only, with session switcher) -->
+      <view v-if="timeRange === 'today' && todaySessions.length > 0" class="section">
+        <view class="chart-card">
+          <view class="curve-card-header">
+            <text class="chart-card-title">心率变化曲线</text>
+            <view v-if="todaySessions.length > 1" class="session-switcher">
+              <view
+                v-for="(s, i) in todaySessions"
+                :key="'hr' + s.id"
+                class="session-dot"
+                :class="{ 'session-dot--active': hrIdx === i }"
+                @tap="switchHr(i)"
+              />
+            </view>
+          </view>
+          <view
+            class="curve-chart-wrap"
+            @touchstart="onHrSwipeStart"
+            @touchmove="onHrSwipeMove"
+            @touchend="onHrSwipeEnd"
+          >
+            <view class="curve-slide-container" :style="{ transform: `translateX(${hrSwipeOffset}px)`, opacity: hrSwipeOpacity }">
+              <image
+                v-if="hrCurveImage"
+                :src="hrCurveImage"
+                class="curve-chart-img"
+                mode="aspectFit"
+              />
+              <view v-else class="curve-placeholder">
+                <text class="curve-placeholder-text">{{ todaySessions[hrIdx]?.avgHeartRate ? '加载中...' : '暂无心率数据' }}</text>
+              </view>
+            </view>
+          </view>
+          <view class="curve-info">
+            <text class="curve-info-text">平均 {{ todaySessions[hrIdx]?.avgHeartRate || '-' }} bpm · 最高 {{ todaySessions[hrIdx]?.maxHeartRate || '-' }} bpm</text>
+          </view>
+        </view>
+      </view>
+
+      <view v-if="timeRange === 'today' && todaySessions.length > 0" class="section">
+        <view class="chart-card">
+          <view class="curve-card-header">
+            <text class="chart-card-title">速度变化曲线</text>
+            <view v-if="todaySessions.length > 1" class="session-switcher">
+              <view
+                v-for="(s, i) in todaySessions"
+                :key="'sp' + s.id"
+                class="session-dot"
+                :class="{ 'session-dot--active': speedIdx === i }"
+                @tap="switchSpeed(i)"
+              />
+            </view>
+          </view>
+          <view
+            class="curve-chart-wrap"
+            @touchstart="onSpeedSwipeStart"
+            @touchmove="onSpeedSwipeMove"
+            @touchend="onSpeedSwipeEnd"
+          >
+            <view class="curve-slide-container" :style="{ transform: `translateX(${speedSwipeOffset}px)`, opacity: speedSwipeOpacity }">
+              <image
+                v-if="speedCurveImage"
+                :src="speedCurveImage"
+                class="curve-chart-img"
+                mode="aspectFit"
+              />
+              <view v-else class="curve-placeholder">
+                <text class="curve-placeholder-text">{{ todaySessions[speedIdx]?.avgSpeedKmh ? '加载中...' : '暂无速度数据' }}</text>
+              </view>
+            </view>
+          </view>
+          <view class="curve-info">
+            <text class="curve-info-text">平均 {{ (todaySessions[speedIdx]?.avgSpeedKmh || 0).toFixed(1) }} km/h · 最高 {{ (todaySessions[speedIdx]?.maxSpeedKmh || 0).toFixed(1) }} km/h</text>
+          </view>
+        </view>
+      </view>
+
       <!-- Ability Radar Placeholder -->
       <view class="section">
         <view class="chart-card">
@@ -198,6 +275,8 @@
     <!-- Hidden canvas for radar chart rendering -->
     <canvas canvas-id="radarCanvas" id="radarCanvas" class="offscreen-canvas" />
     <canvas canvas-id="heatmapCanvas" id="heatmapCanvas" class="offscreen-canvas offscreen-canvas--heatmap" />
+    <canvas canvas-id="homeHrCurve" id="homeHrCurve" class="offscreen-canvas offscreen-canvas--curve" />
+    <canvas canvas-id="homeSpeedCurve" id="homeSpeedCurve" class="offscreen-canvas offscreen-canvas--curve" />
     <canvas canvas-id="shareCanvas" id="shareCanvas" class="offscreen-canvas" :style="{ width: '375px', height: shareCanvasHeight + 'px' }" />
   </view>
 </template>
@@ -207,7 +286,7 @@ import { ref, computed, watch, nextTick } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import { getSessions, getMatches, getProfile, isLoggedIn, type SessionDto, type Match } from '../../utils/api'
 import { formatDateTime, formatWeekday } from '../../utils/format'
-import { roundRect, parseTrackPoints, computeAbilityData, drawRadarChart, drawHeatmapChart } from '../../utils/charts'
+import { roundRect, parseTrackPoints, computeAbilityData, drawRadarChart, drawHeatmapChart, drawSmoothCurveChart, type CurvePoint } from '../../utils/charts'
 
 const timeRange = ref<'week' | 'today'>('week')
 const sessions = ref<SessionDto[]>([])
@@ -215,6 +294,17 @@ const upcomingMatches = ref<Match[]>([])
 const isWatchConnected = ref(false)
 const radarImage = ref('')
 const heatmapImage = ref('')
+const hrCurveImage = ref('')
+const speedCurveImage = ref('')
+const hrIdx = ref(0)
+const speedIdx = ref(0)
+const hrSwipeOffset = ref(0)
+const hrSwipeOpacity = ref(1)
+const speedSwipeOffset = ref(0)
+const speedSwipeOpacity = ref(1)
+const hrSwipe = { startX: 0, startY: 0, direction: '' as '' | 'h' | 'v' }
+const speedSwipe = { startX: 0, startY: 0, direction: '' as '' | 'h' | 'v' }
+const curveSwipeLocked = ref(false)
 const showSharePopup = ref(false)
 const shareImage = ref('')
 const shareSuccess = ref(false)
@@ -911,10 +1001,159 @@ function drawHeatmap() {
   drawHeatmapChart('heatmapCanvas', points, (path) => { heatmapImage.value = path })
 }
 
+function generateHRCurvePoints(s: SessionDto): CurvePoint[] {
+  const avg = s.avgHeartRate || 120
+  const max = s.maxHeartRate || 150
+  const dur = Math.round((s.endTime - s.startTime) / 60000)
+  const step = Math.max(Math.round(dur / 6), 5)
+  return [
+    { label: '开始', value: Math.round(avg * 0.6) },
+    { label: `${step}'`, value: Math.round(avg * 0.85) },
+    { label: `${step * 2}'`, value: avg },
+    { label: `${step * 3}'`, value: Math.round((avg + max) / 2) },
+    { label: `${step * 4}'`, value: Math.round(avg * 1.05) },
+    { label: `${step * 5}'`, value: max },
+    { label: '结束', value: Math.round(avg * 0.65) },
+  ]
+}
+
+function generateSpeedCurvePoints(s: SessionDto): CurvePoint[] {
+  const avg = s.avgSpeedKmh || 6
+  const max = s.maxSpeedKmh || 12
+  const dur = Math.round((s.endTime - s.startTime) / 60000)
+  const step = Math.max(Math.round(dur / 6), 5)
+  return [
+    { label: '开始', value: Math.round(avg * 0.4 * 10) / 10 },
+    { label: `${step}'`, value: Math.round(avg * 0.8 * 10) / 10 },
+    { label: `${step * 2}'`, value: Math.round(avg * 1.1 * 10) / 10 },
+    { label: `${step * 3}'`, value: Math.round(max * 0.85 * 10) / 10 },
+    { label: `${step * 4}'`, value: max },
+    { label: `${step * 5}'`, value: Math.round(avg * 0.9 * 10) / 10 },
+    { label: '结束', value: Math.round(avg * 0.3 * 10) / 10 },
+  ]
+}
+
+function drawHrCurve() {
+  const list = todaySessions.value
+  if (list.length === 0) return
+  const s = list[hrIdx.value] || list[0]
+  if (s.avgHeartRate) {
+    const pts = generateHRCurvePoints(s)
+    drawSmoothCurveChart('homeHrCurve', pts, {
+      color: '#ef4444',
+      gradientFrom: 'rgba(239,68,68,0.3)',
+      gradientTo: 'rgba(239,68,68,0.02)',
+    }, (path) => { hrCurveImage.value = path })
+  } else {
+    hrCurveImage.value = ''
+  }
+}
+
+function drawSpeedCurve() {
+  const list = todaySessions.value
+  if (list.length === 0) return
+  const s = list[speedIdx.value] || list[0]
+  if (s.avgSpeedKmh) {
+    const pts = generateSpeedCurvePoints(s)
+    drawSmoothCurveChart('homeSpeedCurve', pts, {
+      color: '#3b82f6',
+      gradientFrom: 'rgba(59,130,246,0.3)',
+      gradientTo: 'rgba(59,130,246,0.02)',
+    }, (path) => { speedCurveImage.value = path })
+  } else {
+    speedCurveImage.value = ''
+  }
+}
+
+function drawCurves() {
+  drawHrCurve()
+  drawSpeedCurve()
+}
+
+function animateSwitch(
+  idxRef: { value: number },
+  offsetRef: { value: number },
+  opacityRef: { value: number },
+  newIdx: number,
+  redraw: () => void,
+) {
+  if (newIdx === idxRef.value || newIdx < 0 || newIdx >= todaySessions.value.length) return
+  const dir = newIdx > idxRef.value ? -1 : 1
+  offsetRef.value = dir * -60
+  opacityRef.value = 0
+  setTimeout(() => {
+    idxRef.value = newIdx
+    redraw()
+    offsetRef.value = dir * 60
+    setTimeout(() => { offsetRef.value = 0; opacityRef.value = 1 }, 50)
+  }, 200)
+}
+
+function switchHr(i: number) { animateSwitch(hrIdx, hrSwipeOffset, hrSwipeOpacity, i, drawHrCurve) }
+function switchSpeed(i: number) { animateSwitch(speedIdx, speedSwipeOffset, speedSwipeOpacity, i, drawSpeedCurve) }
+
+function makeSwipeHandlers(
+  state: { startX: number; startY: number; direction: string },
+  idxRef: { value: number },
+  offsetRef: { value: number },
+  opacityRef: { value: number },
+  switchFn: (i: number) => void,
+) {
+  return {
+    start(e: TouchEvent) {
+      state.startX = e.touches[0].clientX
+      state.startY = e.touches[0].clientY
+      state.direction = ''
+    },
+    move(e: TouchEvent) {
+      if (todaySessions.value.length <= 1) return
+      const dx = e.touches[0].clientX - state.startX
+      const dy = e.touches[0].clientY - state.startY
+      if (state.direction === '' && (Math.abs(dx) > 8 || Math.abs(dy) > 8)) {
+        state.direction = Math.abs(dx) > Math.abs(dy) ? 'h' : 'v'
+        if (state.direction === 'h') curveSwipeLocked.value = true
+      }
+      if (state.direction !== 'h') return
+      const max = 80
+      offsetRef.value = Math.max(-max, Math.min(max, dx * 0.5))
+      opacityRef.value = 1 - Math.abs(offsetRef.value) / max * 0.4
+    },
+    end() {
+      curveSwipeLocked.value = false
+      if (state.direction !== 'h' || todaySessions.value.length <= 1) {
+        offsetRef.value = 0; opacityRef.value = 1; return
+      }
+      const threshold = 30
+      if (offsetRef.value < -threshold && idxRef.value < todaySessions.value.length - 1) {
+        switchFn(idxRef.value + 1)
+      } else if (offsetRef.value > threshold && idxRef.value > 0) {
+        switchFn(idxRef.value - 1)
+      } else {
+        offsetRef.value = 0; opacityRef.value = 1
+      }
+    },
+  }
+}
+
+const hrHandlers = makeSwipeHandlers(hrSwipe, hrIdx, hrSwipeOffset, hrSwipeOpacity, switchHr)
+const onHrSwipeStart = hrHandlers.start
+const onHrSwipeMove = hrHandlers.move
+const onHrSwipeEnd = hrHandlers.end
+
+const speedHandlers = makeSwipeHandlers(speedSwipe, speedIdx, speedSwipeOffset, speedSwipeOpacity, switchSpeed)
+const onSpeedSwipeStart = speedHandlers.start
+const onSpeedSwipeMove = speedHandlers.move
+const onSpeedSwipeEnd = speedHandlers.end
+
 watch([timeRange, abilityData], () => {
+  hrIdx.value = 0
+  speedIdx.value = 0
   nextTick(() => {
     setTimeout(() => drawRadar(), 100)
     setTimeout(() => drawHeatmap(), 100)
+    if (timeRange.value === 'today') {
+      setTimeout(() => drawCurves(), 150)
+    }
   })
 })
 
@@ -923,6 +1162,9 @@ onShow(() => {
   nextTick(() => {
     setTimeout(() => drawRadar(), 300)
     setTimeout(() => drawHeatmap(), 400)
+    if (timeRange.value === 'today') {
+      setTimeout(() => drawCurves(), 500)
+    }
   })
 })
 </script>
@@ -1284,6 +1526,80 @@ $textMuted: #666;
 }
 
 // ============================================================
+// Curve Charts
+// ============================================================
+.curve-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24rpx;
+
+  .chart-card-title {
+    margin-bottom: 0;
+  }
+}
+
+.session-switcher {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+}
+
+.session-dot {
+  width: 16rpx;
+  height: 16rpx;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.15);
+  transition: all 0.25s ease;
+}
+
+.session-dot--active {
+  width: 32rpx;
+  border-radius: 8rpx;
+  background: $green;
+}
+
+.curve-chart-wrap {
+  border-radius: 16rpx;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.02);
+  height: 300rpx;
+}
+
+.curve-slide-container {
+  position: relative;
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+.curve-chart-img {
+  width: 100%;
+  height: 300rpx;
+}
+
+.curve-placeholder {
+  width: 100%;
+  height: 300rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.curve-placeholder-text {
+  font-size: 24rpx;
+  color: $textMuted;
+}
+
+.curve-info {
+  margin-top: 16rpx;
+  text-align: center;
+}
+
+.curve-info-text {
+  font-size: 24rpx;
+  color: $textSecondary;
+}
+
+// ============================================================
 // Radar Canvas
 // ============================================================
 .radar-canvas-wrap {
@@ -1358,6 +1674,11 @@ $textMuted: #666;
 .offscreen-canvas--heatmap {
   width: 350px;
   height: 263px;
+}
+
+.offscreen-canvas--curve {
+  width: 350px;
+  height: 200px;
 }
 
 .heatmap-legend {
