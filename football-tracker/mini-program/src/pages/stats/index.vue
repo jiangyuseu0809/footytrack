@@ -359,12 +359,16 @@ $textMuted: #666;
 .swipe-wrapper {
   position: relative;
   margin-bottom: 16rpx;
+  overflow: hidden;
+  border-radius: 32rpx;
 }
 
 .swipe-content {
   position: relative;
   z-index: 1;
   transition: transform 0.2s ease;
+  background: $pageBg;
+  border-radius: 32rpx;
 }
 
 .swipe-delete-btn {
