@@ -16,7 +16,8 @@ data class UserRow(
     val age: Int,
     val avatarUrl: String?,
     val authProvider: String,
-    val createdAt: Long
+    val createdAt: Long,
+    val watchBoundAt: Long?
 )
 
 class UserService {
@@ -92,6 +93,12 @@ class UserService {
         }
     }
 
+    fun markWatchBound(uid: UUID) = transaction {
+        UsersTable.update({ UsersTable.uid eq uid }) {
+            it[UsersTable.watchBoundAt] = System.currentTimeMillis()
+        }
+    }
+
     private fun ResultRow.toUserRow() = UserRow(
         uid = this[UsersTable.uid],
         phone = this[UsersTable.phone],
@@ -102,6 +109,7 @@ class UserService {
         age = this[UsersTable.age],
         avatarUrl = this[UsersTable.avatarUrl],
         authProvider = this[UsersTable.authProvider],
-        createdAt = this[UsersTable.createdAt]
+        createdAt = this[UsersTable.createdAt],
+        watchBoundAt = this[UsersTable.watchBoundAt]
     )
 }

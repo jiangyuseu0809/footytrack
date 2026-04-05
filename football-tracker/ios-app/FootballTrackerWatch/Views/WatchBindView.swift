@@ -67,18 +67,27 @@ struct WatchBindView: View {
                 WatchApiClient.shared.uid = result.uid
 
                 await MainActor.run {
-                    PhoneSync.shared.isAuthenticated = true
                     success = true
+                    isLoading = false
                 }
 
-                // Flush queued sessions
-                let synced = await WatchSessionQueue.shared.flushQueue()
-                if synced > 0 {
-                    print("[WatchBind] Flushed \(synced) queued sessions after bind")
+                // Brief delay so user sees success state, then dismiss and update auth
+                try? await Task.sleep(nanoseconds: 800_000_000)
+                await MainActor.run {
+                    dismiss()
+                    // Update auth state after dismiss to avoid view conflict
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                        PhoneSync.shared.isAuthenticated = true
+                    }
                 }
 
-                try? await Task.sleep(nanoseconds: 1_500_000_000)
-                await MainActor.run { dismiss() }
+                // Flush queued sessions in background (non-blocking)
+                Task.detached(priority: .background) {
+                    let synced = await WatchSessionQueue.shared.flushQueue()
+                    if synced > 0 {
+                        print("[WatchBind] Flushed \(synced) queued sessions after bind")
+                    }
+                }
             } catch {
                 await MainActor.run {
                     errorMessage = error.localizedDescription
@@ -96,6 +105,7 @@ struct WatchBindView: View {
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.timeoutInterval = 15
         request.httpBody = try JSONEncoder().encode(BindRequest(code: code))
 
         let (data, response) = try await URLSession.shared.data(for: request)

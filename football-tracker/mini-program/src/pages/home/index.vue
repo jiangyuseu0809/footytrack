@@ -215,7 +215,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, nextTick } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
-import { getSessions, getMatches, isLoggedIn, type SessionDto, type Match } from '../../utils/api'
+import { getSessions, getMatches, getProfile, isLoggedIn, type SessionDto, type Match } from '../../utils/api'
 import { formatDateTime, formatWeekday } from '../../utils/format'
 
 const timeRange = ref<'week' | 'today'>('week')
@@ -295,9 +295,10 @@ const abilityData = computed(() => {
 async function loadData() {
   if (!isLoggedIn()) return
   try {
-    const [sessRes, matchRes] = await Promise.all([getSessions(), getMatches()])
+    const [sessRes, matchRes, profile] = await Promise.all([getSessions(), getMatches(), getProfile()])
     sessions.value = sessRes.sessions
     upcomingMatches.value = matchRes.matches
+    isWatchConnected.value = !!profile.watchBoundAt
   } catch (e) {
     console.error('Failed to load home data', e)
   }

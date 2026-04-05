@@ -168,6 +168,7 @@ fun Route.authRoutes(
                 return@post
             }
 
+            userService.markWatchBound(java.util.UUID.fromString(uid))
             val token = jwtService.generateToken(uid)
             call.respond(BindTokenResponse(token = token, uid = uid))
         }

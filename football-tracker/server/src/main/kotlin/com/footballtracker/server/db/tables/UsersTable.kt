@@ -14,6 +14,7 @@ object UsersTable : Table("users") {
     val avatarUrl = varchar("avatar_url", 500).nullable()
     val authProvider = varchar("auth_provider", 20)  // "phone" | "wechat" | "password"
     val createdAt = long("created_at").default(System.currentTimeMillis())
+    val watchBoundAt = long("watch_bound_at").nullable()
 
     override val primaryKey = PrimaryKey(uid)
 }

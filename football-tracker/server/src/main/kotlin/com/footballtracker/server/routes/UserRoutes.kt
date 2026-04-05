@@ -24,7 +24,8 @@ data class UserProfileResponse(
     val age: Int,
     val avatarUrl: String?,
     val authProvider: String,
-    val createdAt: Long
+    val createdAt: Long,
+    val watchBoundAt: Long? = null
 )
 
 @Serializable
@@ -57,7 +58,8 @@ fun Route.userRoutes(userService: UserService, avatarConfig: AvatarConfig) {
                 age = user.age,
                 avatarUrl = user.avatarUrl,
                 authProvider = user.authProvider,
-                createdAt = user.createdAt
+                createdAt = user.createdAt,
+                watchBoundAt = user.watchBoundAt
             ))
         }
 
@@ -77,7 +79,8 @@ fun Route.userRoutes(userService: UserService, avatarConfig: AvatarConfig) {
                 age = user.age,
                 avatarUrl = user.avatarUrl,
                 authProvider = user.authProvider,
-                createdAt = user.createdAt
+                createdAt = user.createdAt,
+                watchBoundAt = user.watchBoundAt
             ))
         }
 

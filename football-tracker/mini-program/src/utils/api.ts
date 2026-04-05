@@ -115,6 +115,7 @@ export interface UserProfile {
   avatarUrl?: string
   authProvider: string
   createdAt: number
+  watchBoundAt?: number
 }
 
 export async function getProfile(): Promise<UserProfile> {
