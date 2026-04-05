@@ -13,10 +13,12 @@ struct FootballTrackerWatchApp: App {
 
     var body: some Scene {
         WindowGroup {
-            if trackingManager.showSummary {
+            if !phoneSync.isAuthenticated {
+                WatchBindView()
+            } else if trackingManager.showSummary {
                 WatchSummaryView(manager: trackingManager)
             } else {
-                WatchTrackingView(manager: trackingManager, isAuthenticated: phoneSync.isAuthenticated)
+                WatchTrackingView(manager: trackingManager)
             }
         }
     }

@@ -3,8 +3,6 @@ import SwiftUI
 /// Main tracking view for watchOS - shows real-time stats during a football session.
 struct WatchTrackingView: View {
     @ObservedObject var manager: TrackingManager
-    var isAuthenticated: Bool
-    @State private var showBindView = false
 
     var body: some View {
         if manager.isTracking {
@@ -18,16 +16,6 @@ struct WatchTrackingView: View {
 
     private var startView: some View {
         VStack {
-            if !isAuthenticated {
-                Button(action: { showBindView = true }) {
-                    Text("输入绑定码登录")
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundColor(.green)
-                }
-                .buttonStyle(.plain)
-                .padding(.top, 8)
-            }
-
             Spacer()
             Button(action: { manager.startTracking() }) {
                 Text("开始踢球")
@@ -35,11 +23,10 @@ struct WatchTrackingView: View {
                     .foregroundColor(.white)
                     .frame(width: 120, height: 120)
                     .background(
-                        Circle().fill(isAuthenticated ? .green : .gray)
+                        Circle().fill(.green)
                     )
             }
             .buttonStyle(.plain)
-            .disabled(!isAuthenticated)
             Spacer()
 
             let pendingCount = WatchSessionQueue.shared.pendingCount
@@ -49,9 +36,6 @@ struct WatchTrackingView: View {
                     .foregroundColor(.yellow)
                     .padding(.bottom, 4)
             }
-        }
-        .sheet(isPresented: $showBindView) {
-            WatchBindView()
         }
     }
 
