@@ -24,6 +24,7 @@
 
     <!-- Main Content -->
     <scroll-view v-else-if="loaded && circles.length > 0" scroll-y class="scroll-area">
+      <view class="content-fade" :class="{ 'content-fade--visible': contentVisible }">
       <!-- Circle Info Card -->
       <view v-if="selectedCircle" class="section">
         <view class="info-card" :style="{ background: getCircleGradient(selectedCircle.id) }">
@@ -44,33 +45,8 @@
                   <text class="info-subtitle">{{ timePeriodLabel }}运动数据PK</text>
                 </view>
               </view>
-              <view class="info-switch-btn" @tap.stop="showCircleList = !showCircleList">
+              <view v-if="circles.length > 1" class="info-switch-btn" @tap.stop="toggleCircleList">
                 <text class="info-switch-icon">⇄</text>
-              </view>
-            </view>
-
-            <!-- Circle Switch Dropdown (inside card) -->
-            <view v-if="showCircleList" class="info-dropdown">
-              <view
-                v-for="circle in circles"
-                :key="circle.id"
-                class="dropdown-item"
-                :class="{ 'dropdown-item--active': circle.id === selectedCircleId }"
-                @tap.stop="selectCircle(circle.id)"
-              >
-                <view class="dropdown-avatar" :style="{ background: circle.avatarUrl ? '' : getCircleGradient(circle.id) }">
-                  <image v-if="circle.avatarUrl" :src="circle.avatarUrl" class="dropdown-avatar-img" mode="aspectFill" />
-                  <text v-else class="dropdown-avatar-icon">⚽</text>
-                </view>
-                <view class="dropdown-info">
-                  <text class="dropdown-name" :class="{ 'dropdown-name--active': circle.id === selectedCircleId }">{{ circle.name }}</text>
-                  <text class="dropdown-count">{{ circle.memberCount }} 位成员</text>
-                </view>
-              </view>
-              <view class="dropdown-actions">
-                <view class="dropdown-action" @tap.stop="showJoinModal = true; showCircleList = false">
-                  <text class="dropdown-action-text">+ 加入圈子</text>
-                </view>
               </view>
             </view>
             <view class="info-stats">
@@ -211,6 +187,7 @@
           <text class="leave-btn-text">退出圈子</text>
         </view>
       </view>
+      </view>
     </scroll-view>
 
     <!-- FAB: Create Circle -->
@@ -267,23 +244,58 @@
         </view>
       </view>
     </view>
+
+    <!-- Circle Switcher Popup (floating from top-right) -->
+    <view v-if="showCircleList" class="switcher-mask" @tap="showCircleList = false">
+      <view class="switcher-popup" :class="{ 'switcher-popup--show': circleListVisible }" @tap.stop>
+        <view class="switcher-header">
+          <text class="switcher-title">切换圈子</text>
+        </view>
+        <scroll-view scroll-y class="switcher-list">
+          <view
+            v-for="circle in circles"
+            :key="circle.id"
+            class="switcher-item"
+            :class="{ 'switcher-item--active': circle.id === selectedCircleId }"
+            @tap.stop="selectCircle(circle.id)"
+          >
+            <view class="switcher-avatar" :style="{ background: circle.avatarUrl ? '' : getCircleGradient(circle.id) }">
+              <image v-if="circle.avatarUrl" :src="circle.avatarUrl" class="switcher-avatar-img" mode="aspectFill" />
+              <text v-else class="switcher-avatar-icon">⚽</text>
+            </view>
+            <view class="switcher-info">
+              <text class="switcher-name">{{ circle.name }}</text>
+              <text class="switcher-count">{{ circle.memberCount }} 位成员</text>
+            </view>
+            <text v-if="circle.id === selectedCircleId" class="switcher-check">✓</text>
+          </view>
+        </scroll-view>
+        <view class="switcher-footer" @tap.stop="showJoinModal = true; showCircleList = false">
+          <text class="switcher-footer-text">+ 加入圈子</text>
+        </view>
+      </view>
+    </view>
   </view>
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch, nextTick } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import {
   getCircles, createCircle, joinCircle, getCircleDetail, leaveCircle, uploadCircleAvatar,
   isLoggedIn, getUid, type Circle, type CircleMember,
 } from '../../utils/api'
 
+const STORAGE_KEY = 'selected_circle_id'
+
 const loading = ref(false)
 const loaded = ref(false)
 const circles = ref<Circle[]>([])
-const selectedCircleId = ref('')
+const selectedCircleId = ref(uni.getStorageSync(STORAGE_KEY) || '')
 const members = ref<CircleMember[]>([])
 const showCircleList = ref(false)
+const circleListVisible = ref(false)
+const contentVisible = ref(true)
 const showCreateModal = ref(false)
 const showJoinModal = ref(false)
 const showInviteInfo = ref(false)
@@ -291,6 +303,15 @@ const newCircleName = ref('')
 const joinCode = ref('')
 const selectedStat = ref<'distance' | 'calories' | 'sprints' | 'duration'>('distance')
 const timePeriod = ref<'day' | 'week' | 'month' | 'year'>('week')
+
+// Persist selected circle ID
+watch(selectedCircleId, (val) => {
+  if (val) {
+    uni.setStorageSync(STORAGE_KEY, val)
+  } else {
+    uni.removeStorageSync(STORAGE_KEY)
+  }
+})
 
 const timePeriodLabel = computed(() => {
   switch (timePeriod.value) {
@@ -372,10 +393,33 @@ function getRankClass(rank: number): string {
   return ''
 }
 
+function toggleCircleList() {
+  if (showCircleList.value) {
+    circleListVisible.value = false
+    setTimeout(() => { showCircleList.value = false }, 200)
+  } else {
+    showCircleList.value = true
+    nextTick(() => { circleListVisible.value = true })
+  }
+}
+
 function selectCircle(id: string) {
-  selectedCircleId.value = id
-  showCircleList.value = false
-  loadCircleDetail(id)
+  if (id === selectedCircleId.value) {
+    circleListVisible.value = false
+    setTimeout(() => { showCircleList.value = false }, 200)
+    return
+  }
+  // Fade out content
+  contentVisible.value = false
+  circleListVisible.value = false
+  setTimeout(() => {
+    showCircleList.value = false
+    selectedCircleId.value = id
+    loadCircleDetail(id).then(() => {
+      // Fade in content
+      nextTick(() => { contentVisible.value = true })
+    })
+  }, 200)
 }
 
 function switchPeriod(period: 'day' | 'week' | 'month' | 'year') {
@@ -742,7 +786,7 @@ $textMuted: #666;
 }
 
 .info-avatar--editable {
-  border: 2rpx dashed rgba(255, 255, 255, 0.4);
+  cursor: pointer;
 }
 
 .info-avatar-img {
@@ -788,32 +832,70 @@ $textMuted: #666;
   color: $textPrimary;
 }
 
-.info-dropdown {
-  margin-top: 20rpx;
-  padding-top: 20rpx;
-  border-top: 1rpx solid rgba(255, 255, 255, 0.15);
-  display: flex;
-  flex-direction: column;
-  gap: 12rpx;
+// ============================================================
+// Circle Switcher Popup
+// ============================================================
+.switcher-mask {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 998;
 }
 
-// ============================================================
-// Dropdown Items (inside info card)
-// ============================================================
-.dropdown-item {
+.switcher-popup {
+  position: fixed;
+  top: 180rpx;
+  right: 32rpx;
+  width: 480rpx;
+  background: $cardBg;
+  border-radius: 24rpx;
+  border: $border;
+  box-shadow: 0 16rpx 48rpx rgba(0, 0, 0, 0.5);
+  z-index: 999;
+  opacity: 0;
+  transform: translateY(-16rpx) scale(0.95);
+  transform-origin: top right;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  overflow: hidden;
+}
+
+.switcher-popup--show {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+.switcher-header {
+  padding: 28rpx 28rpx 20rpx;
+  border-bottom: $border;
+}
+
+.switcher-title {
+  font-size: 28rpx;
+  font-weight: 700;
+  color: $textPrimary;
+}
+
+.switcher-list {
+  max-height: 480rpx;
+  padding: 12rpx 0;
+}
+
+.switcher-item {
   display: flex;
   align-items: center;
-  padding: 16rpx 20rpx;
-  border-radius: 20rpx;
-  border: 1rpx solid transparent;
+  padding: 16rpx 28rpx;
+  border-radius: 0;
+  margin-bottom: 0;
 }
 
-.dropdown-item--active {
-  background: rgba(255, 255, 255, 0.15);
-  border-color: rgba(255, 255, 255, 0.25);
+.switcher-item--active {
+  background: rgba(7, 193, 96, 0.08);
 }
 
-.dropdown-avatar {
+.switcher-avatar {
   width: 64rpx;
   height: 64rpx;
   border-radius: 16rpx;
@@ -825,56 +907,70 @@ $textMuted: #666;
   overflow: hidden;
 }
 
-.dropdown-avatar-img {
+.switcher-avatar-img {
   width: 64rpx;
   height: 64rpx;
   border-radius: 16rpx;
 }
 
-.dropdown-avatar-icon {
+.switcher-avatar-icon {
   font-size: 28rpx;
 }
 
-.dropdown-info {
+.switcher-info {
   flex: 1;
+  min-width: 0;
 }
 
-.dropdown-name {
+.switcher-name {
   font-size: 26rpx;
   font-weight: 600;
   color: $textPrimary;
   display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.dropdown-name--active {
-  color: $textPrimary;
-  font-weight: 700;
-}
-
-.dropdown-count {
+.switcher-count {
   font-size: 22rpx;
-  color: rgba(255, 255, 255, 0.6);
+  color: $textMuted;
   display: block;
   margin-top: 2rpx;
 }
 
-.dropdown-actions {
-  padding-top: 8rpx;
+.switcher-check {
+  font-size: 28rpx;
+  color: $green;
+  font-weight: 700;
+  flex-shrink: 0;
+  margin-left: 12rpx;
 }
 
-.dropdown-action {
-  padding: 16rpx 20rpx;
-  border-radius: 20rpx;
-  background: rgba(255, 255, 255, 0.1);
+.switcher-footer {
+  padding: 20rpx 28rpx;
+  border-top: $border;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-.dropdown-action-text {
+.switcher-footer-text {
   font-size: 26rpx;
   font-weight: 600;
-  color: $textPrimary;
+  color: $green;
+}
+
+// ============================================================
+// Content Fade Transition
+// ============================================================
+.content-fade {
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
+
+.content-fade--visible {
+  opacity: 1;
 }
 
 .info-stats {
