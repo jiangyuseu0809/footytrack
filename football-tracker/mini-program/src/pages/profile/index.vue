@@ -44,23 +44,14 @@
         <view class="section">
           <view class="stats-row">
             <view class="stat-card">
-              <view class="stat-icon-box green-gradient">
-                <text class="stat-icon">🏆</text>
-              </view>
               <text class="stat-card-value">{{ totalSessions }}</text>
               <text class="stat-card-label">场比赛</text>
             </view>
             <view class="stat-card">
-              <view class="stat-icon-box blue-gradient">
-                <text class="stat-icon">🎯</text>
-              </view>
               <text class="stat-card-value">{{ totalDistanceStr }}</text>
               <text class="stat-card-label">公里</text>
             </view>
             <view class="stat-card">
-              <view class="stat-icon-box orange-gradient">
-                <text class="stat-icon">🔥</text>
-              </view>
               <text class="stat-card-value">{{ totalCaloriesStr }}</text>
               <text class="stat-card-label">千卡</text>
             </view>
@@ -86,9 +77,6 @@
           <view class="menu-card">
             <!-- AI Analysis -->
             <view class="menu-row" @tap="loadAnalysis">
-              <view class="menu-icon-box blue-icon">
-                <text class="menu-icon-text">⚽</text>
-              </view>
               <text class="menu-label">球风分析</text>
               <text class="menu-chevron">›</text>
             </view>
@@ -100,7 +88,7 @@
                 <view class="analysis-strengths">
                   <text v-for="s in analysis.strengths" :key="s" class="strength-tag">{{ s }}</text>
                 </view>
-                <text class="analysis-advice">💡 {{ analysis.advice }}</text>
+                <text class="analysis-advice">{{ analysis.advice }}</text>
               </view>
             </view>
 
@@ -108,9 +96,6 @@
 
             <!-- Badges -->
             <view class="menu-row" @tap="showBadges = !showBadges">
-              <view class="menu-icon-box orange-icon">
-                <text class="menu-icon-text">🏆</text>
-              </view>
               <text class="menu-label">徽章墙</text>
               <view class="badge-count-pill">
                 <text class="badge-count-text">{{ earnedCount }}/{{ totalBadges }}</text>
@@ -135,9 +120,6 @@
         <view class="section">
           <view class="menu-card">
             <view class="menu-row" @tap="goBindWatch">
-              <view class="menu-icon-box green-icon">
-                <text class="menu-icon-text">⌚</text>
-              </view>
               <text class="menu-label">绑定手表</text>
               <text class="menu-chevron">›</text>
             </view>
@@ -145,9 +127,6 @@
             <view class="menu-divider" />
 
             <view class="menu-row" @tap="goFeedback">
-              <view class="menu-icon-box purple-icon">
-                <text class="menu-icon-text">💬</text>
-              </view>
               <text class="menu-label">意见反馈</text>
               <text class="menu-chevron">›</text>
             </view>
@@ -155,9 +134,6 @@
             <view class="menu-divider" />
 
             <view class="menu-row">
-              <view class="menu-icon-box pink-icon">
-                <text class="menu-icon-text">❤️</text>
-              </view>
               <text class="menu-label">打赏支持</text>
               <text class="menu-chevron">›</text>
             </view>
@@ -604,21 +580,25 @@ $textMuted: #666;
 
 .badge-count-pill {
   background: rgba(7, 193, 96, 0.12);
-  padding: 6rpx 16rpx;
+  padding: 8rpx 16rpx;
   border-radius: 16rpx;
   margin-right: 8rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .badge-count-text {
   font-size: 22rpx;
   color: $green;
   font-weight: 600;
+  line-height: 1;
 }
 
 .menu-divider {
   height: 1rpx;
   background: #2a2a2a;
-  margin: 0 28rpx 0 112rpx;
+  margin: 0 28rpx;
 }
 
 // ============================================================
