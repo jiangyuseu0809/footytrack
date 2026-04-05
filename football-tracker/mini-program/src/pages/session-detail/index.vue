@@ -1,20 +1,11 @@
 <template>
   <view class="page">
     <!-- Header -->
-    <view class="header" :style="{ paddingTop: statusBarHeight + 'px' }">
-      <view class="header-nav" :style="{ height: navBarHeight + 'px' }">
-        <view class="nav-capsule" :style="{ height: capsuleHeight + 'px', borderRadius: capsuleHeight / 2 + 'px' }">
-          <view class="capsule-btn" @tap="goBack">
-            <text class="capsule-icon capsule-icon-back">＜</text>
-          </view>
-          <view class="capsule-divider" />
-          <view class="capsule-btn" @tap="goHome">
-            <image class="capsule-home-img" src="/static/icon-home-white.png" mode="aspectFit" />
-          </view>
-        </view>
-        <text class="nav-title">{{ matchName }}</text>
-        <view class="nav-right" />
+    <view class="header">
+      <view class="header-back" @tap="goBack">
+        <text class="header-back-icon">‹</text>
       </view>
+      <text class="header-title">训练详情</text>
     </view>
 
     <scroll-view v-if="session" scroll-y class="scroll-area">
@@ -173,7 +164,7 @@
 import { ref, computed, nextTick } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import { getSessions, type SessionDto } from '../../utils/api'
-import { formatDistance, formatDateTime, formatDuration, computePerformanceScore } from '../../utils/format'
+import { formatDistance, computePerformanceScore } from '../../utils/format'
 import { computeAbilityData, parseTrackPoints, drawRadarChart, drawHeatmapChart, drawSmoothCurveChart, type CurvePoint } from '../../utils/charts'
 
 const session = ref<SessionDto | null>(null)
@@ -181,16 +172,6 @@ const hrCurveImage = ref('')
 const speedCurveImage = ref('')
 const radarImage = ref('')
 const heatmapImage = ref('')
-
-const menuBtn = uni.getMenuButtonBoundingClientRect()
-const sysInfo = uni.getSystemInfoSync()
-const statusBarHeight = sysInfo.statusBarHeight || 44
-const capsuleHeight = menuBtn.height
-const navBarHeight = (menuBtn.top - statusBarHeight) * 2 + menuBtn.height
-
-const matchName = computed(() => '训练详情')
-const dateStr = computed(() => session.value ? formatDateTime(session.value.startTime) : '')
-const locationStr = computed(() => '运动场')
 
 const distanceKm = computed(() => {
   if (!session.value) return '0'
@@ -302,7 +283,6 @@ function drawCharts() {
 }
 
 function goBack() { uni.navigateBack() }
-function goHome() { uni.switchTab({ url: '/pages/home/index' }) }
 
 onLoad(async (options) => {
   const id = options?.id
@@ -339,66 +319,37 @@ $textMuted: #666;
 // ============================================================
 .header {
   background: $cardBg;
-  padding-left: 16rpx;
-  padding-right: 16rpx;
-  padding-bottom: 16rpx;
+  padding: 120rpx 32rpx 28rpx;
   border-bottom: $border;
-}
-
-.header-nav {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  position: relative;
 }
 
-.nav-capsule {
-  display: flex;
-  align-items: center;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1rpx solid rgba(255, 255, 255, 0.15);
-  overflow: hidden;
-}
-
-.capsule-btn {
+.header-back {
+  position: absolute;
+  left: 20rpx;
+  bottom: 20rpx;
+  width: 64rpx;
+  height: 64rpx;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 68rpx;
-  height: 100%;
 }
 
-.capsule-icon {
+.header-back-icon {
+  font-size: 48rpx;
   color: $textPrimary;
-  line-height: 1;
-}
-
-.capsule-icon-back {
-  font-size: 30rpx;
   font-weight: 300;
 }
 
-.capsule-home-img {
-  width: 32rpx;
-  height: 32rpx;
-}
-
-.capsule-divider {
-  width: 1rpx;
-  height: 50%;
-  background: rgba(255, 255, 255, 0.2);
-}
-
-.nav-title {
+.header-title {
   font-size: 34rpx;
-  font-weight: 600;
+  font-weight: 700;
   color: $textPrimary;
+  display: block;
   text-align: center;
   flex: 1;
-}
-
-.nav-right {
-  width: 136rpx;
-  flex-shrink: 0;
 }
 
 // ============================================================
