@@ -32,35 +32,48 @@
         <view
           v-for="day in daySections"
           :key="day.date"
-          class="match-card"
-          @tap="goDetail(day)"
+          class="swipe-wrapper"
         >
-          <view class="match-top">
-            <view class="match-info">
-              <text class="match-name">{{ day.dateStr }} {{ day.weekday }}</text>
-              <view class="match-meta">
-                <text class="match-meta-icon">📅</text>
-                <text class="match-meta-text">{{ day.dateStr }}</text>
-                <text class="match-meta-icon" style="margin-left: 16rpx;">📍</text>
-                <text class="match-meta-text">{{ day.sessions.length }}场训练</text>
+          <view
+            class="swipe-content"
+            :style="{ transform: `translateX(${getSwipeOffset(day.date)}px)` }"
+            @touchstart="onTouchStart($event, day.date)"
+            @touchmove="onTouchMove($event, day.date)"
+            @touchend="onTouchEnd(day.date)"
+            @tap="onCardTap(day)"
+          >
+            <view class="match-card" :class="{ 'match-card--swiped': getSwipeOffset(day.date) < 0 }">
+              <view class="match-top">
+                <view class="match-info">
+                  <text class="match-name">{{ day.dateStr }} {{ day.weekday }}</text>
+                  <view class="match-meta">
+                    <text class="match-meta-icon">📅</text>
+                    <text class="match-meta-text">{{ day.dateStr }}</text>
+                    <text class="match-meta-icon" style="margin-left: 16rpx;">📍</text>
+                    <text class="match-meta-text">{{ day.sessions.length }}场训练</text>
+                  </view>
+                </view>
+                <text class="match-chevron">›</text>
+              </view>
+              <view class="match-divider" />
+              <view class="match-stats">
+                <view class="match-stat-item">
+                  <text class="match-stat-label">时长</text>
+                  <text class="match-stat-value">{{ day.totalDuration }}分钟</text>
+                </view>
+                <view class="match-stat-item">
+                  <text class="match-stat-label">距离</text>
+                  <text class="match-stat-value">{{ formatDistance(day.totalDistance) }}</text>
+                </view>
+                <view class="match-stat-item">
+                  <text class="match-stat-label">热量</text>
+                  <text class="match-stat-value">{{ Math.round(day.totalCalories) }}kcal</text>
+                </view>
               </view>
             </view>
-            <text class="match-chevron">›</text>
           </view>
-          <view class="match-divider" />
-          <view class="match-stats">
-            <view class="match-stat-item">
-              <text class="match-stat-label">时长</text>
-              <text class="match-stat-value">{{ day.totalDuration }}分钟</text>
-            </view>
-            <view class="match-stat-item">
-              <text class="match-stat-label">距离</text>
-              <text class="match-stat-value">{{ formatDistance(day.totalDistance) }}</text>
-            </view>
-            <view class="match-stat-item">
-              <text class="match-stat-label">热量</text>
-              <text class="match-stat-value">{{ Math.round(day.totalCalories) }}kcal</text>
-            </view>
+          <view class="swipe-delete-btn" @tap="confirmDeleteDay(day)">
+            <text class="swipe-delete-text">删除</text>
           </view>
         </view>
       </view>
@@ -78,9 +91,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, reactive } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
-import { getSessions, isLoggedIn, type SessionDto } from '../../utils/api'
+import { getSessions, deleteSession, isLoggedIn, type SessionDto } from '../../utils/api'
 import { formatDistance, formatDate, formatWeekday, computePerformanceScore } from '../../utils/format'
 
 const sessions = ref<SessionDto[]>([])
@@ -132,6 +145,63 @@ const daySections = computed<DaySection[]>(() => {
   return result.sort((a, b) => b.sessions[0].startTime - a.sessions[0].startTime)
 })
 
+// --- Swipe to delete ---
+const DELETE_BTN_W = 80
+const swipeState = reactive<Record<string, { startX: number; offset: number; swiping: boolean }>>({})
+
+function getSwipeOffset(key: string): number {
+  return swipeState[key]?.offset || 0
+}
+
+function onTouchStart(e: TouchEvent, key: string) {
+  // Close any other open swipe
+  for (const k of Object.keys(swipeState)) {
+    if (k !== key && swipeState[k].offset < 0) {
+      swipeState[k].offset = 0
+    }
+  }
+  if (!swipeState[key]) {
+    swipeState[key] = { startX: 0, offset: 0, swiping: false }
+  }
+  swipeState[key].startX = e.touches[0].clientX
+  swipeState[key].swiping = false
+}
+
+function onTouchMove(e: TouchEvent, key: string) {
+  if (!swipeState[key]) return
+  const dx = e.touches[0].clientX - swipeState[key].startX
+  if (Math.abs(dx) > 10) swipeState[key].swiping = true
+  const prev = swipeState[key].offset
+  let next = dx
+  // If already open, offset from open position
+  if (prev === -DELETE_BTN_W) {
+    next = -DELETE_BTN_W + dx
+  }
+  // Clamp
+  swipeState[key].offset = Math.max(-DELETE_BTN_W, Math.min(0, next))
+}
+
+function onTouchEnd(key: string) {
+  if (!swipeState[key]) return
+  // Snap open or closed
+  if (swipeState[key].offset < -DELETE_BTN_W / 2) {
+    swipeState[key].offset = -DELETE_BTN_W
+  } else {
+    swipeState[key].offset = 0
+  }
+}
+
+function onCardTap(day: DaySection) {
+  // If swiping, don't navigate
+  if (swipeState[day.date]?.swiping) return
+  // If open, close instead of navigate
+  if (swipeState[day.date]?.offset < 0) {
+    swipeState[day.date].offset = 0
+    return
+  }
+  goDetail(day)
+}
+
 async function loadData() {
   if (!isLoggedIn()) return
   try {
@@ -145,7 +215,32 @@ async function loadData() {
 function goDetail(day: DaySection) {
   if (day.sessions.length === 1) {
     uni.navigateTo({ url: `/pages/session-detail/index?id=${day.sessions[0].id}` })
+  } else {
+    const ids = day.sessions.map(s => s.id).join(',')
+    uni.navigateTo({ url: `/pages/day-detail/index?ids=${ids}&date=${day.dateStr}` })
   }
+}
+
+function confirmDeleteDay(day: DaySection) {
+  uni.showModal({
+    title: '删除确认',
+    content: `确定删除 ${day.dateStr} 的全部 ${day.sessions.length} 场训练吗？`,
+    confirmColor: '#ef4444',
+    success: async (res) => {
+      if (!res.confirm) return
+      try {
+        uni.showLoading({ title: '删除中...' })
+        await Promise.all(day.sessions.map(s => deleteSession(s.id)))
+        sessions.value = sessions.value.filter(s => !day.sessions.some(ds => ds.id === s.id))
+        delete swipeState[day.date]
+        uni.hideLoading()
+        uni.showToast({ title: '已删除', icon: 'success' })
+      } catch (e) {
+        uni.hideLoading()
+        uni.showToast({ title: '删除失败', icon: 'none' })
+      }
+    },
+  })
 }
 
 onShow(() => { loadData() })
@@ -241,15 +336,52 @@ $textMuted: #666;
 }
 
 // ============================================================
+// Swipe Wrapper
+// ============================================================
+.swipe-wrapper {
+  position: relative;
+  margin-bottom: 16rpx;
+}
+
+.swipe-content {
+  position: relative;
+  z-index: 1;
+  transition: transform 0.2s ease;
+}
+
+.swipe-delete-btn {
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 160rpx;
+  background: #ef4444;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0 32rpx 32rpx 0;
+}
+
+.swipe-delete-text {
+  font-size: 28rpx;
+  font-weight: 500;
+  color: #FFFFFF;
+}
+
+// ============================================================
 // Match Cards
 // ============================================================
 .match-card {
   background: $cardBg;
   border-radius: 32rpx;
   padding: 24rpx 28rpx;
-  margin-bottom: 16rpx;
   border: $border;
   box-shadow: 0 4rpx 24rpx rgba(0, 0, 0, 0.3);
+  transition: border-radius 0.2s ease;
+}
+
+.match-card--swiped {
+  border-radius: 32rpx 0 0 32rpx;
 }
 
 .match-top {

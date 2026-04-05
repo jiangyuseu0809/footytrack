@@ -9,7 +9,8 @@
     { "path": "pages/match-detail/index", "style": { "navigationStyle": "custom" } },
     { "path": "pages/team/index", "style": { "navigationStyle": "custom" } },
     { "path": "pages/team-detail/index", "style": { "navigationStyle": "custom" } },
-    { "path": "pages/bind-watch/index", "style": { "navigationStyle": "custom" } }
+    { "path": "pages/bind-watch/index", "style": { "navigationStyle": "custom" } },
+    { "path": "pages/day-detail/index", "style": { "navigationStyle": "custom" } }
   ],
   "globalStyle": {
     "navigationBarTextStyle": "white",

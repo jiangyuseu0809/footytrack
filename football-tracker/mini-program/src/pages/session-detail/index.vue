@@ -77,43 +77,55 @@
         </view>
       </view>
 
-      <!-- Heart Rate Placeholder -->
+      <!-- Heart Rate Smooth Curve -->
       <view v-if="session.avgHeartRate" class="section">
         <view class="chart-card">
           <view class="chart-header">
-            <text class="chart-header-icon">📈</text>
+            <text class="chart-header-icon">❤️</text>
             <text class="chart-header-title">心率变化曲线</text>
           </view>
-          <view class="hr-chart-placeholder">
-            <view class="hr-bar-row">
-              <view v-for="(bar, i) in heartRateBars" :key="i" class="hr-bar-col">
-                <view class="hr-bar" :style="{ height: bar.height + '%' }" />
-                <text class="hr-bar-label">{{ bar.label }}</text>
-              </view>
+          <view class="curve-chart-wrap">
+            <image v-if="hrCurveImage" :src="hrCurveImage" class="curve-chart-img" mode="aspectFit" />
+            <view v-else class="curve-placeholder">
+              <text class="curve-placeholder-text">加载中...</text>
             </view>
-            <view class="hr-chart-info">
-              <text class="hr-chart-info-text">平均 {{ session.avgHeartRate }} bpm · 最高 {{ session.maxHeartRate }} bpm</text>
-            </view>
+          </view>
+          <view class="curve-info">
+            <text class="curve-info-text">平均 {{ session.avgHeartRate }} bpm · 最高 {{ session.maxHeartRate }} bpm</text>
           </view>
         </view>
       </view>
 
-      <!-- Ability Analysis -->
+      <!-- Speed Smooth Curve -->
+      <view v-if="session.avgSpeedKmh" class="section">
+        <view class="chart-card">
+          <view class="chart-header">
+            <text class="chart-header-icon">🏃</text>
+            <text class="chart-header-title">速度变化曲线</text>
+          </view>
+          <view class="curve-chart-wrap">
+            <image v-if="speedCurveImage" :src="speedCurveImage" class="curve-chart-img" mode="aspectFit" />
+            <view v-else class="curve-placeholder">
+              <text class="curve-placeholder-text">加载中...</text>
+            </view>
+          </view>
+          <view class="curve-info">
+            <text class="curve-info-text">平均 {{ (session.avgSpeedKmh || 0).toFixed(1) }} km/h · 最高 {{ (session.maxSpeedKmh || 0).toFixed(1) }} km/h</text>
+          </view>
+        </view>
+      </view>
+
+      <!-- Ability Spider Chart -->
       <view class="section">
         <view class="chart-card">
           <view class="chart-header">
             <text class="chart-header-icon">🎯</text>
             <text class="chart-header-title">能力分析图</text>
           </view>
-          <view class="radar-placeholder">
-            <view class="radar-grid">
-              <view v-for="item in abilityData" :key="item.ability" class="radar-item">
-                <text class="radar-label">{{ item.ability }}</text>
-                <view class="radar-bar-track">
-                  <view class="radar-bar-fill" :style="{ width: item.value + '%' }" />
-                </view>
-                <text class="radar-bar-value">{{ item.value }}</text>
-              </view>
+          <view class="radar-canvas-wrap">
+            <image v-if="radarImage" :src="radarImage" class="radar-image" mode="aspectFit" />
+            <view v-else class="radar-placeholder">
+              <text class="radar-placeholder-text">加载中...</text>
             </view>
           </view>
         </view>
@@ -128,9 +140,10 @@
               <view class="field-center-line" />
               <view class="field-center-circle" />
             </view>
-            <view class="heat-point heat-1" />
-            <view class="heat-point heat-2" />
-            <view class="heat-point heat-3" />
+            <image v-if="heatmapImage" :src="heatmapImage" class="heatmap-image" mode="aspectFill" />
+            <view v-else class="heat-point heat-1" />
+            <view v-if="!heatmapImage" class="heat-point heat-2" />
+            <view v-if="!heatmapImage" class="heat-point heat-3" />
           </view>
           <view class="heatmap-legend">
             <text class="legend-text">低活跃度</text>
@@ -172,16 +185,27 @@
         </view>
       </view>
     </scroll-view>
+
+    <!-- Offscreen canvases -->
+    <canvas canvas-id="hrCurveCanvas" id="hrCurveCanvas" class="offscreen-canvas offscreen-canvas--curve" />
+    <canvas canvas-id="speedCurveCanvas" id="speedCurveCanvas" class="offscreen-canvas offscreen-canvas--curve" />
+    <canvas canvas-id="sessionRadarCanvas" id="sessionRadarCanvas" class="offscreen-canvas" />
+    <canvas canvas-id="sessionHeatmap" id="sessionHeatmap" class="offscreen-canvas offscreen-canvas--heatmap" />
   </view>
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, nextTick } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import { getSessions, type SessionDto } from '../../utils/api'
 import { formatDistance, formatDateTime, formatDuration, computePerformanceScore } from '../../utils/format'
+import { computeAbilityData, parseTrackPoints, drawRadarChart, drawHeatmapChart, drawSmoothCurveChart, type CurvePoint } from '../../utils/charts'
 
 const session = ref<SessionDto | null>(null)
+const hrCurveImage = ref('')
+const speedCurveImage = ref('')
+const radarImage = ref('')
+const heatmapImage = ref('')
 
 const menuBtn = uni.getMenuButtonBoundingClientRect()
 const sysInfo = uni.getSystemInfoSync()
@@ -205,49 +229,82 @@ const durationMin = computed(() => {
 
 const score = computed(() => session.value ? computePerformanceScore(session.value) : 0)
 
-const heartRateBars = computed(() => {
-  if (!session.value || !session.value.avgHeartRate) return []
-  const avg = session.value.avgHeartRate || 120
-  const max = session.value.maxHeartRate || 150
-  // Generate simulated bar chart data based on avg/max
-  const points = [
+function generateHRCurvePoints(s: SessionDto): CurvePoint[] {
+  const avg = s.avgHeartRate || 120
+  const max = s.maxHeartRate || 150
+  const dur = Math.round((s.endTime - s.startTime) / 60000)
+  const step = Math.max(Math.round(dur / 6), 5)
+  return [
     { label: '开始', value: Math.round(avg * 0.6) },
-    { label: '15\'', value: Math.round(avg * 0.85) },
-    { label: '30\'', value: avg },
-    { label: '45\'', value: Math.round((avg + max) / 2) },
-    { label: '60\'', value: Math.round(avg * 1.05) },
-    { label: '75\'', value: max },
+    { label: `${step}'`, value: Math.round(avg * 0.85) },
+    { label: `${step * 2}'`, value: avg },
+    { label: `${step * 3}'`, value: Math.round((avg + max) / 2) },
+    { label: `${step * 4}'`, value: Math.round(avg * 1.05) },
+    { label: `${step * 5}'`, value: max },
     { label: '结束', value: Math.round(avg * 0.65) },
   ]
-  const maxVal = Math.max(...points.map(p => p.value))
-  return points.map(p => ({ label: p.label, height: Math.round((p.value / maxVal) * 100) }))
-})
+}
 
-const abilityData = computed(() => {
-  if (!session.value) {
-    return [
-      { ability: '速度', value: 0 },
-      { ability: '耐力', value: 0 },
-      { ability: '爆发力', value: 0 },
-      { ability: '灵活性', value: 0 },
-      { ability: '体能', value: 0 },
-      { ability: '持久力', value: 0 },
-    ]
-  }
-  const s = session.value
-  const maxSpeed = s.maxSpeedKmh || 0
-  const avgSpeed = s.avgSpeedKmh || 0
-  const dist = (s.totalDistanceMeters || 0) / 1000
-  const sprints = s.sprintCount || 0
+function generateSpeedCurvePoints(s: SessionDto): CurvePoint[] {
+  const avg = s.avgSpeedKmh || 6
+  const max = s.maxSpeedKmh || 12
+  const dur = Math.round((s.endTime - s.startTime) / 60000)
+  const step = Math.max(Math.round(dur / 6), 5)
   return [
-    { ability: '速度', value: Math.min(100, Math.round(maxSpeed * 4)) },
-    { ability: '耐力', value: Math.min(100, Math.round(dist * 15)) },
-    { ability: '爆发力', value: Math.min(100, Math.round(sprints * 5)) },
-    { ability: '灵活性', value: Math.min(100, Math.round(avgSpeed * 8)) },
-    { ability: '体能', value: Math.min(100, Math.round((dist + avgSpeed) * 6)) },
-    { ability: '持久力', value: Math.min(100, Math.round(dist * 12)) },
+    { label: '开始', value: Math.round(avg * 0.4 * 10) / 10 },
+    { label: `${step}'`, value: Math.round(avg * 0.8 * 10) / 10 },
+    { label: `${step * 2}'`, value: Math.round(avg * 1.1 * 10) / 10 },
+    { label: `${step * 3}'`, value: Math.round(max * 0.85 * 10) / 10 },
+    { label: `${step * 4}'`, value: max },
+    { label: `${step * 5}'`, value: Math.round(avg * 0.9 * 10) / 10 },
+    { label: '结束', value: Math.round(avg * 0.3 * 10) / 10 },
   ]
-})
+}
+
+function drawCharts() {
+  const s = session.value
+  if (!s) return
+
+  nextTick(() => {
+    // Heart rate curve
+    if (s.avgHeartRate) {
+      const hrPoints = generateHRCurvePoints(s)
+      setTimeout(() => {
+        drawSmoothCurveChart('hrCurveCanvas', hrPoints, {
+          color: '#ef4444',
+          gradientFrom: 'rgba(239,68,68,0.3)',
+          gradientTo: 'rgba(239,68,68,0.02)',
+        }, (path) => { hrCurveImage.value = path })
+      }, 200)
+    }
+
+    // Speed curve
+    if (s.avgSpeedKmh) {
+      const speedPoints = generateSpeedCurvePoints(s)
+      setTimeout(() => {
+        drawSmoothCurveChart('speedCurveCanvas', speedPoints, {
+          color: '#3b82f6',
+          gradientFrom: 'rgba(59,130,246,0.3)',
+          gradientTo: 'rgba(59,130,246,0.02)',
+        }, (path) => { speedCurveImage.value = path })
+      }, 350)
+    }
+
+    // Radar chart
+    const ability = computeAbilityData([s])
+    setTimeout(() => {
+      drawRadarChart('sessionRadarCanvas', ability, (path) => { radarImage.value = path })
+    }, 500)
+
+    // Heatmap
+    const pts = parseTrackPoints([s])
+    if (pts.length > 0) {
+      setTimeout(() => {
+        drawHeatmapChart('sessionHeatmap', pts, (path) => { heatmapImage.value = path })
+      }, 650)
+    }
+  })
+}
 
 function goBack() { uni.navigateBack() }
 function goHome() { uni.switchTab({ url: '/pages/home/index' }) }
@@ -258,6 +315,7 @@ onLoad(async (options) => {
   try {
     const res = await getSessions()
     session.value = res.sessions.find(s => s.id === id) || null
+    drawCharts()
   } catch (e) { console.error(e) }
 })
 </script>
@@ -474,99 +532,68 @@ $textMuted: #666;
 }
 
 // ============================================================
-// Heart Rate Bar Chart Placeholder
+// Smooth Curve Chart
 // ============================================================
-.hr-chart-placeholder {
-  padding: 0;
+.curve-chart-wrap {
+  border-radius: 16rpx;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.02);
 }
 
-.hr-bar-row {
-  display: flex;
-  align-items: flex-end;
-  height: 280rpx;
-  gap: 12rpx;
-  padding: 0 8rpx;
-}
-
-.hr-bar-col {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  height: 100%;
-  justify-content: flex-end;
-}
-
-.hr-bar {
+.curve-chart-img {
   width: 100%;
-  background: linear-gradient(180deg, $green, $greenDark);
-  border-radius: 8rpx 8rpx 0 0;
-  min-height: 8rpx;
+  height: 300rpx;
 }
 
-.hr-bar-label {
-  font-size: 20rpx;
+.curve-placeholder {
+  width: 100%;
+  height: 300rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.curve-placeholder-text {
+  font-size: 24rpx;
   color: $textMuted;
-  margin-top: 8rpx;
 }
 
-.hr-chart-info {
+.curve-info {
   margin-top: 16rpx;
   text-align: center;
 }
 
-.hr-chart-info-text {
+.curve-info-text {
   font-size: 24rpx;
   color: $textSecondary;
 }
 
 // ============================================================
-// Radar as Bar Chart
+// Radar (Spider) Chart
 // ============================================================
-.radar-placeholder {
-  padding: 0;
-}
-
-.radar-grid {
+.radar-canvas-wrap {
   display: flex;
-  flex-direction: column;
-  gap: 20rpx;
+  justify-content: center;
+  align-items: center;
+  min-height: 360rpx;
 }
 
-.radar-item {
+.radar-image {
+  width: 360rpx;
+  height: 360rpx;
+}
+
+.radar-placeholder {
+  width: 360rpx;
+  height: 360rpx;
   display: flex;
   align-items: center;
-  gap: 16rpx;
+  justify-content: center;
 }
 
-.radar-label {
+.radar-placeholder-text {
   font-size: 24rpx;
-  color: $textSecondary;
-  width: 80rpx;
-  flex-shrink: 0;
-}
-
-.radar-bar-track {
-  flex: 1;
-  height: 16rpx;
-  background: #2a2a2a;
-  border-radius: 8rpx;
-  overflow: hidden;
-}
-
-.radar-bar-fill {
-  height: 100%;
-  background: linear-gradient(90deg, $green, $greenDark);
-  border-radius: 8rpx;
-  transition: width 0.5s;
-}
-
-.radar-bar-value {
-  font-size: 24rpx;
-  font-weight: 600;
-  color: $textPrimary;
-  width: 60rpx;
-  text-align: right;
+  color: $textMuted;
 }
 
 // ============================================================
@@ -581,6 +608,15 @@ $textMuted: #666;
   background: linear-gradient(135deg, #0a2a0f, #2a2a0a, #2a0a0a);
 }
 
+.heatmap-image {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+}
+
 .field-outline {
   position: absolute;
   top: 24rpx;
@@ -588,14 +624,15 @@ $textMuted: #666;
   right: 24rpx;
   bottom: 24rpx;
   border: 2rpx solid rgba(255, 255, 255, 0.15);
+  z-index: 1;
 }
 
 .field-center-line {
   position: absolute;
-  top: 50%;
-  left: 0;
-  right: 0;
-  height: 1rpx;
+  left: 50%;
+  top: 0;
+  bottom: 0;
+  width: 1rpx;
   background: rgba(255, 255, 255, 0.15);
 }
 
@@ -715,5 +752,26 @@ $textMuted: #666;
   font-size: 80rpx;
   font-weight: 700;
   color: $green;
+}
+
+// ============================================================
+// Offscreen Canvas
+// ============================================================
+.offscreen-canvas {
+  position: fixed;
+  left: -9999px;
+  top: -9999px;
+  width: 280px;
+  height: 280px;
+}
+
+.offscreen-canvas--curve {
+  width: 350px;
+  height: 200px;
+}
+
+.offscreen-canvas--heatmap {
+  width: 350px;
+  height: 263px;
 }
 </style>

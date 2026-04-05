@@ -217,6 +217,7 @@ import { ref, computed, watch, nextTick } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import { getSessions, getMatches, getProfile, isLoggedIn, type SessionDto, type Match } from '../../utils/api'
 import { formatDateTime, formatWeekday } from '../../utils/format'
+import { roundRect, parseTrackPoints, computeAbilityData, drawRadarChart, drawHeatmapChart } from '../../utils/charts'
 
 const timeRange = ref<'week' | 'today'>('week')
 const sessions = ref<SessionDto[]>([])
@@ -268,28 +269,7 @@ const todayWeekday = computed(() => ['Jan','Feb','Mar','Apr','May','Jun','Jul','
 
 const abilityData = computed(() => {
   const list = timeRange.value === 'week' ? weekSessions.value : todaySessions.value
-  if (list.length === 0) {
-    return [
-      { ability: '速度', value: 0 },
-      { ability: '耐力', value: 0 },
-      { ability: '爆发力', value: 0 },
-      { ability: '灵活性', value: 0 },
-      { ability: '体能', value: 0 },
-      { ability: '持久力', value: 0 },
-    ]
-  }
-  const avgSpeed = list.reduce((s, v) => s + (v.avgSpeedKmh || 0), 0) / list.length
-  const maxSpeed = Math.max(...list.map(s => s.maxSpeedKmh || 0))
-  const avgDist = list.reduce((s, v) => s + (v.totalDistanceMeters || 0), 0) / list.length / 1000
-  const totalSprints = list.reduce((s, v) => s + (v.sprintCount || 0), 0)
-  return [
-    { ability: '速度', value: Math.min(100, Math.round(maxSpeed * 4)) },
-    { ability: '耐力', value: Math.min(100, Math.round(avgDist * 15)) },
-    { ability: '爆发力', value: Math.min(100, Math.round(totalSprints * 5)) },
-    { ability: '灵活性', value: Math.min(100, Math.round(avgSpeed * 8)) },
-    { ability: '体能', value: Math.min(100, Math.round((avgDist + avgSpeed) * 6)) },
-    { ability: '持久力', value: Math.min(100, Math.round(avgDist * 12)) },
-  ]
+  return computeAbilityData(list)
 })
 
 async function loadData() {
@@ -897,216 +877,13 @@ function drawShareCard(callback: () => void) {
   })
 }
 
-function roundRect(ctx: any, x: number, y: number, w: number, h: number, r: number) {
-  ctx.beginPath()
-  ctx.moveTo(x + r, y)
-  ctx.lineTo(x + w - r, y)
-  ctx.arcTo(x + w, y, x + w, y + r, r)
-  ctx.lineTo(x + w, y + h - r)
-  ctx.arcTo(x + w, y + h, x + w - r, y + h, r)
-  ctx.lineTo(x + r, y + h)
-  ctx.arcTo(x, y + h, x, y + h - r, r)
-  ctx.lineTo(x, y + r)
-  ctx.arcTo(x, y, x + r, y, r)
-  ctx.closePath()
-}
-
 function drawRadar() {
-  const ctx = uni.createCanvasContext('radarCanvas')
-  const data = abilityData.value
-  const count = data.length
-  if (count === 0) return
-
-  // Canvas size in px (will be scaled by device pixel ratio via CSS)
-  const size = 280
-  const cx = size / 2
-  const cy = size / 2
-  const maxR = size / 2 - 40
-  const levels = 4
-  const angleStep = (Math.PI * 2) / count
-  const startAngle = -Math.PI / 2
-
-  // Clear
-  ctx.clearRect(0, 0, size, size)
-
-  // Draw grid rings
-  for (let lv = 1; lv <= levels; lv++) {
-    const r = (maxR / levels) * lv
-    ctx.beginPath()
-    for (let i = 0; i <= count; i++) {
-      const angle = startAngle + angleStep * (i % count)
-      const x = cx + r * Math.cos(angle)
-      const y = cy + r * Math.sin(angle)
-      if (i === 0) ctx.moveTo(x, y)
-      else ctx.lineTo(x, y)
-    }
-    ctx.closePath()
-    ctx.setStrokeStyle('rgba(255,255,255,0.08)')
-    ctx.setLineWidth(1)
-    ctx.stroke()
-  }
-
-  // Draw axis lines
-  for (let i = 0; i < count; i++) {
-    const angle = startAngle + angleStep * i
-    ctx.beginPath()
-    ctx.moveTo(cx, cy)
-    ctx.lineTo(cx + maxR * Math.cos(angle), cy + maxR * Math.sin(angle))
-    ctx.setStrokeStyle('rgba(255,255,255,0.06)')
-    ctx.setLineWidth(1)
-    ctx.stroke()
-  }
-
-  // Draw data area
-  ctx.beginPath()
-  for (let i = 0; i <= count; i++) {
-    const idx = i % count
-    const angle = startAngle + angleStep * idx
-    const r = (data[idx].value / 100) * maxR
-    const x = cx + r * Math.cos(angle)
-    const y = cy + r * Math.sin(angle)
-    if (i === 0) ctx.moveTo(x, y)
-    else ctx.lineTo(x, y)
-  }
-  ctx.closePath()
-  ctx.setFillStyle('rgba(7,193,96,0.3)')
-  ctx.fill()
-  ctx.setStrokeStyle('#07c160')
-  ctx.setLineWidth(2)
-  ctx.stroke()
-
-  // Draw data points
-  for (let i = 0; i < count; i++) {
-    const angle = startAngle + angleStep * i
-    const r = (data[i].value / 100) * maxR
-    const x = cx + r * Math.cos(angle)
-    const y = cy + r * Math.sin(angle)
-    ctx.beginPath()
-    ctx.arc(x, y, 3, 0, Math.PI * 2)
-    ctx.setFillStyle('#07c160')
-    ctx.fill()
-  }
-
-  // Draw labels
-  ctx.setFontSize(11)
-  ctx.setTextAlign('center')
-  ctx.setTextBaseline('middle')
-  ctx.setFillStyle('#999999')
-  for (let i = 0; i < count; i++) {
-    const angle = startAngle + angleStep * i
-    const labelR = maxR + 20
-    const x = cx + labelR * Math.cos(angle)
-    const y = cy + labelR * Math.sin(angle)
-    ctx.fillText(data[i].ability, x, y)
-  }
-
-  ctx.draw(false, () => {
-    setTimeout(() => {
-      uni.canvasToTempFilePath({
-        canvasId: 'radarCanvas',
-        success: (res) => { radarImage.value = res.tempFilePath },
-        fail: (err) => { console.error('canvasToTempFilePath fail', err) },
-      })
-    }, 150)
-  })
-}
-
-interface TrackPoint {
-  latitude: number
-  longitude: number
-  speed: number
-}
-
-function parseTrackPoints(sessions: SessionDto[]): TrackPoint[] {
-  const points: TrackPoint[] = []
-  for (const s of sessions) {
-    if (!s.trackPointsData) continue
-    try {
-      const json = decodeURIComponent(escape(atob(s.trackPointsData)))
-      const arr = JSON.parse(json) as any[]
-      for (const p of arr) {
-        if (p.latitude && p.longitude) {
-          points.push({ latitude: p.latitude, longitude: p.longitude, speed: p.speed || 0 })
-        }
-      }
-    } catch {}
-  }
-  return points
+  drawRadarChart('radarCanvas', abilityData.value, (path) => { radarImage.value = path })
 }
 
 function drawHeatmap() {
-  const ctx = uni.createCanvasContext('heatmapCanvas')
-  const w = 350
-  const h = 263 // 4:3 ratio
-
-  ctx.clearRect(0, 0, w, h)
-
-  // Dark green base (low activity)
-  ctx.setFillStyle('#0a2a0f')
-  ctx.fillRect(0, 0, w, h)
-
   const points = parseTrackPoints(todaySessions.value)
-
-  if (points.length > 0) {
-    // Compute bounding box
-    let minLat = Infinity, maxLat = -Infinity, minLng = Infinity, maxLng = -Infinity
-    for (const p of points) {
-      if (p.latitude < minLat) minLat = p.latitude
-      if (p.latitude > maxLat) maxLat = p.latitude
-      if (p.longitude < minLng) minLng = p.longitude
-      if (p.longitude > maxLng) maxLng = p.longitude
-    }
-
-    // Add padding
-    const latPad = Math.max((maxLat - minLat) * 0.1, 0.0002)
-    const lngPad = Math.max((maxLng - minLng) * 0.1, 0.0002)
-    minLat -= latPad; maxLat += latPad
-    minLng -= lngPad; maxLng += lngPad
-
-    const latRange = maxLat - minLat || 0.001
-    const lngRange = maxLng - minLng || 0.001
-
-    // Find max speed for normalization
-    const maxSpeed = Math.max(...points.map(p => p.speed), 1)
-
-    // Draw heat blobs
-    for (const p of points) {
-      const x = ((p.longitude - minLng) / lngRange) * w
-      const y = (1 - (p.latitude - minLat) / latRange) * h // flip Y
-      const intensity = Math.min(p.speed / maxSpeed, 1)
-      const radius = 8 + intensity * 8
-
-      // Color: green(low) → yellow → red(high)
-      let r: number, g: number, b: number
-      if (intensity < 0.5) {
-        const t = intensity * 2
-        r = Math.round(22 + t * (234 - 22))
-        g = Math.round(163 + t * (179 - 163))
-        b = Math.round(74 - t * 74)
-      } else {
-        const t = (intensity - 0.5) * 2
-        r = Math.round(234 + t * (239 - 234))
-        g = Math.round(179 - t * (179 - 68))
-        b = Math.round(0 + t * 68)
-      }
-
-      const alpha = 0.35 + intensity * 0.35
-      ctx.beginPath()
-      ctx.arc(x, y, radius, 0, Math.PI * 2)
-      ctx.setFillStyle(`rgba(${r},${g},${b},${alpha})`)
-      ctx.fill()
-    }
-  }
-
-  ctx.draw(false, () => {
-    setTimeout(() => {
-      uni.canvasToTempFilePath({
-        canvasId: 'heatmapCanvas',
-        success: (res) => { heatmapImage.value = res.tempFilePath },
-        fail: (err) => { console.error('heatmap canvasToTempFilePath fail', err) },
-      })
-    }, 150)
-  })
+  drawHeatmapChart('heatmapCanvas', points, (path) => { heatmapImage.value = path })
 }
 
 watch([timeRange, abilityData], () => {
@@ -1546,10 +1323,10 @@ $textMuted: #666;
 
 .field-center-line {
   position: absolute;
-  top: 50%;
-  left: 0;
-  right: 0;
-  height: 1rpx;
+  left: 50%;
+  top: 0;
+  bottom: 0;
+  width: 1rpx;
   background: rgba(255, 255, 255, 0.15);
 }
 
