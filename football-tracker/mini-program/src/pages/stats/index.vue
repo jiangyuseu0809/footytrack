@@ -5,7 +5,7 @@
       <text class="header-title">比赛历史</text>
     </view>
 
-    <scroll-view scroll-y class="scroll-area">
+    <scroll-view v-if="loaded" scroll-y class="scroll-area">
       <!-- Summary Stats -->
       <view class="section">
         <view class="summary-card">
@@ -79,7 +79,7 @@
       </view>
 
       <!-- Empty State -->
-      <view v-if="sessions.length === 0" class="empty-state">
+      <view v-if="loaded && sessions.length === 0" class="empty-state">
         <view class="empty-icon-box">
           <text class="empty-icon">📅</text>
         </view>
@@ -97,6 +97,7 @@ import { getSessions, deleteSession, isLoggedIn, type SessionDto } from '../../u
 import { formatDistance, formatDate, formatWeekday, computePerformanceScore } from '../../utils/format'
 
 const sessions = ref<SessionDto[]>([])
+const loaded = ref(false)
 
 interface DaySection {
   date: string
@@ -218,6 +219,8 @@ async function loadData() {
     sessions.value = res.sessions
   } catch (e) {
     console.error('Failed to load sessions', e)
+  } finally {
+    loaded.value = true
   }
 }
 
