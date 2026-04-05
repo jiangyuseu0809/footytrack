@@ -96,8 +96,16 @@ import { onShow } from '@dcloudio/uni-app'
 import { getSessions, deleteSession, isLoggedIn, type SessionDto } from '../../utils/api'
 import { formatDistance, formatDate, formatWeekday, computePerformanceScore } from '../../utils/format'
 
+const CACHE_KEY = 'cache_sessions'
 const sessions = ref<SessionDto[]>([])
 const loaded = ref(false)
+
+// Restore from cache immediately
+const cached = uni.getStorageSync(CACHE_KEY)
+if (cached) {
+  sessions.value = cached
+  loaded.value = true
+}
 
 interface DaySection {
   date: string
@@ -217,6 +225,7 @@ async function loadData() {
   try {
     const res = await getSessions()
     sessions.value = res.sessions
+    uni.setStorageSync(CACHE_KEY, res.sessions)
   } catch (e) {
     console.error('Failed to load sessions', e)
   } finally {

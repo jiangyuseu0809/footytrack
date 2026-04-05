@@ -33,12 +33,9 @@
           <view class="info-content">
             <view class="info-header">
               <view class="info-header-left">
-                <view class="info-avatar" :class="{ 'info-avatar--editable': isOwner }" @tap.stop="openAvatarPicker">
+                <view class="info-avatar" @tap.stop="openAvatarPicker">
                   <image v-if="selectedCircle.avatarUrl" :src="selectedCircle.avatarUrl" class="info-avatar-img" mode="aspectFill" />
                   <text v-else class="info-avatar-emoji">⚽</text>
-                  <view v-if="isOwner" class="info-avatar-edit-badge">
-                    <text class="info-avatar-edit-icon">📷</text>
-                  </view>
                 </view>
                 <view class="info-title-col">
                   <text class="info-name">{{ selectedCircle.name }}</text>
@@ -109,7 +106,6 @@
               :class="{ 'filter-btn--active filter-btn--distance': selectedStat === 'distance' }"
               @tap="selectedStat = 'distance'"
             >
-              <text class="filter-btn-icon">📏</text>
               <text class="filter-btn-label">距离</text>
             </view>
             <view
@@ -117,7 +113,6 @@
               :class="{ 'filter-btn--active filter-btn--calories': selectedStat === 'calories' }"
               @tap="selectedStat = 'calories'"
             >
-              <text class="filter-btn-icon">🔥</text>
               <text class="filter-btn-label">热量</text>
             </view>
             <view
@@ -125,7 +120,6 @@
               :class="{ 'filter-btn--active filter-btn--sprints': selectedStat === 'sprints' }"
               @tap="selectedStat = 'sprints'"
             >
-              <text class="filter-btn-icon">⚡</text>
               <text class="filter-btn-label">冲刺</text>
             </view>
             <view
@@ -133,7 +127,6 @@
               :class="{ 'filter-btn--active filter-btn--duration': selectedStat === 'duration' }"
               @tap="selectedStat = 'duration'"
             >
-              <text class="filter-btn-icon">⏱</text>
               <text class="filter-btn-label">时长</text>
             </view>
           </view>
@@ -287,13 +280,26 @@ import {
 } from '../../utils/api'
 
 const STORAGE_KEY = 'selected_circle_id'
+const CACHE_CIRCLES = 'cache_circles'
+const CACHE_MEMBERS = 'cache_circle_members'
 
 const loading = ref(false)
 const loaded = ref(false)
 const circles = ref<Circle[]>([])
 const selectedCircleId = ref(uni.getStorageSync(STORAGE_KEY) || '')
 const members = ref<CircleMember[]>([])
-const showCircleList = ref(false)
+
+// Restore from cache immediately
+const cachedCircles = uni.getStorageSync(CACHE_CIRCLES)
+const cachedMembers = uni.getStorageSync(CACHE_MEMBERS)
+if (cachedCircles && cachedCircles.length > 0) {
+  circles.value = cachedCircles
+  if (cachedMembers) members.value = cachedMembers
+  if (!selectedCircleId.value || !cachedCircles.find((c: Circle) => c.id === selectedCircleId.value)) {
+    selectedCircleId.value = cachedCircles[0].id
+  }
+  loaded.value = true
+}const showCircleList = ref(false)
 const circleListVisible = ref(false)
 const contentVisible = ref(true)
 const showCreateModal = ref(false)
@@ -464,6 +470,7 @@ async function loadData() {
   try {
     const res = await getCircles()
     circles.value = res.circles
+    uni.setStorageSync(CACHE_CIRCLES, res.circles)
     if (res.circles.length > 0) {
       if (!selectedCircleId.value || !res.circles.find(c => c.id === selectedCircleId.value)) {
         selectedCircleId.value = res.circles[0].id
@@ -482,6 +489,7 @@ async function loadCircleDetail(circleId: string) {
   try {
     const res = await getCircleDetail(circleId, timePeriod.value)
     members.value = res.members
+    uni.setStorageSync(CACHE_MEMBERS, res.members)
     const idx = circles.value.findIndex(c => c.id === circleId)
     if (idx >= 0) {
       circles.value[idx].memberCount = res.circle.memberCount
@@ -785,10 +793,6 @@ $textMuted: #666;
   margin-right: 20rpx;
 }
 
-.info-avatar--editable {
-  cursor: pointer;
-}
-
 .info-avatar-img {
   width: 80rpx;
   height: 80rpx;
@@ -797,22 +801,6 @@ $textMuted: #666;
 
 .info-avatar-emoji {
   font-size: 40rpx;
-}
-
-.info-avatar-edit-badge {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 28rpx;
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.info-avatar-edit-icon {
-  font-size: 16rpx;
 }
 
 .info-switch-btn {
@@ -1081,7 +1069,7 @@ $textMuted: #666;
 }
 
 .filter-title {
-  font-size: 24rpx;
+  font-size: 28rpx;
   color: $textSecondary;
   display: block;
   margin-bottom: 16rpx;
@@ -1095,9 +1083,9 @@ $textMuted: #666;
 
 .filter-btn {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  padding: 16rpx 0;
+  justify-content: center;
+  padding: 18rpx 0;
   border-radius: 20rpx;
   background: $cardBgLight;
 }
@@ -1111,13 +1099,8 @@ $textMuted: #666;
 .filter-btn--sprints { background: linear-gradient(135deg, #eab308, #ca8a04); }
 .filter-btn--duration { background: linear-gradient(135deg, #8b5cf6, #7c3aed); }
 
-.filter-btn-icon {
-  font-size: 24rpx;
-  margin-bottom: 4rpx;
-}
-
 .filter-btn-label {
-  font-size: 22rpx;
+  font-size: 26rpx;
   color: $textSecondary;
 }
 

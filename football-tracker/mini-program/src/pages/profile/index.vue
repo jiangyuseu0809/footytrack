@@ -191,6 +191,9 @@ import {
 } from '../../utils/api'
 import { formatDistance } from '../../utils/format'
 
+const CACHE_PROFILE = 'cache_profile'
+const CACHE_PROFILE_SESSIONS = 'cache_profile_sessions'
+
 const profile = ref<UserProfile | null>(null)
 const sessions = ref<SessionDto[]>([])
 const analysis = ref<{ type: string; description: string; strengths: string[]; advice: string } | null>(null)
@@ -198,6 +201,12 @@ const allBadges = ref<Badge[]>([])
 const earnedBadges = ref<UserBadge[]>([])
 const showBadges = ref(false)
 const loggedIn = ref(isLoggedIn())
+
+// Restore from cache immediately
+const cachedProfile = uni.getStorageSync(CACHE_PROFILE)
+const cachedSessions = uni.getStorageSync(CACHE_PROFILE_SESSIONS)
+if (cachedProfile) profile.value = cachedProfile
+if (cachedSessions) sessions.value = cachedSessions
 
 const totalSessions = computed(() => sessions.value.length)
 const totalDistanceStr = computed(() => {
@@ -251,6 +260,8 @@ async function loadData() {
     sessions.value = s.sessions
     allBadges.value = b.allBadges
     earnedBadges.value = b.earnedBadges
+    uni.setStorageSync(CACHE_PROFILE, p)
+    uni.setStorageSync(CACHE_PROFILE_SESSIONS, s.sessions)
   } catch (e) { console.error(e) }
 }
 

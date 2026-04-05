@@ -20,84 +20,58 @@
     <scroll-view v-if="session" scroll-y class="scroll-area">
       <!-- Core Stats -->
       <view class="section">
-        <view class="stats-card">
-          <text class="card-title">核心数据</text>
-          <view class="stats-row">
-            <view class="stat-cell">
-              <view class="stat-icon-box orange-red">
-                <text class="stat-icon">🔥</text>
-              </view>
-              <text class="stat-sub-label">热量</text>
-              <text class="stat-big-value">{{ Math.round(session.caloriesBurned || 0) }}</text>
-              <text class="stat-tiny-unit">kcal</text>
+        <view class="core-panel">
+          <text class="core-panel-title">核心数据</text>
+          <view class="core-grid">
+            <view class="core-item" :class="'core-item--' + getSessionLevel('calories', Math.round(session.caloriesBurned || 0))">
+              <text class="core-item-value">{{ Math.round(session.caloriesBurned || 0) }}</text>
+              <text class="core-item-label">热量(kcal)</text>
             </view>
-            <view class="stat-cell">
-              <view class="stat-icon-box blue">
-                <text class="stat-icon">📍</text>
-              </view>
-              <text class="stat-sub-label">距离</text>
-              <text class="stat-big-value">{{ distanceKm }}</text>
-              <text class="stat-tiny-unit">km</text>
+            <view class="core-item" :class="'core-item--' + getSessionLevel('distance', distanceKm)">
+              <text class="core-item-value">{{ distanceKm }}</text>
+              <text class="core-item-label">距离(km)</text>
             </view>
-            <view class="stat-cell">
-              <view class="stat-icon-box yellow-orange">
-                <text class="stat-icon">⚡</text>
-              </view>
-              <text class="stat-sub-label">冲刺</text>
-              <text class="stat-big-value">{{ session.sprintCount || 0 }}</text>
-              <text class="stat-tiny-unit">次</text>
+            <view class="core-item" :class="'core-item--' + getSessionLevel('sprints', session.sprintCount || 0)">
+              <text class="core-item-value">{{ session.sprintCount || 0 }}</text>
+              <text class="core-item-label">冲刺次数</text>
             </view>
-          </view>
-          <view class="stats-row">
-            <view class="stat-cell">
-              <view class="stat-icon-box purple">
-                <text class="stat-icon">⏱️</text>
-              </view>
-              <text class="stat-sub-label">时长</text>
-              <text class="stat-big-value">{{ durationMin }}</text>
-              <text class="stat-tiny-unit">分钟</text>
+            <view class="core-item" :class="'core-item--' + getSessionLevel('duration', durationMin)">
+              <text class="core-item-value">{{ durationMin }}</text>
+              <text class="core-item-label">时长(分钟)</text>
             </view>
-            <view class="stat-cell">
-              <view class="stat-icon-box pink-red">
-                <text class="stat-icon">❤️</text>
-              </view>
-              <text class="stat-sub-label">最高心率</text>
-              <text class="stat-big-value">{{ session.maxHeartRate || '-' }}</text>
-              <text class="stat-tiny-unit">bpm</text>
+            <view class="core-item" :class="'core-item--' + getSessionLevel('maxHeartRate', session.maxHeartRate || 0)">
+              <text class="core-item-value">{{ session.maxHeartRate || '-' }}</text>
+              <text class="core-item-label">最高心率</text>
             </view>
-            <view class="stat-cell">
-              <view class="stat-icon-box green-teal">
-                <text class="stat-icon">❤️</text>
-              </view>
-              <text class="stat-sub-label">平均心率</text>
-              <text class="stat-big-value">{{ session.avgHeartRate || '-' }}</text>
-              <text class="stat-tiny-unit">bpm</text>
+            <view class="core-item" :class="'core-item--' + getSessionLevel('avgHeartRate', session.avgHeartRate || 0)">
+              <text class="core-item-value">{{ session.avgHeartRate || '-' }}</text>
+              <text class="core-item-label">平均心率</text>
+            </view>
+            <view class="core-item" :class="'core-item--' + getSessionLevel('maxSpeed', session.maxSpeedKmh || 0)">
+              <text class="core-item-value">{{ (session.maxSpeedKmh || 0).toFixed(1) }}</text>
+              <text class="core-item-label">最高时速</text>
+            </view>
+            <view class="core-item" :class="'core-item--' + getSessionLevel('avgSpeed', session.avgSpeedKmh || 0)">
+              <text class="core-item-value">{{ (session.avgSpeedKmh || 0).toFixed(1) }}</text>
+              <text class="core-item-label">平均时速</text>
+            </view>
+            <view class="core-item" :class="'core-item--' + getSessionLevel('score', score)">
+              <text class="core-item-value">{{ score.toFixed(1) }}</text>
+              <text class="core-item-label">综合评分</text>
             </view>
           </view>
-          <view class="stats-row">
-            <view class="stat-cell">
-              <view class="stat-icon-box green-teal">
-                <text class="stat-icon">❤️</text>
-              </view>
-              <text class="stat-sub-label">平均心率</text>
-              <text class="stat-big-value">{{ session.avgHeartRate || '-' }}</text>
-              <text class="stat-tiny-unit">bpm</text>
+          <view class="core-legend">
+            <view class="core-legend-item">
+              <view class="core-legend-dot core-legend-dot--good" />
+              <text class="core-legend-text">出色</text>
             </view>
-            <view class="stat-cell">
-              <view class="stat-icon-box cyan">
-                <text class="stat-icon">🏃</text>
-              </view>
-              <text class="stat-sub-label">平均时速</text>
-              <text class="stat-big-value">{{ (session.avgSpeedKmh || 0).toFixed(1) }}</text>
-              <text class="stat-tiny-unit">km/h</text>
+            <view class="core-legend-item">
+              <view class="core-legend-dot core-legend-dot--normal" />
+              <text class="core-legend-text">一般</text>
             </view>
-            <view class="stat-cell">
-              <view class="stat-icon-box red-deep">
-                <text class="stat-icon">💨</text>
-              </view>
-              <text class="stat-sub-label">最高时速</text>
-              <text class="stat-big-value">{{ (session.maxSpeedKmh || 0).toFixed(1) }}</text>
-              <text class="stat-tiny-unit">km/h</text>
+            <view class="core-legend-item">
+              <view class="core-legend-dot core-legend-dot--low" />
+              <text class="core-legend-text">待提升</text>
             </view>
           </view>
         </view>
@@ -171,7 +145,7 @@
       </view>
 
       <!-- Slack Index -->
-      <view v-if="session.slackIndex != null" class="section">
+      <view v-if="session.slackIndex != null" class="section section--last">
         <view class="chart-card">
           <text class="chart-card-title">摸鱼指数</text>
           <view class="slack-content">
@@ -182,19 +156,6 @@
               <text class="slack-percentage">{{ session.slackIndex || 0 }}%</text>
               <text class="slack-label-text">{{ session.slackLabel || '-' }}</text>
             </view>
-          </view>
-        </view>
-      </view>
-
-      <!-- Performance Score -->
-      <view class="section section--last">
-        <view class="chart-card">
-          <view class="chart-header">
-            <text class="chart-header-icon">📊</text>
-            <text class="chart-header-title">综合评分</text>
-          </view>
-          <view class="score-content">
-            <text class="score-value">{{ score.toFixed(1) }}</text>
           </view>
         </view>
       </view>
@@ -242,6 +203,26 @@ const durationMin = computed(() => {
 })
 
 const score = computed(() => session.value ? computePerformanceScore(session.value) : 0)
+
+function getSessionLevel(metric: string, value: number | string): string {
+  const v = typeof value === 'string' ? parseFloat(value) : value
+  if (!v) return 'low'
+  const thresholds: Record<string, [number, number]> = {
+    calories:     [300, 100],
+    distance:     [3, 1],
+    sprints:      [8, 3],
+    duration:     [45, 15],
+    maxHeartRate: [170, 140],
+    avgHeartRate: [140, 110],
+    maxSpeed:     [20, 12],
+    avgSpeed:     [8, 4],
+    score:        [8, 6.5],
+  }
+  const [good, normal] = thresholds[metric] || [1, 0]
+  if (v >= good) return 'good'
+  if (v >= normal) return 'normal'
+  return 'low'
+}
 
 function generateHRCurvePoints(s: SessionDto): CurvePoint[] {
   const avg = s.avgHeartRate || 120
@@ -432,9 +413,9 @@ $textMuted: #666;
 }
 
 // ============================================================
-// Core Stats Card
+// Core Stats Panel
 // ============================================================
-.stats-card {
+.core-panel {
   background: $cardBg;
   border-radius: 32rpx;
   padding: 28rpx 24rpx;
@@ -442,73 +423,91 @@ $textMuted: #666;
   box-shadow: 0 4rpx 24rpx rgba(0, 0, 0, 0.3);
 }
 
-.card-title {
+.core-panel-title {
   font-size: 30rpx;
-  font-weight: 500;
+  font-weight: 600;
   color: $textPrimary;
   display: block;
   margin-bottom: 24rpx;
+  padding-left: 4rpx;
 }
 
-.stats-row {
+.core-grid {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
   gap: 16rpx;
-  margin-bottom: 16rpx;
-
-  &:last-child {
-    margin-bottom: 0;
-  }
 }
 
-.stat-cell {
-  text-align: center;
+.core-item {
   display: flex;
   flex-direction: column;
   align-items: center;
+  padding: 16rpx 8rpx;
+  border-radius: 16rpx;
+  background: rgba(255, 255, 255, 0.04);
 }
 
-.stat-icon-box {
-  width: 80rpx;
-  height: 80rpx;
-  border-radius: 20rpx;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: 8rpx;
-  box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.2);
+.core-item--good {
+  background: rgba(7, 193, 96, 0.15);
 }
 
-.orange-red { background: linear-gradient(135deg, #fb923c, #ef4444); }
-.blue { background: linear-gradient(135deg, #60a5fa, #3b82f6); }
-.yellow-orange { background: linear-gradient(135deg, #facc15, #f97316); }
-.purple { background: linear-gradient(135deg, #a78bfa, #7c3aed); }
-.pink-red { background: linear-gradient(135deg, #f472b6, #ef4444); }
-.green-teal { background: linear-gradient(135deg, #4ade80, #14b8a6); }
-.cyan { background: linear-gradient(135deg, #22d3ee, #0891b2); }
-.red-deep { background: linear-gradient(135deg, #f87171, #dc2626); }
-
-.stat-icon {
-  font-size: 36rpx;
+.core-item--normal {
+  background: rgba(250, 204, 21, 0.12);
 }
 
-.stat-sub-label {
-  font-size: 22rpx;
-  color: $textSecondary;
-  margin-bottom: 4rpx;
+.core-item--low {
+  background: rgba(239, 68, 68, 0.12);
 }
 
-.stat-big-value {
-  font-size: 36rpx;
+.core-item-value {
+  font-size: 38rpx;
   font-weight: 700;
   color: $textPrimary;
   line-height: 1.1;
 }
 
-.stat-tiny-unit {
-  font-size: 20rpx;
+.core-item-label {
+  font-size: 22rpx;
   color: $textMuted;
-  margin-top: 2rpx;
+  margin-top: 6rpx;
+}
+
+.core-legend {
+  display: flex;
+  justify-content: center;
+  gap: 32rpx;
+  margin-top: 20rpx;
+  padding-top: 16rpx;
+  border-top: 1rpx solid #2a2a2a;
+}
+
+.core-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+}
+
+.core-legend-dot {
+  width: 16rpx;
+  height: 16rpx;
+  border-radius: 4rpx;
+}
+
+.core-legend-dot--good {
+  background: rgba(7, 193, 96, 0.5);
+}
+
+.core-legend-dot--normal {
+  background: rgba(250, 204, 21, 0.4);
+}
+
+.core-legend-dot--low {
+  background: rgba(239, 68, 68, 0.4);
+}
+
+.core-legend-text {
+  font-size: 22rpx;
+  color: $textMuted;
 }
 
 // ============================================================
@@ -753,21 +752,6 @@ $textMuted: #666;
 .slack-label-text {
   font-size: 24rpx;
   color: $textSecondary;
-}
-
-// ============================================================
-// Performance Score
-// ============================================================
-.score-content {
-  display: flex;
-  justify-content: center;
-  padding: 16rpx 0 8rpx;
-}
-
-.score-value {
-  font-size: 80rpx;
-  font-weight: 700;
-  color: $green;
 }
 
 // ============================================================

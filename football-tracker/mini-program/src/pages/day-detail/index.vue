@@ -9,50 +9,60 @@
     </view>
 
     <scroll-view scroll-y class="scroll-area">
-      <!-- Day Summary Card -->
+      <!-- Core Stats Panel -->
       <view class="section">
-        <view class="summary-card">
-          <text class="summary-title">全天汇总</text>
-          <view class="summary-grid">
-            <view class="summary-item">
-              <text class="summary-value">{{ daySummary.duration }}</text>
-              <text class="summary-label">分钟</text>
+        <view class="core-panel">
+          <text class="core-panel-title">核心数据</text>
+          <view class="core-grid">
+            <view class="core-item" :class="'core-item--' + getDayLevel('sessions', daySummary.sessions)">
+              <text class="core-item-value">{{ daySummary.sessions }}</text>
+              <text class="core-item-label">比赛场次</text>
             </view>
-            <view class="summary-item">
-              <text class="summary-value">{{ daySummary.distance }}</text>
-              <text class="summary-label">公里</text>
+            <view class="core-item" :class="'core-item--' + getDayLevel('calories', daySummary.calories)">
+              <text class="core-item-value">{{ daySummary.calories }}</text>
+              <text class="core-item-label">热量(kcal)</text>
             </view>
-            <view class="summary-item">
-              <text class="summary-value">{{ daySummary.calories }}</text>
-              <text class="summary-label">千卡</text>
+            <view class="core-item" :class="'core-item--' + getDayLevel('distance', daySummary.distance)">
+              <text class="core-item-value">{{ daySummary.distance }}</text>
+              <text class="core-item-label">距离(km)</text>
+            </view>
+            <view class="core-item" :class="'core-item--' + getDayLevel('sprints', daySummary.sprints)">
+              <text class="core-item-value">{{ daySummary.sprints }}</text>
+              <text class="core-item-label">冲刺次数</text>
+            </view>
+            <view class="core-item" :class="'core-item--' + getDayLevel('duration', daySummary.duration)">
+              <text class="core-item-value">{{ daySummary.duration }}</text>
+              <text class="core-item-label">时长(分钟)</text>
+            </view>
+            <view class="core-item" :class="'core-item--' + getDayLevel('maxHR', daySummary.maxHR)">
+              <text class="core-item-value">{{ daySummary.maxHR }}</text>
+              <text class="core-item-label">最高心率</text>
+            </view>
+            <view class="core-item" :class="'core-item--' + getDayLevel('avgHR', daySummary.avgHR)">
+              <text class="core-item-value">{{ daySummary.avgHR }}</text>
+              <text class="core-item-label">平均心率</text>
+            </view>
+            <view class="core-item" :class="'core-item--' + getDayLevel('maxSpeed', daySummary.maxSpeed)">
+              <text class="core-item-value">{{ daySummary.maxSpeed }}</text>
+              <text class="core-item-label">最高时速</text>
+            </view>
+            <view class="core-item" :class="'core-item--' + getDayLevel('avgSpeed', daySummary.avgSpeed)">
+              <text class="core-item-value">{{ daySummary.avgSpeed }}</text>
+              <text class="core-item-label">平均时速</text>
             </view>
           </view>
-          <view class="summary-grid summary-grid--second">
-            <view class="summary-item">
-              <text class="summary-value">{{ daySummary.sprints }}</text>
-              <text class="summary-label">冲刺</text>
+          <view class="core-legend">
+            <view class="core-legend-item">
+              <view class="core-legend-dot core-legend-dot--good" />
+              <text class="core-legend-text">出色</text>
             </view>
-            <view class="summary-item">
-              <text class="summary-value">{{ daySummary.maxHR }}</text>
-              <text class="summary-label">最高心率</text>
+            <view class="core-legend-item">
+              <view class="core-legend-dot core-legend-dot--normal" />
+              <text class="core-legend-text">一般</text>
             </view>
-            <view class="summary-item">
-              <text class="summary-value">{{ daySummary.avgHR }}</text>
-              <text class="summary-label">平均心率</text>
-            </view>
-          </view>
-          <view class="summary-grid summary-grid--second">
-            <view class="summary-item">
-              <text class="summary-value">{{ daySummary.maxSpeed }}</text>
-              <text class="summary-label">最高时速</text>
-            </view>
-            <view class="summary-item">
-              <text class="summary-value">{{ daySummary.avgSpeed }}</text>
-              <text class="summary-label">平均时速</text>
-            </view>
-            <view class="summary-item">
-              <text class="summary-value">{{ daySummary.sessions }}</text>
-              <text class="summary-label">比赛场次</text>
+            <view class="core-legend-item">
+              <view class="core-legend-dot core-legend-dot--low" />
+              <text class="core-legend-text">待提升</text>
             </view>
           </view>
         </view>
@@ -188,6 +198,26 @@ const daySummary = computed(() => {
 
 function sessionDuration(s: SessionDto): number {
   return Math.round((s.endTime - s.startTime) / 60000)
+}
+
+function getDayLevel(metric: string, value: number | string): string {
+  const v = typeof value === 'string' ? parseFloat(value) : value
+  if (!v) return 'low'
+  const thresholds: Record<string, [number, number]> = {
+    sessions:  [2, 1],
+    calories:  [300, 100],
+    distance:  [3, 1],
+    sprints:   [8, 3],
+    duration:  [45, 15],
+    maxHR:     [170, 140],
+    avgHR:     [140, 110],
+    maxSpeed:  [20, 12],
+    avgSpeed:  [8, 4],
+  }
+  const [good, normal] = thresholds[metric] || [1, 0]
+  if (v >= good) return 'good'
+  if (v >= normal) return 'normal'
+  return 'low'
 }
 
 function formatTimeRange(s: SessionDto): string {
@@ -396,52 +426,101 @@ $textMuted: #666;
 }
 
 // ============================================================
-// Summary Card
+// Core Stats Panel
 // ============================================================
-.summary-card {
-  background: linear-gradient(135deg, $green, $greenDark);
+.core-panel {
+  background: $cardBg;
   border-radius: 32rpx;
-  padding: 36rpx 32rpx;
-  box-shadow: 0 8rpx 32rpx rgba(7, 193, 96, 0.2);
+  padding: 28rpx 24rpx;
+  border: $border;
+  box-shadow: 0 4rpx 24rpx rgba(0, 0, 0, 0.3);
 }
 
-.summary-title {
+.core-panel-title {
   font-size: 30rpx;
-  font-weight: 500;
-  color: rgba(255, 255, 255, 0.9);
+  font-weight: 600;
+  color: $textPrimary;
   display: block;
   margin-bottom: 24rpx;
+  padding-left: 4rpx;
 }
 
-.summary-grid {
-  display: flex;
-  justify-content: space-between;
+.core-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 16rpx;
 }
 
-.summary-grid--second {
-  margin-top: 24rpx;
-  padding-top: 24rpx;
-  border-top: 1rpx solid rgba(255, 255, 255, 0.15);
-}
-
-.summary-item {
+.core-item {
   display: flex;
   flex-direction: column;
   align-items: center;
-  flex: 1;
+  padding: 16rpx 8rpx;
+  border-radius: 16rpx;
+  background: rgba(255, 255, 255, 0.04);
 }
 
-.summary-value {
-  font-size: 44rpx;
+.core-item--good {
+  background: rgba(7, 193, 96, 0.15);
+}
+
+.core-item--normal {
+  background: rgba(250, 204, 21, 0.12);
+}
+
+.core-item--low {
+  background: rgba(239, 68, 68, 0.12);
+}
+
+.core-item-value {
+  font-size: 38rpx;
   font-weight: 700;
   color: $textPrimary;
-  line-height: 1;
+  line-height: 1.1;
 }
 
-.summary-label {
-  font-size: 24rpx;
-  color: rgba(255, 255, 255, 0.8);
-  margin-top: 8rpx;
+.core-item-label {
+  font-size: 22rpx;
+  color: $textMuted;
+  margin-top: 6rpx;
+}
+
+.core-legend {
+  display: flex;
+  justify-content: center;
+  gap: 32rpx;
+  margin-top: 20rpx;
+  padding-top: 16rpx;
+  border-top: 1rpx solid #2a2a2a;
+}
+
+.core-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+}
+
+.core-legend-dot {
+  width: 16rpx;
+  height: 16rpx;
+  border-radius: 4rpx;
+}
+
+.core-legend-dot--good {
+  background: rgba(7, 193, 96, 0.5);
+}
+
+.core-legend-dot--normal {
+  background: rgba(250, 204, 21, 0.4);
+}
+
+.core-legend-dot--low {
+  background: rgba(239, 68, 68, 0.4);
+}
+
+.core-legend-text {
+  font-size: 22rpx;
+  color: $textMuted;
 }
 
 // ============================================================
