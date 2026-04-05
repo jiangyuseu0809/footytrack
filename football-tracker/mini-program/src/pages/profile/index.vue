@@ -200,7 +200,7 @@
 
             <view class="menu-divider" />
 
-            <view class="menu-row">
+            <view class="menu-row" @tap="goDonate">
               <text class="menu-label">打赏支持</text>
               <text class="menu-chevron">›</text>
             </view>
@@ -387,6 +387,10 @@ function goBindWatch() {
 
 function goFeedback() {
   uni.navigateTo({ url: '/pages/feedback/index' })
+}
+
+function goDonate() {
+  uni.navigateTo({ url: '/pages/donate/index' })
 }
 
 async function loadAnalysis() {

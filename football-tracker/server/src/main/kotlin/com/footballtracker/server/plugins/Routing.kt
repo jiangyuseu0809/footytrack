@@ -26,11 +26,15 @@ fun Application.configureRouting(
     matchSummaryService: MatchSummaryService,
     circleService: CircleService,
     feedbackService: com.footballtracker.server.service.FeedbackService,
+    wxPayService: com.footballtracker.server.service.WxPayService,
     avatarConfig: com.footballtracker.server.config.AvatarConfig
 ) {
     routing {
         route("/api") {
             authRoutes(jwtService, smsCodeStore, bindCodeStore, tencentSmsService, weChatService, userService)
+
+            // WeChat Pay notify — no JWT required
+            donationNotifyRoute(wxPayService)
 
             authenticate("auth-jwt") {
                 userRoutes(userService, avatarConfig)
@@ -40,6 +44,7 @@ fun Application.configureRouting(
                 matchRoutes(matchService, sessionService, matchSummaryService)
                 circleRoutes(circleService, avatarConfig)
                 feedbackRoutes(feedbackService, avatarConfig)
+                donationRoutes(wxPayService)
 
                 // Bind code generation (requires login)
                 post("/auth/bind/generate") {

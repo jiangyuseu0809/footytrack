@@ -11,7 +11,8 @@
     { "path": "pages/team-detail/index", "style": { "navigationStyle": "custom" } },
     { "path": "pages/bind-watch/index", "style": { "navigationStyle": "custom" } },
     { "path": "pages/day-detail/index", "style": { "navigationStyle": "custom" } },
-    { "path": "pages/feedback/index", "style": { "navigationStyle": "custom" } }
+    { "path": "pages/feedback/index", "style": { "navigationStyle": "custom" } },
+    { "path": "pages/donate/index", "style": { "navigationStyle": "custom" } }
   ],
   "globalStyle": {
     "navigationBarTextStyle": "white",

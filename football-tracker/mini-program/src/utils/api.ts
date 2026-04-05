@@ -408,3 +408,17 @@ export async function generateBindCode(): Promise<{ code: string; expiresInSecon
 export async function submitFeedback(content: string, imageUrls?: string[]): Promise<void> {
   await request('/api/feedback', { method: 'POST', data: { content, imageUrls } })
 }
+
+// --- Donation ---
+
+export interface PaymentParams {
+  timeStamp: string
+  nonceStr: string
+  package: string
+  signType: string
+  paySign: string
+}
+
+export async function createDonation(amountCents: number): Promise<PaymentParams> {
+  return request<PaymentParams>('/api/donation/create', { method: 'POST', data: { amount: amountCents } })
+}

@@ -8,7 +8,8 @@ data class AppConfig(
     val tencent: TencentConfig,
     val wechat: WeChatConfig,
     val avatar: AvatarConfig,
-    val openai: OpenAiConfig
+    val openai: OpenAiConfig,
+    val wxPay: WxPayConfig
 )
 
 data class OpenAiConfig(
@@ -51,6 +52,14 @@ data class AvatarConfig(
     val maxBytes: Long
 )
 
+data class WxPayConfig(
+    val mchId: String,
+    val apiV3Key: String,
+    val pubKeyId: String,
+    val pubKeyPem: String,
+    val mpAppId: String
+)
+
 fun Application.loadConfig(): AppConfig {
     val config = environment.config
     fun env(key: String, yamlPath: String): String =
@@ -90,6 +99,13 @@ fun Application.loadConfig(): AppConfig {
             endpoint = env("APP_OPENAI_ENDPOINT", "app.openai.endpoint"),
             apiKey = env("APP_OPENAI_API_KEY", "app.openai.apiKey"),
             deploymentName = env("APP_OPENAI_DEPLOYMENT", "app.openai.deploymentName")
+        ),
+        wxPay = WxPayConfig(
+            mchId = System.getenv("WXPAY_MCH_ID") ?: "",
+            apiV3Key = System.getenv("WXPAY_API_V3_KEY") ?: "",
+            pubKeyId = System.getenv("WXPAY_PUB_KEY_ID") ?: "",
+            pubKeyPem = System.getenv("WXPAY_PRIVATE_KEY_PEM") ?: "",
+            mpAppId = System.getenv("WXPAY_MP_APP_ID") ?: config.property("app.wechat.mpAppId").getString()
         )
     )
 }
