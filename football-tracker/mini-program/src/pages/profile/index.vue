@@ -87,7 +87,7 @@
             <!-- AI Analysis -->
             <view class="menu-row" @tap="loadAnalysis">
               <view class="menu-icon-box blue-icon">
-                <text class="menu-icon-text">🧠</text>
+                <text class="menu-icon-text">⚽</text>
               </view>
               <text class="menu-label">球风分析</text>
               <text class="menu-chevron">›</text>

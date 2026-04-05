@@ -199,7 +199,7 @@ function formatTimeRange(s: SessionDto): string {
 
 // --- Swipe to delete ---
 const DELETE_BTN_W = 80
-const swipeState = reactive<Record<string, { startX: number; offset: number; swiping: boolean }>>({})
+const swipeState = reactive<Record<string, { startX: number; startY: number; offset: number; swiping: boolean; direction: '' | 'h' | 'v' }>>({})
 
 function getSwipeOffset(key: string): number {
   return swipeState[key]?.offset || 0
@@ -212,16 +212,26 @@ function onTouchStart(e: TouchEvent, key: string) {
     }
   }
   if (!swipeState[key]) {
-    swipeState[key] = { startX: 0, offset: 0, swiping: false }
+    swipeState[key] = { startX: 0, startY: 0, offset: 0, swiping: false, direction: '' }
   }
   swipeState[key].startX = e.touches[0].clientX
+  swipeState[key].startY = e.touches[0].clientY
   swipeState[key].swiping = false
+  swipeState[key].direction = ''
 }
 
 function onTouchMove(e: TouchEvent, key: string) {
   if (!swipeState[key]) return
   const dx = e.touches[0].clientX - swipeState[key].startX
-  if (Math.abs(dx) > 10) swipeState[key].swiping = true
+  const dy = e.touches[0].clientY - swipeState[key].startY
+
+  if (swipeState[key].direction === '' && (Math.abs(dx) > 8 || Math.abs(dy) > 8)) {
+    swipeState[key].direction = Math.abs(dx) > Math.abs(dy) ? 'h' : 'v'
+  }
+
+  if (swipeState[key].direction !== 'h') return
+
+  swipeState[key].swiping = true
   const prev = swipeState[key].offset
   let next = dx
   if (prev === -DELETE_BTN_W) {
