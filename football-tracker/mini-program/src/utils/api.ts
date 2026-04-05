@@ -402,3 +402,9 @@ export async function checkBadges(): Promise<{ newBadges: Badge[] }> {
 export async function generateBindCode(): Promise<{ code: string; expiresInSeconds: number }> {
   return request('/api/auth/bind/generate', { method: 'POST' })
 }
+
+// --- Feedback ---
+
+export async function submitFeedback(content: string, imageUrls?: string[]): Promise<void> {
+  await request('/api/feedback', { method: 'POST', data: { content, imageUrls } })
+}

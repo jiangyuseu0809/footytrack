@@ -26,7 +26,8 @@ object DatabaseFactory {
                 MatchRegistrationsTable,
                 MatchSummariesTable,
                 CirclesTable,
-                CircleMembersTable
+                CircleMembersTable,
+                FeedbackTable
             )
         }
 

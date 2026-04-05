@@ -144,7 +144,7 @@
 
             <view class="menu-divider" />
 
-            <view class="menu-row">
+            <view class="menu-row" @tap="goFeedback">
               <view class="menu-icon-box purple-icon">
                 <text class="menu-icon-text">💬</text>
               </view>
@@ -287,6 +287,10 @@ async function onNicknameBlur(e: any) {
 
 function goBindWatch() {
   uni.navigateTo({ url: '/pages/bind-watch/index' })
+}
+
+function goFeedback() {
+  uni.navigateTo({ url: '/pages/feedback/index' })
 }
 
 async function loadAnalysis() {

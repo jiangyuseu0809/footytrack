@@ -25,6 +25,7 @@ fun Application.configureRouting(
     playerAnalysisService: PlayerAnalysisService,
     matchSummaryService: MatchSummaryService,
     circleService: CircleService,
+    feedbackService: com.footballtracker.server.service.FeedbackService,
     avatarConfig: com.footballtracker.server.config.AvatarConfig
 ) {
     routing {
@@ -38,6 +39,7 @@ fun Application.configureRouting(
                 badgeRoutes(badgeService)
                 matchRoutes(matchService, sessionService, matchSummaryService)
                 circleRoutes(circleService, avatarConfig)
+                feedbackRoutes(feedbackService, avatarConfig)
 
                 // Bind code generation (requires login)
                 post("/auth/bind/generate") {
