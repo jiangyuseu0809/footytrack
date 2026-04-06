@@ -182,43 +182,43 @@
           </view>
         </view>
 
-        <!-- Menu Group 2 -->
-        <view class="section">
-          <view class="menu-card">
-            <view class="menu-row" @tap="goBindWatch">
-              <text class="menu-label">绑定手表</text>
-              <text class="menu-chevron">›</text>
-            </view>
-
-            <view class="menu-divider" />
-
-            <view class="menu-row" @tap="goFeedback">
-              <text class="menu-label">意见反馈</text>
-              <text class="menu-chevron">›</text>
-            </view>
-
-            <view class="menu-divider" />
-
-            <view class="menu-row" @tap="goDonate">
-              <text class="menu-label">打赏支持</text>
-              <text class="menu-chevron">›</text>
-            </view>
-          </view>
-        </view>
-
         <!-- Logout -->
         <view class="section">
           <view class="logout-btn" @tap="handleLogout">
             <text class="logout-text">退出登录</text>
           </view>
         </view>
-
-        <!-- About -->
-        <view class="about-section section--last">
-          <text class="about-text">FootyTrack v1.0.0</text>
-          <text class="about-sub">记录你的每一场球</text>
-        </view>
       </template>
+
+      <!-- Menu Group 2 (always visible) -->
+      <view class="section">
+        <view class="menu-card">
+          <view class="menu-row" @tap="goBindWatch">
+            <text class="menu-label">绑定手表</text>
+            <text class="menu-chevron">›</text>
+          </view>
+
+          <view class="menu-divider" />
+
+          <view class="menu-row" @tap="goFeedback">
+            <text class="menu-label">意见反馈</text>
+            <text class="menu-chevron">›</text>
+          </view>
+
+          <view class="menu-divider" />
+
+          <view class="menu-row" @tap="goDonate">
+            <text class="menu-label">打赏支持</text>
+            <text class="menu-chevron">›</text>
+          </view>
+        </view>
+      </view>
+
+      <!-- About -->
+      <view class="about-section section--last">
+        <text class="about-text">FootyTrack v1.0.0</text>
+        <text class="about-sub">记录你的每一场球</text>
+      </view>
     </scroll-view>
   </view>
 </template>
