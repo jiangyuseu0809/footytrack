@@ -4,7 +4,7 @@
     <view class="header">
       <text class="header-title">FootyTrack</text>
       <view v-if="isWatchConnected" class="watch-badge connected">
-        <text class="watch-badge-text">⌚ {{ watchBrand ? watchBrand + ' Watch ' : '' }}已连接</text>
+        <text class="watch-badge-text">⌚ {{ watchBrand ? watchBrand + ' Watch' : '已连接' }}</text>
       </view>
       <view v-else class="watch-badge disconnected" @tap="goBindWatch">
         <text class="watch-badge-text">⌚ 连接手表</text>
