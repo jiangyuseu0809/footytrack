@@ -38,159 +38,150 @@
     </view>
 
     <scroll-view scroll-y class="scroll-area">
-      <template v-if="loggedIn">
-        <!-- Stats Cards -->
-        <view class="section">
-          <view class="stats-row">
-            <view class="stat-card">
-              <text class="stat-card-value">{{ totalSessions }}</text>
-              <text class="stat-card-label">场比赛</text>
-            </view>
-            <view class="stat-card">
-              <text class="stat-card-value">{{ totalDistanceStr }}</text>
-              <text class="stat-card-label">公里</text>
-            </view>
-            <view class="stat-card">
-              <text class="stat-card-value">{{ totalCaloriesStr }}</text>
-              <text class="stat-card-label">千卡</text>
-            </view>
+      <!-- Stats Cards -->
+      <view class="section">
+        <view class="stats-row">
+          <view class="stat-card">
+            <text class="stat-card-value">{{ totalSessions }}</text>
+            <text class="stat-card-label">场比赛</text>
+          </view>
+          <view class="stat-card">
+            <text class="stat-card-value">{{ totalDistanceStr }}</text>
+            <text class="stat-card-label">公里</text>
+          </view>
+          <view class="stat-card">
+            <text class="stat-card-value">{{ totalCaloriesStr }}</text>
+            <text class="stat-card-label">千卡</text>
+          </view>
+        </view>
+      </view>
+
+      <!-- Monthly Goal -->
+      <view class="section">
+        <!-- No goals set: prompt -->
+        <view v-if="!hasGoals" class="goal-card goal-prompt" @tap="requireLogin() && openGoalModal()">
+          <text class="goal-prompt-text">设置你的月度运动目标</text>
+          <view class="goal-prompt-btn">
+            <text class="goal-prompt-btn-text">设置目标</text>
           </view>
         </view>
 
-        <!-- Monthly Goal -->
-        <view class="section">
-          <!-- No goals set: prompt -->
-          <view v-if="!hasGoals" class="goal-card goal-prompt" @tap="openGoalModal">
-            <text class="goal-prompt-text">设置你的月度运动目标</text>
-            <view class="goal-prompt-btn">
-              <text class="goal-prompt-btn-text">设置目标</text>
-            </view>
+        <!-- Goals set: progress bars -->
+        <view v-else class="goal-card">
+          <view class="goal-header">
+            <text class="goal-title">本月目标</text>
+            <text class="goal-edit" @tap="requireLogin() && openGoalModal()">编辑</text>
           </view>
 
-          <!-- Goals set: progress bars -->
-          <view v-else class="goal-card">
-            <view class="goal-header">
-              <text class="goal-title">本月目标</text>
-              <text class="goal-edit" @tap="openGoalModal">编辑</text>
+          <view v-if="goals.distance > 0" class="goal-row">
+            <view class="goal-row-top">
+              <text class="goal-row-label">距离</text>
+              <text class="goal-row-value">{{ monthDistance.toFixed(1) }}/{{ goals.distance }} km</text>
             </view>
-
-            <view v-if="goals.distance > 0" class="goal-row">
-              <view class="goal-row-top">
-                <text class="goal-row-label">距离</text>
-                <text class="goal-row-value">{{ monthDistance.toFixed(1) }}/{{ goals.distance }} km</text>
-              </view>
-              <view class="goal-bar-track">
-                <view class="goal-bar-fill" :style="{ width: goalPercent(monthDistance, goals.distance) + '%' }" />
-              </view>
-              <text class="goal-row-percent">{{ goalPercent(monthDistance, goals.distance) }}%</text>
+            <view class="goal-bar-track">
+              <view class="goal-bar-fill" :style="{ width: goalPercent(monthDistance, goals.distance) + '%' }" />
             </view>
+            <text class="goal-row-percent">{{ goalPercent(monthDistance, goals.distance) }}%</text>
+          </view>
 
-            <view v-if="goals.calories > 0" class="goal-row">
-              <view class="goal-row-top">
-                <text class="goal-row-label">热量</text>
-                <text class="goal-row-value">{{ Math.round(monthCalories) }}/{{ goals.calories }} kcal</text>
-              </view>
-              <view class="goal-bar-track">
-                <view class="goal-bar-fill" :style="{ width: goalPercent(monthCalories, goals.calories) + '%' }" />
-              </view>
-              <text class="goal-row-percent">{{ goalPercent(monthCalories, goals.calories) }}%</text>
+          <view v-if="goals.calories > 0" class="goal-row">
+            <view class="goal-row-top">
+              <text class="goal-row-label">热量</text>
+              <text class="goal-row-value">{{ Math.round(monthCalories) }}/{{ goals.calories }} kcal</text>
             </view>
+            <view class="goal-bar-track">
+              <view class="goal-bar-fill" :style="{ width: goalPercent(monthCalories, goals.calories) + '%' }" />
+            </view>
+            <text class="goal-row-percent">{{ goalPercent(monthCalories, goals.calories) }}%</text>
+          </view>
 
-            <view v-if="goals.matches > 0" class="goal-row">
-              <view class="goal-row-top">
-                <text class="goal-row-label">场次</text>
-                <text class="goal-row-value">{{ monthSessions }}/{{ goals.matches }} 场</text>
-              </view>
-              <view class="goal-bar-track">
-                <view class="goal-bar-fill" :style="{ width: goalPercent(monthSessions, goals.matches) + '%' }" />
-              </view>
-              <text class="goal-row-percent">{{ goalPercent(monthSessions, goals.matches) }}%</text>
+          <view v-if="goals.matches > 0" class="goal-row">
+            <view class="goal-row-top">
+              <text class="goal-row-label">场次</text>
+              <text class="goal-row-value">{{ monthSessions }}/{{ goals.matches }} 场</text>
+            </view>
+            <view class="goal-bar-track">
+              <view class="goal-bar-fill" :style="{ width: goalPercent(monthSessions, goals.matches) + '%' }" />
+            </view>
+            <text class="goal-row-percent">{{ goalPercent(monthSessions, goals.matches) }}%</text>
+          </view>
+        </view>
+      </view>
+
+      <!-- Goal Setting Modal -->
+      <view v-if="showGoalModal" class="modal-mask" @tap="showGoalModal = false">
+        <view class="modal-box" @tap.stop>
+          <text class="modal-title">设置月度目标</text>
+
+          <view class="modal-field">
+            <text class="modal-label">距离目标 (km)</text>
+            <input class="modal-input" type="digit" v-model="goalForm.distance" placeholder="0" />
+          </view>
+          <view class="modal-field">
+            <text class="modal-label">热量目标 (kcal)</text>
+            <input class="modal-input" type="digit" v-model="goalForm.calories" placeholder="0" />
+          </view>
+          <view class="modal-field">
+            <text class="modal-label">场次目标</text>
+            <input class="modal-input" type="number" v-model="goalForm.matches" placeholder="0" />
+          </view>
+
+          <view class="modal-actions">
+            <view class="modal-btn modal-btn--cancel" @tap="showGoalModal = false">
+              <text class="modal-btn-text">取消</text>
+            </view>
+            <view class="modal-btn modal-btn--confirm" @tap="saveGoals">
+              <text class="modal-btn-text modal-btn-text--confirm">确定</text>
             </view>
           </view>
         </view>
+      </view>
 
-        <!-- Goal Setting Modal -->
-        <view v-if="showGoalModal" class="modal-mask" @tap="showGoalModal = false">
-          <view class="modal-box" @tap.stop>
-            <text class="modal-title">设置月度目标</text>
+      <!-- Menu Items -->
+      <view class="section">
+        <view class="menu-card">
+          <!-- AI Analysis -->
+          <view class="menu-row" @tap="requireLogin() && loadAnalysis()">
+            <text class="menu-label">球风分析</text>
+            <text class="menu-chevron">›</text>
+          </view>
 
-            <view class="modal-field">
-              <text class="modal-label">距离目标 (km)</text>
-              <input class="modal-input" type="digit" v-model="goalForm.distance" placeholder="0" />
-            </view>
-            <view class="modal-field">
-              <text class="modal-label">热量目标 (kcal)</text>
-              <input class="modal-input" type="digit" v-model="goalForm.calories" placeholder="0" />
-            </view>
-            <view class="modal-field">
-              <text class="modal-label">场次目标</text>
-              <input class="modal-input" type="number" v-model="goalForm.matches" placeholder="0" />
-            </view>
-
-            <view class="modal-actions">
-              <view class="modal-btn modal-btn--cancel" @tap="showGoalModal = false">
-                <text class="modal-btn-text">取消</text>
+          <view v-if="analysis" class="analysis-expand">
+            <view class="analysis-inner">
+              <text class="analysis-type">{{ analysis.type }}</text>
+              <text class="analysis-desc">{{ analysis.description }}</text>
+              <view class="analysis-strengths">
+                <text v-for="s in analysis.strengths" :key="s" class="strength-tag">{{ s }}</text>
               </view>
-              <view class="modal-btn modal-btn--confirm" @tap="saveGoals">
-                <text class="modal-btn-text modal-btn-text--confirm">确定</text>
-              </view>
+              <text class="analysis-advice">{{ analysis.advice }}</text>
             </view>
           </view>
-        </view>
 
-        <!-- Menu Items -->
-        <view class="section">
-          <view class="menu-card">
-            <!-- AI Analysis -->
-            <view class="menu-row" @tap="loadAnalysis">
-              <text class="menu-label">球风分析</text>
-              <text class="menu-chevron">›</text>
+          <view class="menu-divider" />
+
+          <!-- Badges -->
+          <view class="menu-row" @tap="showBadges = !showBadges">
+            <text class="menu-label">徽章墙</text>
+            <view class="badge-count-pill">
+              <text class="badge-count-text">{{ earnedCount }}/{{ totalBadges }}</text>
             </view>
+            <text class="menu-chevron">›</text>
+          </view>
 
-            <view v-if="analysis" class="analysis-expand">
-              <view class="analysis-inner">
-                <text class="analysis-type">{{ analysis.type }}</text>
-                <text class="analysis-desc">{{ analysis.description }}</text>
-                <view class="analysis-strengths">
-                  <text v-for="s in analysis.strengths" :key="s" class="strength-tag">{{ s }}</text>
+          <view v-if="showBadges" class="badges-expand">
+            <view class="badges-grid">
+              <view v-for="b in allBadges" :key="b.id" class="badge-item" :class="{ earned: isEarned(b.id) }">
+                <view class="badge-icon-wrap">
+                  <text class="badge-icon-text">{{ badgeIcon(b.iconName) }}</text>
                 </view>
-                <text class="analysis-advice">{{ analysis.advice }}</text>
-              </view>
-            </view>
-
-            <view class="menu-divider" />
-
-            <!-- Badges -->
-            <view class="menu-row" @tap="showBadges = !showBadges">
-              <text class="menu-label">徽章墙</text>
-              <view class="badge-count-pill">
-                <text class="badge-count-text">{{ earnedCount }}/{{ totalBadges }}</text>
-              </view>
-              <text class="menu-chevron">›</text>
-            </view>
-
-            <view v-if="showBadges" class="badges-expand">
-              <view class="badges-grid">
-                <view v-for="b in allBadges" :key="b.id" class="badge-item" :class="{ earned: isEarned(b.id) }">
-                  <view class="badge-icon-wrap">
-                    <text class="badge-icon-text">{{ badgeIcon(b.iconName) }}</text>
-                  </view>
-                  <text class="badge-name">{{ b.name }}</text>
-                </view>
+                <text class="badge-name">{{ b.name }}</text>
               </view>
             </view>
           </view>
         </view>
+      </view>
 
-        <!-- Logout -->
-        <view class="section">
-          <view class="logout-btn" @tap="handleLogout">
-            <text class="logout-text">退出登录</text>
-          </view>
-        </view>
-      </template>
-
-      <!-- Menu Group 2 (always visible) -->
+      <!-- Menu Group 2 -->
       <view class="section">
         <view class="menu-card">
           <view class="menu-row" @tap="goBindWatch">
@@ -211,6 +202,13 @@
             <text class="menu-label">打赏支持</text>
             <text class="menu-chevron">›</text>
           </view>
+        </view>
+      </view>
+
+      <!-- Logout (only when logged in) -->
+      <view v-if="loggedIn" class="section">
+        <view class="logout-btn" @tap="handleLogout">
+          <text class="logout-text">退出登录</text>
         </view>
       </view>
 
@@ -360,6 +358,12 @@ async function handleLogin() {
   } catch (e: any) {
     uni.showToast({ title: e.message || '登录失败', icon: 'none' })
   }
+}
+
+function requireLogin(): boolean {
+  if (loggedIn.value) return true
+  uni.showToast({ title: '请先登录', icon: 'none' })
+  return false
 }
 
 async function onChooseAvatar(e: any) {
