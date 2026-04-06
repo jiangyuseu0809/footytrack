@@ -92,6 +92,25 @@
         </view>
       </view>
 
+      <!-- Heatmap -->
+      <view v-if="heatmapImage" class="section">
+        <view class="chart-card">
+          <text class="chart-card-title">跑动覆盖热力图</text>
+          <view class="heatmap-box">
+            <view class="field-outline">
+              <view class="field-center-line" />
+              <view class="field-center-circle" />
+            </view>
+            <image :src="heatmapImage" class="heatmap-image" mode="aspectFill" />
+          </view>
+          <view class="heatmap-legend">
+            <text class="legend-text">低活跃度</text>
+            <view class="legend-bar" />
+            <text class="legend-text">高活跃度</text>
+          </view>
+        </view>
+      </view>
+
       <!-- Rankings: Distance -->
       <view v-if="rankings && rankings.distanceRanking && rankings.distanceRanking.length > 0" class="section">
         <view class="rank-card">
@@ -130,21 +149,26 @@
         </view>
       </view>
     </scroll-view>
+
+    <!-- Offscreen canvas for heatmap -->
+    <canvas canvas-id="matchHeatmap" id="matchHeatmap" class="offscreen-canvas offscreen-canvas--heatmap" />
   </view>
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, nextTick } from 'vue'
 import { onLoad, onShareAppMessage } from '@dcloudio/uni-app'
 import {
   getMatchDetail, registerForMatch, cancelMatchRegistration,
-  getMatchRankings, type MatchRegistration
+  getMatchRankings, getSessions, type MatchRegistration, type SessionDto
 } from '../../utils/api'
 import { formatDateTime } from '../../utils/format'
+import { parseTrackPoints, drawHeatmapChart } from '../../utils/charts'
 
 const detail = ref<any>(null)
 const rankings = ref<any>(null)
 const matchId = ref('')
+const heatmapImage = ref('')
 
 const menuBtn = uni.getMenuButtonBoundingClientRect()
 const sysInfo = uni.getSystemInfoSync()
@@ -174,6 +198,23 @@ async function loadData() {
   try {
     detail.value = await getMatchDetail(matchId.value)
     try { rankings.value = await getMatchRankings(matchId.value) } catch {}
+    // Load heatmap from GPS sessions overlapping match time (±3h)
+    try {
+      const matchDate = new Date(detail.value.match.matchDate).getTime()
+      const windowMs = 3 * 60 * 60 * 1000
+      const res = await getSessions()
+      const matched = res.sessions.filter((s: SessionDto) =>
+        s.startTime < matchDate + windowMs && s.endTime > matchDate - windowMs
+      )
+      const pts = parseTrackPoints(matched)
+      if (pts.length > 0) {
+        nextTick(() => {
+          setTimeout(() => {
+            drawHeatmapChart('matchHeatmap', pts, (path) => { heatmapImage.value = path })
+          }, 300)
+        })
+      }
+    } catch {}
   } catch (e) { console.error(e) }
 }
 
@@ -634,5 +675,109 @@ $textMuted: #666;
 
 .rank-value-orange {
   color: #FFA502;
+}
+
+// ============================================================
+// Chart Card & Heatmap
+// ============================================================
+.chart-card {
+  background: $cardBg;
+  border-radius: 32rpx;
+  padding: 28rpx 32rpx;
+  border: $border;
+  box-shadow: 0 4rpx 24rpx rgba(0, 0, 0, 0.3);
+}
+
+.chart-card-title {
+  font-size: 30rpx;
+  font-weight: 500;
+  color: $textPrimary;
+  display: block;
+  margin-bottom: 24rpx;
+}
+
+.heatmap-box {
+  aspect-ratio: 4/3;
+  border-radius: 20rpx;
+  position: relative;
+  overflow: hidden;
+  border: $border;
+  background: linear-gradient(135deg, #0a2a0f, #2a2a0a, #2a0a0a);
+}
+
+.heatmap-image {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+}
+
+.field-outline {
+  position: absolute;
+  top: 24rpx;
+  left: 24rpx;
+  right: 24rpx;
+  bottom: 24rpx;
+  border: 2rpx solid rgba(255, 255, 255, 0.15);
+  z-index: 1;
+}
+
+.field-center-line {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  bottom: 0;
+  width: 1rpx;
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.field-center-circle {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 100rpx;
+  height: 100rpx;
+  border: 2rpx solid rgba(255, 255, 255, 0.15);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.heatmap-legend {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 16rpx;
+  padding: 0 8rpx;
+}
+
+.legend-text {
+  font-size: 22rpx;
+  color: $textMuted;
+}
+
+.legend-bar {
+  flex: 1;
+  height: 12rpx;
+  margin: 0 24rpx;
+  background: linear-gradient(90deg, #16a34a, #eab308, #ef4444);
+  border-radius: 6rpx;
+}
+
+// ============================================================
+// Offscreen Canvas
+// ============================================================
+.offscreen-canvas {
+  position: fixed;
+  left: -9999px;
+  top: -9999px;
+  width: 280px;
+  height: 280px;
+}
+
+.offscreen-canvas--heatmap {
+  width: 350px;
+  height: 263px;
 }
 </style>
