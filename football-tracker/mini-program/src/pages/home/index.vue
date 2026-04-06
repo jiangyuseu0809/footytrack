@@ -389,7 +389,13 @@ function getLevel(metric: string, value: number | string): string {
 }
 
 async function loadData() {
-  if (!isLoggedIn()) return
+  if (!isLoggedIn()) {
+    sessions.value = []
+    upcomingMatches.value = []
+    isWatchConnected.value = false
+    watchBrand.value = ''
+    return
+  }
   try {
     const [sessRes, matchRes, profile] = await Promise.all([getSessions(), getMatches(), getProfile()])
     sessions.value = sessRes.sessions

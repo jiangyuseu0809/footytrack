@@ -140,7 +140,7 @@ async function loadData() {
 }
 
 async function handleCreate() {
-  if (!isLoggedIn()) { uni.navigateTo({ url: '/pages/login/index' }); return }
+  if (!isLoggedIn()) { uni.switchTab({ url: '/pages/profile/index' }); return }
   if (!newTeamName.value) return
   try {
     await createTeam(newTeamName.value)
@@ -154,7 +154,7 @@ async function handleCreate() {
 }
 
 async function handleJoin() {
-  if (!isLoggedIn()) { uni.navigateTo({ url: '/pages/login/index' }); return }
+  if (!isLoggedIn()) { uni.switchTab({ url: '/pages/profile/index' }); return }
   if (!joinCode.value) return
   try {
     await joinTeam(joinCode.value)

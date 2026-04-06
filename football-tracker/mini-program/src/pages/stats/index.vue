@@ -80,8 +80,8 @@
         <view class="empty-icon-box">
           <text class="empty-icon">📅</text>
         </view>
-        <text class="empty-title">还没有比赛记录</text>
-        <text class="empty-sub">开始你的第一场比赛吧</text>
+        <text class="empty-title">{{ loggedIn ? '还没有比赛记录' : '未登录' }}</text>
+        <text class="empty-sub">{{ loggedIn ? '开始你的第一场比赛吧' : '登录后查看比赛历史' }}</text>
       </view>
     </scroll-view>
   </view>
@@ -96,10 +96,11 @@ import { formatDistance, formatDate, formatWeekday, computePerformanceScore } fr
 const CACHE_KEY = 'cache_sessions'
 const sessions = ref<SessionDto[]>([])
 const loaded = ref(false)
+const loggedIn = ref(isLoggedIn())
 
 // Restore from cache immediately
 const cached = uni.getStorageSync(CACHE_KEY)
-if (cached) {
+if (cached && isLoggedIn()) {
   sessions.value = cached
   loaded.value = true
 }
@@ -218,7 +219,12 @@ function onCardTap(day: DaySection) {
 }
 
 async function loadData() {
-  if (!isLoggedIn()) return
+  loggedIn.value = isLoggedIn()
+  if (!loggedIn.value) {
+    sessions.value = []
+    loaded.value = true
+    return
+  }
   try {
     const res = await getSessions()
     sessions.value = res.sessions

@@ -5,40 +5,39 @@
       <text class="header-title">我的</text>
 
       <!-- User Info -->
-      <view class="user-info">
-        <button class="avatar-btn" open-type="chooseAvatar" @chooseavatar="onChooseAvatar">
-          <image v-if="profile?.avatarUrl" class="avatar-img" :src="profile.avatarUrl" mode="aspectFill" />
-          <view v-else class="avatar-circle">
-            <text class="avatar-icon">👤</text>
-          </view>
-        </button>
+      <view class="user-info" @tap="!loggedIn && handleLogin()">
+        <view v-if="loggedIn">
+          <button class="avatar-btn" open-type="chooseAvatar" @chooseavatar="onChooseAvatar">
+            <image v-if="profile?.avatarUrl" class="avatar-img" :src="profile.avatarUrl" mode="aspectFill" />
+            <view v-else class="avatar-circle">
+              <text class="avatar-icon">👤</text>
+            </view>
+          </button>
+        </view>
+        <view v-else class="avatar-circle">
+          <text class="avatar-icon">👤</text>
+        </view>
         <view class="user-text">
-          <input
-            type="nickname"
-            class="nickname-input"
-            :value="profile?.nickname || '足球爱好者'"
-            placeholder="设置昵称"
-            placeholder-class="nickname-placeholder"
-            @blur="onNicknameBlur"
-          />
-          <text class="join-date">加入于 {{ joinDate }}</text>
+          <template v-if="loggedIn">
+            <input
+              type="nickname"
+              class="nickname-input"
+              :value="profile?.nickname || '足球爱好者'"
+              placeholder="设置昵称"
+              placeholder-class="nickname-placeholder"
+              @blur="onNicknameBlur"
+            />
+            <text class="join-date">加入于 {{ joinDate }}</text>
+          </template>
+          <template v-else>
+            <text class="nickname-input login-hint">点击登录</text>
+            <text class="join-date">登录后查看个人数据</text>
+          </template>
         </view>
       </view>
     </view>
 
     <scroll-view scroll-y class="scroll-area">
-      <!-- Not Logged In State -->
-      <view v-if="!loggedIn" class="login-prompt">
-        <view class="login-prompt-icon">
-          <text class="login-prompt-emoji">👤</text>
-        </view>
-        <text class="login-prompt-title">登录后查看个人数据</text>
-        <text class="login-prompt-sub">登录后可查看训练统计、徽章和AI分析</text>
-        <view class="login-prompt-btn" @tap="goLogin">
-          <text class="login-prompt-btn-text">去登录</text>
-        </view>
-      </view>
-
       <template v-if="loggedIn">
         <!-- Stats Cards -->
         <view class="section">
@@ -229,7 +228,7 @@ import { ref, reactive, computed } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import {
   getProfile, getSessions, getPlayerAnalysis, getEarnedBadges,
-  clearAuth, isLoggedIn, updateProfile, uploadAvatar,
+  clearAuth, isLoggedIn, updateProfile, uploadAvatar, wxLogin, setToken, setUid,
   type UserProfile, type SessionDto, type Badge, type UserBadge
 } from '../../utils/api'
 import { formatDistance } from '../../utils/format'
@@ -350,8 +349,17 @@ async function loadData() {
   } catch (e) { console.error(e) }
 }
 
-function goLogin() {
-  uni.navigateTo({ url: '/pages/login/index' })
+async function handleLogin() {
+  try {
+    const res = await wxLogin()
+    setToken(res.token)
+    setUid(res.uid)
+    loggedIn.value = true
+    await loadData()
+    uni.showToast({ title: '登录成功', icon: 'success' })
+  } catch (e: any) {
+    uni.showToast({ title: e.message || '登录失败', icon: 'none' })
+  }
 }
 
 async function onChooseAvatar(e: any) {
@@ -412,7 +420,13 @@ function handleLogout() {
     success(res) {
       if (res.confirm) {
         clearAuth()
-        uni.reLaunch({ url: '/pages/login/index' })
+        loggedIn.value = false
+        profile.value = null
+        sessions.value = []
+        analysis.value = null
+        allBadges.value = []
+        earnedBadges.value = []
+        goals.value = { distance: 0, calories: 0, matches: 0 }
       }
     }
   })
@@ -997,59 +1011,9 @@ $textMuted: #666;
 }
 
 // ============================================================
-// Login Prompt
+// Login Hint (in header)
 // ============================================================
-.login-prompt {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 120rpx 48rpx 60rpx;
-}
-
-.login-prompt-icon {
-  width: 120rpx;
-  height: 120rpx;
-  border-radius: 50%;
-  background: #FFFFFF;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: 24rpx;
-}
-
-.login-prompt-emoji {
-  font-size: 56rpx;
-}
-
-.login-prompt-title {
-  font-size: 32rpx;
-  font-weight: 600;
-  color: $textPrimary;
-  display: block;
-  margin-bottom: 8rpx;
-}
-
-.login-prompt-sub {
-  font-size: 26rpx;
-  color: $textSecondary;
-  display: block;
-  margin-bottom: 40rpx;
-}
-
-.login-prompt-btn {
-  width: 360rpx;
-  height: 88rpx;
-  background: linear-gradient(135deg, $green, $greenDark);
-  border-radius: 100rpx;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 8rpx 24rpx rgba(7, 193, 96, 0.3);
-}
-
-.login-prompt-btn-text {
-  font-size: 30rpx;
-  font-weight: 600;
-  color: #FFFFFF;
+.login-hint {
+  color: rgba(255, 255, 255, 0.6);
 }
 </style>

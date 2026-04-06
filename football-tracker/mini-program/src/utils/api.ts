@@ -25,6 +25,14 @@ export function getUid(): string {
 export function clearAuth() {
   uni.removeStorageSync('auth_token')
   uni.removeStorageSync('auth_uid')
+  // Clear all user-related caches
+  uni.removeStorageSync('cache_profile')
+  uni.removeStorageSync('cache_profile_sessions')
+  uni.removeStorageSync('cache_sessions')
+  uni.removeStorageSync('cache_circles')
+  uni.removeStorageSync('cache_circle_members')
+  uni.removeStorageSync('selected_circle_id')
+  uni.removeStorageSync('monthly_goals')
 }
 
 export function isLoggedIn(): boolean {
@@ -52,7 +60,7 @@ function request<T = any>(endpoint: string, options: RequestOptions = {}): Promi
         } else if (res.statusCode === 401) {
           clearAuth()
           uni.showToast({ title: '登录已过期，请重新登录', icon: 'none' })
-          setTimeout(() => uni.navigateTo({ url: '/pages/login/index' }), 1500)
+          setTimeout(() => uni.switchTab({ url: '/pages/profile/index' }), 1500)
           reject(new Error('登录已过期'))
         } else {
           const errMsg = (res.data as any)?.error || `服务器错误(${res.statusCode})`
