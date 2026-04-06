@@ -55,8 +55,9 @@ data class AvatarConfig(
 data class WxPayConfig(
     val mchId: String,
     val apiV3Key: String,
+    val certSerialNo: String,
     val pubKeyId: String,
-    val pubKeyPem: String,
+    val privateKeyPem: String,
     val mpAppId: String
 )
 
@@ -103,8 +104,9 @@ fun Application.loadConfig(): AppConfig {
         wxPay = WxPayConfig(
             mchId = System.getenv("WXPAY_MCH_ID") ?: "",
             apiV3Key = System.getenv("WXPAY_API_V3_KEY") ?: "",
+            certSerialNo = System.getenv("WXPAY_CERT_SERIAL_NO") ?: "",
             pubKeyId = System.getenv("WXPAY_PUB_KEY_ID") ?: "",
-            pubKeyPem = System.getenv("WXPAY_PRIVATE_KEY_PEM") ?: "",
+            privateKeyPem = System.getenv("WXPAY_PRIVATE_KEY_PEM") ?: "",
             mpAppId = System.getenv("WXPAY_MP_APP_ID") ?: ""
         )
     )

@@ -50,7 +50,7 @@ class WxPayService(private val config: WxPayConfig) {
 
         val signature = sign("$method\n$urlPath\n$timestamp\n$nonceStr\n$body\n")
 
-        val authorization = """WECHATPAY2-SHA256-RSA2048 mchid="${config.mchId}",serial_no="${config.pubKeyId}",nonce_str="$nonceStr",timestamp="$timestamp",signature="$signature""""
+        val authorization = """WECHATPAY2-SHA256-RSA2048 mchid="${config.mchId}",serial_no="${config.certSerialNo}",nonce_str="$nonceStr",timestamp="$timestamp",signature="$signature""""
 
         val resp = client.post("https://api.mch.weixin.qq.com$urlPath") {
             header(HttpHeaders.Authorization, authorization)
@@ -149,7 +149,7 @@ class WxPayService(private val config: WxPayConfig) {
      * RSA-SHA256 sign with the merchant's private key (PEM loaded from config).
      */
     private fun sign(message: String): String {
-        val pemContent = config.pubKeyPem
+        val pemContent = config.privateKeyPem
             .replace("-----BEGIN PRIVATE KEY-----", "")
             .replace("-----END PRIVATE KEY-----", "")
             .replace("\\s".toRegex(), "")
