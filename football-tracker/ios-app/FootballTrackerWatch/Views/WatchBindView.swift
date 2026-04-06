@@ -1,4 +1,5 @@
 import SwiftUI
+import WatchKit
 
 struct WatchBindView: View {
     @State private var code: String = ""
@@ -179,7 +180,11 @@ struct WatchBindView: View {
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.timeoutInterval = 15
-        request.httpBody = try JSONEncoder().encode(BindRequest(code: code))
+        request.httpBody = try JSONEncoder().encode(BindRequest(
+            code: code,
+            brand: "Apple",
+            model: WKInterfaceDevice.current().name
+        ))
 
         let (data, response) = try await URLSession.shared.data(for: request)
 
@@ -201,6 +206,8 @@ struct WatchBindView: View {
 
 private struct BindRequest: Encodable {
     let code: String
+    let brand: String
+    let model: String
 }
 
 private struct BindResponse: Decodable {

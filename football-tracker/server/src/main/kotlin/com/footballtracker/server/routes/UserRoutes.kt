@@ -25,7 +25,9 @@ data class UserProfileResponse(
     val avatarUrl: String?,
     val authProvider: String,
     val createdAt: Long,
-    val watchBoundAt: Long? = null
+    val watchBoundAt: Long? = null,
+    val watchBrand: String? = null,
+    val watchModel: String? = null
 )
 
 @Serializable
@@ -59,7 +61,9 @@ fun Route.userRoutes(userService: UserService, avatarConfig: AvatarConfig) {
                 avatarUrl = user.avatarUrl,
                 authProvider = user.authProvider,
                 createdAt = user.createdAt,
-                watchBoundAt = user.watchBoundAt
+                watchBoundAt = user.watchBoundAt,
+                watchBrand = user.watchBrand,
+                watchModel = user.watchModel
             ))
         }
 
@@ -80,7 +84,9 @@ fun Route.userRoutes(userService: UserService, avatarConfig: AvatarConfig) {
                 avatarUrl = user.avatarUrl,
                 authProvider = user.authProvider,
                 createdAt = user.createdAt,
-                watchBoundAt = user.watchBoundAt
+                watchBoundAt = user.watchBoundAt,
+                watchBrand = user.watchBrand,
+                watchModel = user.watchModel
             ))
         }
 

@@ -32,7 +32,7 @@ data class UsernamePasswordRequest(val username: String, val password: String)
 data class AuthResponse(val token: String, val uid: String, val isNewUser: Boolean)
 
 @Serializable
-data class BindCodeRequest(val code: String)
+data class BindCodeRequest(val code: String, val brand: String? = null, val model: String? = null)
 
 @Serializable
 data class BindCodeResponse(val code: String, val expiresInSeconds: Int)
@@ -168,7 +168,7 @@ fun Route.authRoutes(
                 return@post
             }
 
-            userService.markWatchBound(java.util.UUID.fromString(uid))
+            userService.markWatchBound(java.util.UUID.fromString(uid), req.brand, req.model)
             val token = jwtService.generateToken(uid)
             call.respond(BindTokenResponse(token = token, uid = uid))
         }

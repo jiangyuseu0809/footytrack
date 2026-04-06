@@ -116,6 +116,8 @@ export interface UserProfile {
   authProvider: string
   createdAt: number
   watchBoundAt?: number
+  watchBrand?: string
+  watchModel?: string
 }
 
 export async function getProfile(): Promise<UserProfile> {
