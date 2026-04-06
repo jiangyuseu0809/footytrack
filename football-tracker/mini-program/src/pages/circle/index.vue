@@ -183,9 +183,32 @@
       </view>
     </scroll-view>
 
+    <!-- FAB Popup -->
+    <view v-if="showFabMenu" class="fab-popup-mask" @tap="closeFabMenu"></view>
+    <view v-if="showFabMenu" class="fab-popup" :class="{ 'fab-popup--show': fabMenuVisible }" @tap.stop>
+      <view class="fab-popup-item" @tap="fabAction('join')">
+        <view class="fab-popup-icon fab-popup-icon--join">
+          <image src="/static/icons/fab-join.svg" class="fab-popup-icon-svg" />
+        </view>
+        <view class="fab-popup-item-info">
+          <text class="fab-popup-item-title">加入圈子</text>
+          <text class="fab-popup-item-desc">输入邀请码加入足球圈</text>
+        </view>
+      </view>
+      <view class="fab-popup-item" @tap="fabAction('create')">
+        <view class="fab-popup-icon fab-popup-icon--create">
+          <image src="/static/icons/fab-create.svg" class="fab-popup-icon-svg" />
+        </view>
+        <view class="fab-popup-item-info">
+          <text class="fab-popup-item-title">新建圈子</text>
+          <text class="fab-popup-item-desc">创建你的足球圈</text>
+        </view>
+      </view>
+    </view>
+
     <!-- FAB: Create Circle -->
-    <view v-if="loaded && circles.length > 0" class="fab" @tap="showCreateModal = true">
-      <text class="fab-icon">+</text>
+    <view v-if="loaded && circles.length > 0" class="fab" @tap="toggleFabMenu">
+      <text class="fab-icon" :class="{ 'fab-icon--open': showFabMenu }">+</text>
     </view>
 
     <!-- Create Modal -->
@@ -263,9 +286,6 @@
             <text v-if="circle.id === selectedCircleId" class="switcher-check">✓</text>
           </view>
         </scroll-view>
-        <view class="switcher-footer" @tap.stop="showJoinModal = true; showCircleList = false">
-          <text class="switcher-footer-text">+ 加入圈子</text>
-        </view>
       </view>
     </view>
   </view>
@@ -305,6 +325,8 @@ const contentVisible = ref(true)
 const showCreateModal = ref(false)
 const showJoinModal = ref(false)
 const showInviteInfo = ref(false)
+const showFabMenu = ref(false)
+const fabMenuVisible = ref(false)
 const newCircleName = ref('')
 const joinCode = ref('')
 const selectedStat = ref<'distance' | 'calories' | 'sprints' | 'duration'>('distance')
@@ -407,6 +429,28 @@ function toggleCircleList() {
     showCircleList.value = true
     nextTick(() => { circleListVisible.value = true })
   }
+}
+
+function toggleFabMenu() {
+  if (showFabMenu.value) {
+    closeFabMenu()
+  } else {
+    showFabMenu.value = true
+    nextTick(() => { fabMenuVisible.value = true })
+  }
+}
+
+function closeFabMenu() {
+  fabMenuVisible.value = false
+  setTimeout(() => { showFabMenu.value = false }, 200)
+}
+
+function fabAction(type: 'join' | 'create') {
+  closeFabMenu()
+  setTimeout(() => {
+    if (type === 'join') showJoinModal.value = true
+    else showCreateModal.value = true
+  }, 200)
 }
 
 function selectCircle(id: string) {
@@ -615,6 +659,99 @@ $textMuted: #666;
   font-weight: 300;
   color: $textPrimary;
   margin-top: -4rpx;
+  transition: transform 0.25s ease;
+}
+
+.fab-icon--open {
+  transform: rotate(45deg);
+}
+
+// ============================================================
+// FAB Popup
+// ============================================================
+.fab-popup-mask {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 99;
+}
+
+.fab-popup {
+  position: fixed;
+  right: 40rpx;
+  bottom: calc(env(safe-area-inset-bottom) + 156rpx);
+  width: 400rpx;
+  background: $cardBg;
+  border-radius: 24rpx;
+  padding: 12rpx;
+  border: $border;
+  box-shadow: 0 16rpx 48rpx rgba(0, 0, 0, 0.5);
+  z-index: 100;
+  opacity: 0;
+  transform: translateY(16rpx) scale(0.95);
+  transform-origin: bottom right;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.fab-popup--show {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+.fab-popup-item {
+  display: flex;
+  align-items: center;
+  padding: 20rpx;
+  border-radius: 20rpx;
+
+  &:active {
+    background: $cardBgLight;
+  }
+}
+
+.fab-popup-icon {
+  width: 72rpx;
+  height: 72rpx;
+  border-radius: 16rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 20rpx;
+  flex-shrink: 0;
+}
+
+.fab-popup-icon--join {
+  background: rgba(59, 130, 246, 0.15);
+}
+
+.fab-popup-icon--create {
+  background: rgba(7, 193, 96, 0.15);
+}
+
+.fab-popup-icon-svg {
+  width: 40rpx;
+  height: 40rpx;
+}
+
+.fab-popup-item-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.fab-popup-item-title {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: $textPrimary;
+  display: block;
+  margin-bottom: 2rpx;
+}
+
+.fab-popup-item-desc {
+  font-size: 22rpx;
+  color: $textSecondary;
+  display: block;
 }
 
 // ============================================================
@@ -933,20 +1070,6 @@ $textMuted: #666;
   font-weight: 700;
   flex-shrink: 0;
   margin-left: 12rpx;
-}
-
-.switcher-footer {
-  padding: 20rpx 28rpx;
-  border-top: $border;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.switcher-footer-text {
-  font-size: 26rpx;
-  font-weight: 600;
-  color: $green;
 }
 
 // ============================================================
