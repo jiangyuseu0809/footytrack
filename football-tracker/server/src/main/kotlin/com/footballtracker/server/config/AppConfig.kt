@@ -105,7 +105,7 @@ fun Application.loadConfig(): AppConfig {
             apiV3Key = System.getenv("WXPAY_API_V3_KEY") ?: "",
             pubKeyId = System.getenv("WXPAY_PUB_KEY_ID") ?: "",
             pubKeyPem = System.getenv("WXPAY_PRIVATE_KEY_PEM") ?: "",
-            mpAppId = System.getenv("WXPAY_MP_APP_ID") ?: config.property("app.wechat.mpAppId").getString()
+            mpAppId = System.getenv("WXPAY_MP_APP_ID") ?: ""
         )
     )
 }
