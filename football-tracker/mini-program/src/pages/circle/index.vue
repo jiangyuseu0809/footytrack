@@ -11,16 +11,14 @@
         <view class="empty-icon-wrap">
           <text class="empty-icon">👥</text>
         </view>
-        <text class="empty-title">{{ loggedIn ? '欢迎来到圈子' : '未登录' }}</text>
-        <text class="empty-desc">{{ loggedIn ? '创建你的第一个运动圈子\n邀请好友一起PK运动数据' : '登录后查看运动圈子' }}</text>
-        <template v-if="loggedIn">
-          <view class="empty-btn" @tap="showCreateModal = true">
-            <text class="empty-btn-text">+ 创建圈子</text>
-          </view>
-          <view class="empty-btn-join" @tap="showJoinModal = true">
-            <text class="empty-btn-join-text">加入圈子</text>
-          </view>
-        </template>
+        <text class="empty-title">欢迎来到圈子</text>
+        <text class="empty-desc">创建你的第一个运动圈子&#10;邀请好友一起PK运动数据</text>
+        <view class="empty-btn" @tap="showCreateModal = true">
+          <text class="empty-btn-text">+ 创建圈子</text>
+        </view>
+        <view class="empty-btn-join" @tap="showJoinModal = true">
+          <text class="empty-btn-join-text">加入圈子</text>
+        </view>
       </view>
     </scroll-view>
 
@@ -298,7 +296,7 @@ import { ref, computed, watch, nextTick } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import {
   getCircles, createCircle, joinCircle, getCircleDetail, leaveCircle, uploadCircleAvatar,
-  isLoggedIn, getUid, type Circle, type CircleMember,
+  ensureLogin, getUid, type Circle, type CircleMember,
 } from '../../utils/api'
 
 const STORAGE_KEY = 'selected_circle_id'
@@ -307,24 +305,22 @@ const CACHE_MEMBERS = 'cache_circle_members'
 
 const loading = ref(false)
 const loaded = ref(false)
-const loggedIn = ref(isLoggedIn())
 const circles = ref<Circle[]>([])
 const selectedCircleId = ref(uni.getStorageSync(STORAGE_KEY) || '')
 const members = ref<CircleMember[]>([])
 
-// Restore from cache immediately (only if logged in)
-if (isLoggedIn()) {
-  const cachedCircles = uni.getStorageSync(CACHE_CIRCLES)
-  const cachedMembers = uni.getStorageSync(CACHE_MEMBERS)
-  if (cachedCircles && cachedCircles.length > 0) {
-    circles.value = cachedCircles
-    if (cachedMembers) members.value = cachedMembers
-    if (!selectedCircleId.value || !cachedCircles.find((c: Circle) => c.id === selectedCircleId.value)) {
-      selectedCircleId.value = cachedCircles[0].id
-    }
-    loaded.value = true
+// Restore from cache immediately
+const cachedCircles = uni.getStorageSync(CACHE_CIRCLES)
+const cachedMembers = uni.getStorageSync(CACHE_MEMBERS)
+if (cachedCircles && cachedCircles.length > 0) {
+  circles.value = cachedCircles
+  if (cachedMembers) members.value = cachedMembers
+  if (!selectedCircleId.value || !cachedCircles.find((c: Circle) => c.id === selectedCircleId.value)) {
+    selectedCircleId.value = cachedCircles[0].id
   }
-}const showCircleList = ref(false)
+  loaded.value = true
+}
+const showCircleList = ref(false)
 const circleListVisible = ref(false)
 const contentVisible = ref(true)
 const showCreateModal = ref(false)
@@ -514,14 +510,7 @@ function openAvatarPicker() {
 }
 
 async function loadData() {
-  loggedIn.value = isLoggedIn()
-  if (!loggedIn.value) {
-    circles.value = []
-    members.value = []
-    selectedCircleId.value = ''
-    loaded.value = true
-    return
-  }
+  await ensureLogin()
   loading.value = true
   try {
     const res = await getCircles()
@@ -557,7 +546,6 @@ async function loadCircleDetail(circleId: string) {
 }
 
 async function handleCreate() {
-  if (!isLoggedIn()) { uni.switchTab({ url: '/pages/profile/index' }); return }
   if (!newCircleName.value.trim()) return
   try {
     const circle = await createCircle(newCircleName.value.trim())
@@ -572,7 +560,6 @@ async function handleCreate() {
 }
 
 async function handleJoin() {
-  if (!isLoggedIn()) { uni.switchTab({ url: '/pages/profile/index' }); return }
   if (!joinCode.value.trim()) return
   try {
     const circle = await joinCircle(joinCode.value.trim())

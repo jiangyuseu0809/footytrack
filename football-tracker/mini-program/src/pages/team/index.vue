@@ -123,7 +123,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
-import { getTeams, createTeam, joinTeam, isLoggedIn, type Team } from '../../utils/api'
+import { getTeams, createTeam, joinTeam, ensureLogin, type Team } from '../../utils/api'
 
 const teams = ref<Team[]>([])
 const showCreateModal = ref(false)
@@ -132,7 +132,7 @@ const newTeamName = ref('')
 const joinCode = ref('')
 
 async function loadData() {
-  if (!isLoggedIn()) return
+  await ensureLogin()
   try {
     const res = await getTeams()
     teams.value = res.teams
@@ -140,7 +140,6 @@ async function loadData() {
 }
 
 async function handleCreate() {
-  if (!isLoggedIn()) { uni.switchTab({ url: '/pages/profile/index' }); return }
   if (!newTeamName.value) return
   try {
     await createTeam(newTeamName.value)
@@ -154,7 +153,6 @@ async function handleCreate() {
 }
 
 async function handleJoin() {
-  if (!isLoggedIn()) { uni.switchTab({ url: '/pages/profile/index' }); return }
   if (!joinCode.value) return
   try {
     await joinTeam(joinCode.value)

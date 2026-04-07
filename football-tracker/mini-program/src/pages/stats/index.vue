@@ -80,8 +80,8 @@
         <view class="empty-icon-box">
           <text class="empty-icon">📅</text>
         </view>
-        <text class="empty-title">{{ loggedIn ? '还没有比赛记录' : '未登录' }}</text>
-        <text class="empty-sub">{{ loggedIn ? '开始你的第一场比赛吧' : '登录后查看比赛历史' }}</text>
+        <text class="empty-title">还没有比赛记录</text>
+        <text class="empty-sub">开始你的第一场比赛吧</text>
       </view>
     </scroll-view>
   </view>
@@ -90,17 +90,16 @@
 <script setup lang="ts">
 import { ref, computed, reactive } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
-import { getSessions, deleteSession, isLoggedIn, type SessionDto } from '../../utils/api'
+import { getSessions, deleteSession, ensureLogin, type SessionDto } from '../../utils/api'
 import { formatDistance, formatDate, formatWeekday, computePerformanceScore } from '../../utils/format'
 
 const CACHE_KEY = 'cache_sessions'
 const sessions = ref<SessionDto[]>([])
 const loaded = ref(false)
-const loggedIn = ref(isLoggedIn())
 
 // Restore from cache immediately
 const cached = uni.getStorageSync(CACHE_KEY)
-if (cached && isLoggedIn()) {
+if (cached) {
   sessions.value = cached
   loaded.value = true
 }
@@ -219,12 +218,7 @@ function onCardTap(day: DaySection) {
 }
 
 async function loadData() {
-  loggedIn.value = isLoggedIn()
-  if (!loggedIn.value) {
-    sessions.value = []
-    loaded.value = true
-    return
-  }
+  await ensureLogin()
   try {
     const res = await getSessions()
     sessions.value = res.sessions

@@ -3,6 +3,12 @@
 </template>
 
 <script setup lang="ts">
+import { onLaunch } from '@dcloudio/uni-app'
+import { ensureLogin } from './utils/api'
+
+onLaunch(() => {
+  ensureLogin()
+})
 </script>
 
 <style>

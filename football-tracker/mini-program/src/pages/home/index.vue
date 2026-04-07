@@ -284,7 +284,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, nextTick } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
-import { getSessions, getMatches, getProfile, isLoggedIn, type SessionDto, type Match } from '../../utils/api'
+import { getSessions, getMatches, getProfile, ensureLogin, type SessionDto, type Match } from '../../utils/api'
 import { formatDateTime, formatWeekday } from '../../utils/format'
 import { roundRect, parseTrackPoints, computeAbilityData, drawRadarChart, drawHeatmapChart, drawSmoothCurveChart, type CurvePoint } from '../../utils/charts'
 
@@ -389,13 +389,7 @@ function getLevel(metric: string, value: number | string): string {
 }
 
 async function loadData() {
-  if (!isLoggedIn()) {
-    sessions.value = []
-    upcomingMatches.value = []
-    isWatchConnected.value = false
-    watchBrand.value = ''
-    return
-  }
+  await ensureLogin()
   try {
     const [sessRes, matchRes, profile] = await Promise.all([getSessions(), getMatches(), getProfile()])
     sessions.value = sessRes.sessions

@@ -157,7 +157,7 @@
 <script setup lang="ts">
 import { ref, computed, reactive, nextTick } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
-import { getSessions, deleteSession, isLoggedIn, type SessionDto } from '../../utils/api'
+import { getSessions, deleteSession, ensureLogin, type SessionDto } from '../../utils/api'
 import { formatDistance, computePerformanceScore } from '../../utils/format'
 import { computeAbilityData, drawRadarChart } from '../../utils/charts'
 
@@ -326,7 +326,7 @@ function goSessionDetail(id: string) {
 }
 
 async function loadData() {
-  if (!isLoggedIn()) return
+  await ensureLogin()
   try {
     const res = await getSessions()
     allSessions.value = res.sessions

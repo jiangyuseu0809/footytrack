@@ -5,8 +5,8 @@
       <text class="header-title">我的</text>
 
       <!-- User Info -->
-      <view class="user-info" @tap="!loggedIn && handleLogin()">
-        <view v-if="loggedIn">
+      <view class="user-info">
+        <view>
           <button class="avatar-btn" open-type="chooseAvatar" @chooseavatar="onChooseAvatar">
             <image v-if="profile?.avatarUrl" class="avatar-img" :src="profile.avatarUrl" mode="aspectFill" />
             <view v-else class="avatar-circle">
@@ -14,25 +14,16 @@
             </view>
           </button>
         </view>
-        <view v-else class="avatar-circle">
-          <text class="avatar-icon">👤</text>
-        </view>
         <view class="user-text">
-          <template v-if="loggedIn">
-            <input
-              type="nickname"
-              class="nickname-input"
-              :value="profile?.nickname || '足球爱好者'"
-              placeholder="设置昵称"
-              placeholder-class="nickname-placeholder"
-              @blur="onNicknameBlur"
-            />
-            <text class="join-date">加入于 {{ joinDate }}</text>
-          </template>
-          <template v-else>
-            <text class="nickname-input login-hint">点击登录</text>
-            <text class="join-date">登录后查看个人数据</text>
-          </template>
+          <input
+            type="nickname"
+            class="nickname-input"
+            :value="profile?.nickname || '足球爱好者'"
+            placeholder="设置昵称"
+            placeholder-class="nickname-placeholder"
+            @blur="onNicknameBlur"
+          />
+          <text class="join-date">加入于 {{ joinDate }}</text>
         </view>
       </view>
     </view>
@@ -59,7 +50,7 @@
       <!-- Monthly Goal -->
       <view class="section">
         <!-- No goals set: prompt -->
-        <view v-if="!hasGoals" class="goal-card goal-prompt" @tap="requireLogin() && openGoalModal()">
+        <view v-if="!hasGoals" class="goal-card goal-prompt" @tap="openGoalModal()">
           <text class="goal-prompt-text">设置你的月度运动目标</text>
           <view class="goal-prompt-btn">
             <text class="goal-prompt-btn-text">设置目标</text>
@@ -70,7 +61,7 @@
         <view v-else class="goal-card">
           <view class="goal-header">
             <text class="goal-title">本月目标</text>
-            <text class="goal-edit" @tap="requireLogin() && openGoalModal()">编辑</text>
+            <text class="goal-edit" @tap="openGoalModal()">编辑</text>
           </view>
 
           <view v-if="goals.distance > 0" class="goal-row">
@@ -141,7 +132,7 @@
       <view class="section">
         <view class="menu-card">
           <!-- AI Analysis -->
-          <view class="menu-row" @tap="requireLogin() && loadAnalysis()">
+          <view class="menu-row" @tap="loadAnalysis()">
             <text class="menu-label">球风分析</text>
             <text class="menu-chevron">›</text>
           </view>
@@ -205,13 +196,6 @@
         </view>
       </view>
 
-      <!-- Logout (only when logged in) -->
-      <view v-if="loggedIn" class="section">
-        <view class="logout-btn" @tap="handleLogout">
-          <text class="logout-text">退出登录</text>
-        </view>
-      </view>
-
       <!-- About -->
       <view class="about-section section--last">
         <text class="about-text">FootyTrack v1.0.0</text>
@@ -226,7 +210,7 @@ import { ref, reactive, computed } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import {
   getProfile, getSessions, getPlayerAnalysis, getEarnedBadges,
-  clearAuth, isLoggedIn, updateProfile, uploadAvatar, wxLogin, setToken, setUid,
+  updateProfile, uploadAvatar, ensureLogin,
   type UserProfile, type SessionDto, type Badge, type UserBadge
 } from '../../utils/api'
 import { formatDistance } from '../../utils/format'
@@ -241,7 +225,6 @@ const analysis = ref<{ type: string; description: string; strengths: string[]; a
 const allBadges = ref<Badge[]>([])
 const earnedBadges = ref<UserBadge[]>([])
 const showBadges = ref(false)
-const loggedIn = ref(isLoggedIn())
 
 // Restore from cache immediately
 const cachedProfile = uni.getStorageSync(CACHE_PROFILE)
@@ -334,8 +317,7 @@ function badgeIcon(iconName: string): string {
 }
 
 async function loadData() {
-  loggedIn.value = isLoggedIn()
-  if (!loggedIn.value) return
+  await ensureLogin()
   try {
     const [p, s, b] = await Promise.all([getProfile(), getSessions(), getEarnedBadges()])
     profile.value = p
@@ -345,25 +327,6 @@ async function loadData() {
     uni.setStorageSync(CACHE_PROFILE, p)
     uni.setStorageSync(CACHE_PROFILE_SESSIONS, s.sessions)
   } catch (e) { console.error(e) }
-}
-
-async function handleLogin() {
-  try {
-    const res = await wxLogin()
-    setToken(res.token)
-    setUid(res.uid)
-    loggedIn.value = true
-    await loadData()
-    uni.showToast({ title: '登录成功', icon: 'success' })
-  } catch (e: any) {
-    uni.showToast({ title: e.message || '登录失败', icon: 'none' })
-  }
-}
-
-function requireLogin(): boolean {
-  if (loggedIn.value) return true
-  uni.showToast({ title: '请先登录', icon: 'none' })
-  return false
 }
 
 async function onChooseAvatar(e: any) {
@@ -415,25 +378,6 @@ async function loadAnalysis() {
     uni.hideLoading()
     uni.showToast({ title: e.message || '分析失败', icon: 'none' })
   }
-}
-
-function handleLogout() {
-  uni.showModal({
-    title: '确认退出',
-    content: '确定要退出登录吗？',
-    success(res) {
-      if (res.confirm) {
-        clearAuth()
-        loggedIn.value = false
-        profile.value = null
-        sessions.value = []
-        analysis.value = null
-        allBadges.value = []
-        earnedBadges.value = []
-        goals.value = { distance: 0, calories: 0, matches: 0 }
-      }
-    }
-  })
 }
 
 onShow(() => { loadData() })
@@ -993,31 +937,5 @@ $textMuted: #666;
   font-size: 22rpx;
   color: $textMuted;
   display: block;
-}
-
-// ============================================================
-// Logout
-// ============================================================
-.logout-btn {
-  background: $cardBg;
-  border-radius: 32rpx;
-  padding: 28rpx;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: $border;
-}
-
-.logout-text {
-  font-size: 28rpx;
-  font-weight: 600;
-  color: #FF4757;
-}
-
-// ============================================================
-// Login Hint (in header)
-// ============================================================
-.login-hint {
-  color: rgba(255, 255, 255, 0.6);
 }
 </style>

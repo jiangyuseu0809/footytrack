@@ -39,6 +39,25 @@ export function isLoggedIn(): boolean {
   return !!getToken()
 }
 
+/** Silently login via wx.login(); resolves when token is ready. */
+let _loginPromise: Promise<void> | null = null
+export function ensureLogin(): Promise<void> {
+  if (isLoggedIn()) return Promise.resolve()
+  if (_loginPromise) return _loginPromise
+  _loginPromise = (async () => {
+    try {
+      const res = await wxLogin()
+      setToken(res.token)
+      setUid(res.uid)
+    } catch (e) {
+      console.error('Silent login failed', e)
+    } finally {
+      _loginPromise = null
+    }
+  })()
+  return _loginPromise
+}
+
 function request<T = any>(endpoint: string, options: RequestOptions = {}): Promise<T> {
   const { method = 'GET', data, noAuth = false } = options
   const header: Record<string, string> = { 'Content-Type': 'application/json' }
@@ -58,9 +77,11 @@ function request<T = any>(endpoint: string, options: RequestOptions = {}): Promi
         if (res.statusCode >= 200 && res.statusCode < 300) {
           resolve(res.data as T)
         } else if (res.statusCode === 401) {
+          // Token expired — silently re-login and let the user retry
           clearAuth()
-          uni.showToast({ title: '登录已过期，请重新登录', icon: 'none' })
-          setTimeout(() => uni.switchTab({ url: '/pages/profile/index' }), 1500)
+          ensureLogin().then(() => {
+            uni.showToast({ title: '已自动重新登录，请重试', icon: 'none' })
+          })
           reject(new Error('登录已过期'))
         } else {
           const errMsg = (res.data as any)?.error || `服务器错误(${res.statusCode})`
