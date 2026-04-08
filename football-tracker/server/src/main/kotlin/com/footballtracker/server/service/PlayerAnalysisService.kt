@@ -75,7 +75,7 @@ class PlayerAnalysisService(
 }
 """.trim()
 
-        val apiUrl = "${openAiConfig.endpoint}/openai/deployments/${openAiConfig.deploymentName}/chat/completions?api-version=2024-02-15-preview"
+        val apiUrl = "${openAiConfig.endpoint}/openai/deployments/${openAiConfig.deploymentName}/chat/completions?api-version=2025-04-01-preview"
 
         val requestBody = buildJsonObject {
             putJsonArray("messages") {
@@ -85,7 +85,7 @@ class PlayerAnalysisService(
                 }
             }
             put("temperature", 0.7)
-            put("max_tokens", 500)
+            put("max_completion_tokens", 500)
         }
 
         val response = client.post(apiUrl) {

@@ -31,4 +31,4 @@ app:
   openai:
     endpoint: "YOUR_AZURE_OPENAI_ENDPOINT"
     apiKey: "YOUR_AZURE_OPENAI_API_KEY"
-    deploymentName: "gpt-4o-mini"
+    deploymentName: "gpt-5.4-nano"
