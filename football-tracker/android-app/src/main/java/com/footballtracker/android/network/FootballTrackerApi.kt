@@ -64,4 +64,38 @@ interface FootballTrackerApi {
 
     @POST("api/badges/check")
     suspend fun checkBadges(): CheckBadgesResponse
+
+    // ── Matches ──
+
+    @POST("api/matches")
+    suspend fun createMatch(@Body request: CreateMatchRequest): MatchResponse
+
+    @GET("api/matches")
+    suspend fun getMatches(): MatchListResponse
+
+    @GET("api/matches/{matchId}")
+    suspend fun getMatchDetail(@Path("matchId") matchId: String): MatchDetailResponse
+
+    @POST("api/matches/{matchId}/register")
+    suspend fun registerForMatch(
+        @Path("matchId") matchId: String,
+        @Body body: RegisterMatchBody
+    ): MessageResponse
+
+    @POST("api/matches/{matchId}/cancel")
+    suspend fun cancelMatchRegistration(@Path("matchId") matchId: String): MessageResponse
+
+    @DELETE("api/matches/{matchId}")
+    suspend fun deleteMatch(@Path("matchId") matchId: String): MessageResponse
+
+    @GET("api/matches/{matchId}/rankings")
+    suspend fun getMatchRankings(@Path("matchId") matchId: String): MatchRankingsResponse
+
+    @GET("api/matches/{matchId}/summary")
+    suspend fun getMatchSummary(@Path("matchId") matchId: String): MatchSummaryResponse
+
+    // ── Player Analysis ──
+
+    @GET("api/sessions/analysis")
+    suspend fun getPlayerAnalysis(): PlayerAnalysisResponse
 }

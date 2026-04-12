@@ -7,10 +7,10 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.BarChart
+import androidx.compose.material.icons.rounded.Groups
+import androidx.compose.material.icons.rounded.History
 import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.Person
-import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -59,51 +59,31 @@ class MainActivity : ComponentActivity() {
         val authRepo = appContainer.authRepository
         val userRepo = appContainer.userRepository
         val sessionRepo = appContainer.sessionRepo
+        val cloudSync = appContainer.cloudSync
         val weChatHelper = appContainer.weChatAuthHelper
 
         val currentUser by authRepo.currentUser.collectAsState()
         val navController = rememberNavController()
-
-        // Determine start destination based on auth state
-        val startDest = if (currentUser == null) "login" else "home"
 
         var sessions by remember { mutableStateOf<List<SessionEntity>>(emptyList()) }
         var selectedSession by remember { mutableStateOf<SessionEntity?>(null) }
         var selectedStats by remember { mutableStateOf<SessionStats?>(null) }
         var selectedPoints by remember { mutableStateOf<List<TrackPoint>>(emptyList()) }
 
-        // Load sessions when user is logged in
+        // Load sessions only when logged in; unlogged users see empty home
         LaunchedEffect(currentUser) {
             if (currentUser != null) {
                 sessions = sessionRepo.getAllSessions()
-                // Assign owner to any sessions without one
                 sessionRepo.getSessionDao().assignOwner(currentUser!!.uid)
+            } else {
+                sessions = emptyList()
             }
         }
-
-        // Observe WeChat auth code and complete sign-in (disabled — requires enterprise credentials)
-        // val weChatCode by weChatHelper.authCode.collectAsState()
-        // LaunchedEffect(weChatCode) {
-        //     val code = weChatCode ?: return@LaunchedEffect
-        //     weChatHelper.clearAuthCode()
-        //     try {
-        //         val (result, isNewUser) = authRepo.signInWithWeChatCheckNew(code)
-        //         result.onSuccess {
-        //             if (isNewUser) {
-        //                 navController.navigate("onboarding") { popUpTo(0) { inclusive = true } }
-        //             } else {
-        //                 navController.navigate("home") { popUpTo(0) { inclusive = true } }
-        //             }
-        //         }
-        //     } catch (_: Exception) {
-        //         // WeChat auth failed — user stays on login screen
-        //     }
-        // }
 
         val navBackStackEntry by navController.currentBackStackEntryAsState()
         val currentRoute = navBackStackEntry?.destination?.route
 
-        val bottomNavRoutes = listOf("home", "stats", "profile", "settings")
+        val bottomNavRoutes = listOf("home", "stats", "community", "profile")
         val showBottomNav = currentRoute in bottomNavRoutes
 
         Scaffold(
@@ -156,7 +136,7 @@ class MainActivity : ComponentActivity() {
         ) { padding ->
             NavHost(
                 navController = navController,
-                startDestination = startDest,
+                startDestination = "home",
                 modifier = Modifier.padding(padding)
             ) {
                 // ── Auth screens ──
@@ -256,6 +236,12 @@ class MainActivity : ComponentActivity() {
                                     navController.navigate("detail")
                                 }
                             }
+                        },
+                        onNavigateCreateMatch = {
+                            navController.navigate("create_match")
+                        },
+                        onNavigateMatchDetail = { matchId ->
+                            navController.navigate("match_detail/$matchId")
                         }
                     )
                 }
@@ -290,22 +276,26 @@ class MainActivity : ComponentActivity() {
                     )
                 }
 
+                composable("community") {
+                    CommunityScreen()
+                }
+
                 composable("profile") {
                     ProfileScreen(
                         sessions = sessions,
-                        onSessionClick = { sessionId ->
+                        userRepository = userRepo,
+                        authRepository = authRepo,
+                        cloudSync = cloudSync,
+                        onNavigateTeams = { navController.navigate("team_list") },
+                        onNavigateTeamDetail = { teamId -> navController.navigate("team_detail/$teamId") },
+                        onLogout = {
                             lifecycleScope.launch {
-                                val result = sessionRepo.getSessionWithStats(sessionId)
-                                if (result != null) {
-                                    selectedSession = result.first
-                                    selectedStats = result.second
-                                    selectedPoints = sessionRepo.getTrackPoints(sessionId)
-                                    navController.navigate("detail")
+                                authRepo.signOut()
+                                navController.navigate("home") {
+                                    popUpTo(0) { inclusive = true }
                                 }
                             }
-                        },
-                        onNavigateTeams = { navController.navigate("team_list") },
-                        onNavigateTeamDetail = { teamId -> navController.navigate("team_detail/$teamId") }
+                        }
                     )
                 }
 
@@ -324,19 +314,23 @@ class MainActivity : ComponentActivity() {
                     )
                 }
 
-                composable("settings") {
-                    SettingsScreen(
-                        userRepository = userRepo,
-                        authRepository = authRepo,
-                        cloudSync = appContainer.cloudSync,
-                        onLogout = {
-                            lifecycleScope.launch {
-                                authRepo.signOut()
-                                navController.navigate("login") {
-                                    popUpTo(0) { inclusive = true }
-                                }
-                            }
+                // ── Match screens ──
+                composable("create_match") {
+                    CreateMatchScreen(
+                        onBack = { navController.popBackStack() },
+                        onMatchCreated = { matchId ->
+                            navController.popBackStack()
+                            navController.navigate("match_detail/$matchId")
                         }
+                    )
+                }
+
+                composable("match_detail/{matchId}") { backStackEntry ->
+                    val matchId = backStackEntry.arguments?.getString("matchId") ?: return@composable
+                    MatchDetailScreen(
+                        matchId = matchId,
+                        currentUid = currentUser?.uid,
+                        onBack = { navController.popBackStack() }
                     )
                 }
             }
@@ -345,8 +339,8 @@ class MainActivity : ComponentActivity() {
 }
 
 private enum class BottomNavItem(val route: String, val label: String, val icon: ImageVector) {
-    Home("home", "首页", Icons.Rounded.Home),
-    Stats("stats", "统计", Icons.Rounded.BarChart),
-    Profile("profile", "我的", Icons.Rounded.Person),
-    Settings("settings", "设置", Icons.Rounded.Settings)
+    Home("home", "Home", Icons.Rounded.Home),
+    History("stats", "History", Icons.Rounded.History),
+    Community("community", "Community", Icons.Rounded.Groups),
+    Profile("profile", "Profile", Icons.Rounded.Person)
 }

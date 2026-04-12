@@ -144,3 +144,91 @@ data class EarnedBadgesResponse(
 data class CheckBadgesResponse(
     val newBadges: List<BadgeResponse>
 )
+
+// ── Matches ──
+
+@Serializable
+data class CreateMatchRequest(
+    val title: String,
+    val matchDate: Long,
+    val location: String,
+    val groups: Int,
+    val playersPerGroup: Int,
+    val groupColors: String
+)
+
+@Serializable
+data class MatchResponse(
+    val id: String,
+    val creatorUid: String,
+    val title: String,
+    val matchDate: Long,
+    val location: String,
+    val groups: Int,
+    val playersPerGroup: Int,
+    val groupColors: String,
+    val status: String,
+    val registrationCount: Long,
+    val createdAt: Long
+)
+
+@Serializable
+data class MatchListResponse(
+    val matches: List<MatchResponse>
+)
+
+@Serializable
+data class MatchRegistrationResponse(
+    val userUid: String,
+    val nickname: String,
+    val groupColor: String,
+    val registeredAt: Long
+)
+
+@Serializable
+data class MatchDetailResponse(
+    val match: MatchResponse,
+    val registrations: List<MatchRegistrationResponse>,
+    val isRegistered: Boolean
+)
+
+@Serializable
+data class RegisterMatchBody(
+    val groupColor: String
+)
+
+@Serializable
+data class PlayerRankItem(
+    val userUid: String,
+    val nickname: String,
+    val groupColor: String,
+    val value: Double
+)
+
+@Serializable
+data class MatchRankingsResponse(
+    val caloriesRanking: List<PlayerRankItem>,
+    val distanceRanking: List<PlayerRankItem>
+)
+
+@Serializable
+data class MatchSummaryResponse(
+    val summary: String
+)
+
+// ── Player Analysis ──
+
+@Serializable
+data class PlayerAnalysisResponse(
+    val type: String,
+    val description: String,
+    val strengths: List<String>,
+    val advice: String
+)
+
+// ── Avatar ──
+
+@Serializable
+data class AvatarUploadResponse(
+    val avatarUrl: String
+)
