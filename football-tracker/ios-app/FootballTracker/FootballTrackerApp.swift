@@ -28,38 +28,23 @@ struct FootballTrackerApp: App {
 
     var body: some Scene {
         WindowGroup {
-            ZStack {
-                if authManager.isLoggedIn {
-                    MainTabView(store: sessionStore, authManager: authManager)
-                        .transition(.asymmetric(
-                            insertion: .move(edge: .trailing).combined(with: .opacity),
-                            removal: .move(edge: .leading).combined(with: .opacity)
-                        ))
-                } else {
-                    AuthFlowView(authManager: authManager, store: sessionStore)
-                        .transition(.asymmetric(
-                            insertion: .move(edge: .leading).combined(with: .opacity),
-                            removal: .move(edge: .trailing).combined(with: .opacity)
-                        ))
-                }
-            }
-            .animation(.easeInOut(duration: 0.35), value: authManager.isLoggedIn)
-            .preferredColorScheme(.dark)
-            .onReceive(NotificationCenter.default.publisher(for: WatchSync.didReceiveDataNotification)) { notification in
-                if let data = notification.userInfo as? [String: Any] {
-                    Task { @MainActor in
-                        if WatchSync.parseWatchData(data, store: sessionStore),
-                           let sessionId = data["session_id"] as? String {
-                            WatchSync.shared.removePendingUserInfo(sessionId: sessionId)
+            MainTabView(store: sessionStore, authManager: authManager)
+                .preferredColorScheme(.dark)
+                .onReceive(NotificationCenter.default.publisher(for: WatchSync.didReceiveDataNotification)) { notification in
+                    if let data = notification.userInfo as? [String: Any] {
+                        Task { @MainActor in
+                            if WatchSync.parseWatchData(data, store: sessionStore, ownerUid: authManager.effectiveUid),
+                               let sessionId = data["session_id"] as? String {
+                                WatchSync.shared.removePendingUserInfo(sessionId: sessionId)
+                            }
                         }
                     }
                 }
-            }
-            .task {
-                await MainActor.run {
-                    WatchSync.shared.flushPendingUserInfo(to: sessionStore)
+                .task {
+                    await MainActor.run {
+                        WatchSync.shared.flushPendingUserInfo(to: sessionStore, ownerUid: authManager.effectiveUid)
+                    }
                 }
-            }
         }
     }
 }
@@ -119,8 +104,8 @@ struct MainTabView: View {
                     _ = try? await CloudSync.pullFromCloud(store: store, authManager: authManager)
                 }
                 _ = try? await CloudSync.uploadPendingSessions(store: store, authManager: authManager)
+                await authManager.preloadData()
             }
-            await authManager.preloadData()
             // Request notification permission
             let center = UNUserNotificationCenter.current()
             _ = try? await center.requestAuthorization(options: [.alert, .sound, .badge])
@@ -202,7 +187,9 @@ struct TeamHubView: View {
         ZStack {
             AppColors.darkBg.ignoresSafeArea()
 
-            if isLoading {
+            if !authManager.isLoggedIn {
+                loginRequiredState
+            } else if isLoading {
                 ProgressView()
                     .tint(AppColors.neonBlue)
             } else if hasTeam {
@@ -456,6 +443,71 @@ struct TeamHubView: View {
         )
     }
 
+    @State private var showTeamLoginSheet = false
+
+    private var loginRequiredState: some View {
+        ScrollView {
+            VStack(spacing: 16) {
+                VStack(spacing: 12) {
+                    Circle()
+                        .fill(Color.white.opacity(0.2))
+                        .frame(width: 74, height: 74)
+                        .overlay(Text("⚽️").font(.system(size: 36)))
+
+                    Text("登录后查看球队")
+                        .font(.title3.weight(.bold))
+                        .foregroundColor(.white)
+
+                    Text("登录后即可创建球队、加入球队，查看成员表现与排行榜。")
+                        .font(.subheadline)
+                        .foregroundColor(Color.white.opacity(0.9))
+                        .multilineTextAlignment(.center)
+                }
+                .padding(18)
+                .frame(maxWidth: .infinity)
+                .background(
+                    LinearGradient(
+                        colors: [Color(hex: 0x3B82F6), Color(hex: 0x4F46E5)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+                .cornerRadius(18)
+
+                Button {
+                    showTeamLoginSheet = true
+                } label: {
+                    Text("登录 / 注册")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                        .background(LinearGradient(colors: [Color(hex: 0x3B82F6), Color(hex: 0x4F46E5)], startPoint: .leading, endPoint: .trailing))
+                        .cornerRadius(12)
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.top, 12)
+            .padding(.bottom, 20)
+        }
+        .sheet(isPresented: $showTeamLoginSheet) {
+            NavigationStack {
+                LoginView(authManager: authManager, store: store)
+                    .toolbar {
+                        ToolbarItem(placement: .topBarLeading) {
+                            Button("关闭") { showTeamLoginSheet = false }
+                                .foregroundColor(AppColors.textSecondary)
+                        }
+                    }
+            }
+        }
+        .onChange(of: authManager.isLoggedIn) { _, loggedIn in
+            if loggedIn {
+                showTeamLoginSheet = false
+            }
+        }
+    }
+
     private var noTeamState: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
@@ -572,6 +624,10 @@ struct TeamHubView: View {
     }
 
     private func loadTeamData() async {
+        guard authManager.isLoggedIn else {
+            isLoading = false
+            return
+        }
         // Show cached data instantly if available
         if let firstTeam = authManager.teams.first {
             if let cachedDetail = authManager.getCachedTeamDetail(teamId: firstTeam.id) {
@@ -611,7 +667,7 @@ private struct TeamLeaderItem: Identifiable {
     let rank: Int
 }
 
-// MARK: - Auth Flow
+// MARK: - Auth Flow (kept for profile login sheet)
 
 struct AuthFlowView: View {
     @ObservedObject var authManager: AuthManager
@@ -619,7 +675,7 @@ struct AuthFlowView: View {
 
     var body: some View {
         NavigationStack {
-            LoginView(authManager: authManager)
+            LoginView(authManager: authManager, store: store)
         }
     }
 }

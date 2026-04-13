@@ -2,6 +2,7 @@ import SwiftUI
 
 struct RegisterView: View {
     @ObservedObject var authManager: AuthManager
+    var store: SessionStore? = nil
     @Environment(\.dismiss) private var dismiss
     @State private var username = ""
     @State private var password = ""
@@ -108,7 +109,7 @@ struct RegisterView: View {
         }
 
         Task {
-            let isNew = await authManager.register(username: username, password: password)
+            let isNew = await authManager.register(username: username, password: password, store: store)
             if authManager.isLoggedIn {
                 showOnboarding = isNew
             }

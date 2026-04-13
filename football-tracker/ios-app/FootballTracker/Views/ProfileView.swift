@@ -10,6 +10,7 @@ struct ProfileView: View {
     @ObservedObject private var watchSync = WatchSync.shared
     @State private var isLoading = true
     @State private var showEditSheet = false
+    @State private var showLoginSheet = false
     @State private var pickerItem: PhotosPickerItem?
     @State private var isUploadingAvatar = false
     @State private var syncStatus: String?
@@ -44,12 +45,18 @@ struct ProfileView: View {
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
-                    profileCard
-                    syncSection
+                    if authManager.isLoggedIn {
+                        profileCard
+                        syncSection
+                    } else {
+                        loginPromptCard
+                    }
                     menuSection(title: "外观", items: appearanceItems)
                     menuSection(title: "账号", items: accountItems)
                     menuSection(title: "设备", items: deviceItems)
-                    signOutButton
+                    if authManager.isLoggedIn {
+                        signOutButton
+                    }
                     versionText
                 }
                 .padding(.horizontal, 16)
@@ -69,11 +76,27 @@ struct ProfileView: View {
                 authManager.refreshProfileTimestamp()
             }
         }
+        .sheet(isPresented: $showLoginSheet) {
+            NavigationStack {
+                LoginView(authManager: authManager, store: store)
+                    .toolbar {
+                        ToolbarItem(placement: .topBarLeading) {
+                            Button("关闭") { showLoginSheet = false }
+                                .foregroundColor(AppColors.textSecondary)
+                        }
+                    }
+            }
+        }
         .task(id: pickerItem) {
             await uploadAvatarIfNeeded()
         }
         .onReceive(NotificationCenter.default.publisher(for: .sessionRecorded)) { _ in
             unreadSessionCount = UserDefaults.standard.integer(forKey: "unread_session_count")
+        }
+        .onChange(of: authManager.isLoggedIn) { _, loggedIn in
+            if loggedIn {
+                showLoginSheet = false
+            }
         }
     }
 
@@ -380,6 +403,56 @@ struct ProfileView: View {
         }
     }
 
+    private var loginPromptCard: some View {
+        VStack(spacing: 14) {
+            Image(systemName: "person.crop.circle.badge.plus")
+                .font(.system(size: 44))
+                .foregroundStyle(
+                    LinearGradient(
+                        colors: [Color(hex: 0x3B82F6), Color(hex: 0x4F46E5)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+
+            Text("登录以解锁更多功能")
+                .font(.headline.weight(.bold))
+                .foregroundColor(AppColors.textPrimary)
+
+            Text("登录后即可云同步数据、加入球队、参与比赛排行。")
+                .font(.subheadline)
+                .foregroundColor(AppColors.textSecondary)
+                .multilineTextAlignment(.center)
+
+            Button {
+                showLoginSheet = true
+            } label: {
+                Text("登录 / 注册")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+                    .background(
+                        LinearGradient(
+                            colors: [Color(hex: 0x3B82F6), Color(hex: 0x4F46E5)],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                    )
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity)
+        .background(AppColors.cardBg)
+        .clipShape(RoundedRectangle(cornerRadius: 18))
+        .overlay(
+            RoundedRectangle(cornerRadius: 18)
+                .stroke(Color.white.opacity(0.08), lineWidth: 0.5)
+        )
+    }
+
     private var signOutButton: some View {
         Button {
             authManager.logout()
@@ -436,7 +509,11 @@ struct ProfileView: View {
         case .theme:
             return
         case .editProfile:
-            showEditSheet = true
+            if authManager.isLoggedIn {
+                showEditSheet = true
+            } else {
+                showLoginSheet = true
+            }
         case .notifications:
             return
         case .share:
@@ -457,10 +534,12 @@ struct ProfileView: View {
     }
 
     private func loadData() async {
-        async let profileLoad: () = authManager.loadProfileIfNeeded()
-        async let teamsLoad: () = authManager.loadTeamsIfNeeded()
-        async let badgesLoad: () = authManager.loadBadgesIfNeeded()
-        _ = await (profileLoad, teamsLoad, badgesLoad)
+        if authManager.isLoggedIn {
+            async let profileLoad: () = authManager.loadProfileIfNeeded()
+            async let teamsLoad: () = authManager.loadTeamsIfNeeded()
+            async let badgesLoad: () = authManager.loadBadgesIfNeeded()
+            _ = await (profileLoad, teamsLoad, badgesLoad)
+        }
         isLoading = false
     }
 
@@ -508,6 +587,10 @@ struct ProfileView: View {
     }
 
     private func uploadData() {
+        guard authManager.isLoggedIn else {
+            showLoginSheet = true
+            return
+        }
         isSyncing = true
         syncStatus = "正在上传..."
         Task {
@@ -524,6 +607,10 @@ struct ProfileView: View {
     }
 
     private func restoreData() {
+        guard authManager.isLoggedIn else {
+            showLoginSheet = true
+            return
+        }
         isSyncing = true
         syncStatus = "正在恢复..."
         Task {

@@ -2,6 +2,7 @@ import SwiftUI
 
 struct LoginView: View {
     @ObservedObject var authManager: AuthManager
+    var store: SessionStore? = nil
     @State private var username = ""
     @State private var password = ""
     @State private var showPassword = false
@@ -80,7 +81,7 @@ struct LoginView: View {
 
                     // Login Button
                     Button {
-                        Task { await authManager.login(username: username, password: password) }
+                        Task { await authManager.login(username: username, password: password, store: store) }
                     } label: {
                         Group {
                             if authManager.isLoading {
@@ -118,7 +119,7 @@ struct LoginView: View {
             }
         }
         .navigationDestination(isPresented: $showRegister) {
-            RegisterView(authManager: authManager)
+            RegisterView(authManager: authManager, store: store)
         }
         .navigationBarHidden(true)
     }

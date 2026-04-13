@@ -16,11 +16,9 @@ class WatchSync: NSObject, ObservableObject, WCSessionDelegate {
     @Published var isPaired: Bool = false
     @Published var isReachable: Bool = false
 
-    /// True when a Watch is paired to this iPhone.
-    /// We rely on isPaired alone because isWatchAppInstalled returns false
-    /// when the Watch app is installed independently from the Watch App Store.
+    /// True when a Watch is paired AND our Watch app is installed.
     var isWatchConnected: Bool {
-        isPaired
+        isPaired && isWatchAppInstalled
     }
 
     override init() {
@@ -153,13 +151,13 @@ class WatchSync: NSObject, ObservableObject, WCSessionDelegate {
     }
 
     @MainActor
-    func flushPendingUserInfo(to store: SessionStore) {
+    func flushPendingUserInfo(to store: SessionStore, ownerUid: String = "") {
         let pending = loadPendingUserInfo()
         guard !pending.isEmpty else { return }
 
         var remaining: [[String: Any]] = []
         for item in pending {
-            let saved = WatchSync.parseWatchData(item, store: store)
+            let saved = WatchSync.parseWatchData(item, store: store, ownerUid: ownerUid)
             if !saved {
                 remaining.append(item)
             }
@@ -190,7 +188,7 @@ class WatchSync: NSObject, ObservableObject, WCSessionDelegate {
 
     /// Parse raw watch data into a FootballSession + TrackPoints
     @MainActor
-    static func parseWatchData(_ data: [String: Any], store: SessionStore) -> Bool {
+    static func parseWatchData(_ data: [String: Any], store: SessionStore, ownerUid: String = "") -> Bool {
         guard let sessionId = data["session_id"] as? String,
               let startTime = data["start_time"] as? TimeInterval,
               let endTime = data["end_time"] as? TimeInterval,
@@ -246,6 +244,7 @@ class WatchSync: NSObject, ObservableObject, WCSessionDelegate {
             coveragePercent: stats.coveragePercent,
             trackPointsData: pointsData
         )
+        session.ownerUid = ownerUid
 
         store.saveSession(session)
 

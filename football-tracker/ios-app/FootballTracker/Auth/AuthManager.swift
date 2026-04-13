@@ -3,6 +3,7 @@ import SwiftUI
 
 private let kTokenKey = "auth_token"
 private let kUidKey = "auth_uid"
+private let kDeviceUuidKey = "device_anonymous_uuid"
 private let kMatchesCacheKey = "cached_upcoming_matches"
 private let kTeamsCacheKey = "cached_teams"
 private let kTeamDetailCacheKey = "cached_team_detail"
@@ -18,6 +19,10 @@ class AuthManager: ObservableObject {
     @Published var earnedBadges: EarnedBadgesResponse?
     @Published var upcomingMatches: [MatchResponse] = []
 
+    /// Anonymous device UUID for local session ownership when not logged in.
+    /// Persisted across app launches. Replaced by real uid after login.
+    let deviceUuid: String
+
     private var profileLoadedAt: Date?
     private var teamsLoadedAt: Date?
     private var badgesLoadedAt: Date?
@@ -26,7 +31,21 @@ class AuthManager: ObservableObject {
     private var teamDetailsLoadedAt: [String: Date] = [:]
     private let cacheTTL: TimeInterval = 300
 
+    /// The effective owner ID: real uid if logged in, otherwise anonymous device UUID.
+    var effectiveUid: String {
+        currentUid ?? deviceUuid
+    }
+
     init() {
+        // Ensure a stable anonymous device UUID exists
+        if let existing = UserDefaults.standard.string(forKey: kDeviceUuidKey), !existing.isEmpty {
+            deviceUuid = existing
+        } else {
+            let newUuid = UUID().uuidString
+            UserDefaults.standard.set(newUuid, forKey: kDeviceUuidKey)
+            deviceUuid = newUuid
+        }
+
         let token = UserDefaults.standard.string(forKey: kTokenKey)
         let uid = UserDefaults.standard.string(forKey: kUidKey)
         if let token = token, !token.isEmpty {
@@ -50,12 +69,16 @@ class AuthManager: ObservableObject {
         }
     }
 
-    func login(username: String, password: String) async {
+    func login(username: String, password: String, store: SessionStore? = nil) async {
         isLoading = true
         errorMessage = nil
         do {
             let response = try await loginWithRetry(username: username, password: password)
             saveAuth(token: response.token, uid: response.uid)
+            // Migrate anonymous sessions to the real user
+            if let store = store {
+                migrateAnonymousSessions(store: store, newUid: response.uid)
+            }
             await preloadData()
         } catch {
             errorMessage = error.localizedDescription
@@ -63,12 +86,16 @@ class AuthManager: ObservableObject {
         isLoading = false
     }
 
-    func register(username: String, password: String) async -> Bool {
+    func register(username: String, password: String, store: SessionStore? = nil) async -> Bool {
         isLoading = true
         errorMessage = nil
         do {
             let response = try await registerWithRetry(username: username, password: password)
             saveAuth(token: response.token, uid: response.uid)
+            // Migrate anonymous sessions to the real user
+            if let store = store {
+                migrateAnonymousSessions(store: store, newUid: response.uid)
+            }
             await preloadData()
             isLoading = false
             return response.isNewUser
@@ -76,6 +103,22 @@ class AuthManager: ObservableObject {
             errorMessage = error.localizedDescription
             isLoading = false
             return false
+        }
+    }
+
+    /// Re-assign all sessions owned by deviceUuid (or empty) to the real user uid.
+    func migrateAnonymousSessions(store: SessionStore, newUid: String) {
+        var changed = false
+        for session in store.sessions {
+            if session.ownerUid.isEmpty || session.ownerUid == deviceUuid {
+                session.ownerUid = newUid
+                session.syncedToCloud = false  // Mark for re-upload under real account
+                changed = true
+            }
+        }
+        if changed {
+            try? store.context.save()
+            store.fetchSessions()
         }
     }
 
@@ -122,9 +165,7 @@ class AuthManager: ObservableObject {
         matchesLoadedAt = nil
         teamDetailsById = [:]
         teamDetailsLoadedAt = [:]
-        withAnimation(.easeInOut(duration: 0.35)) {
-            isLoggedIn = false
-        }
+        isLoggedIn = false
         UserDefaults.standard.removeObject(forKey: kMatchesCacheKey)
         UserDefaults.standard.removeObject(forKey: kTeamsCacheKey)
         UserDefaults.standard.removeObject(forKey: kTeamDetailCacheKey)
@@ -264,9 +305,7 @@ class AuthManager: ObservableObject {
         UserDefaults.standard.set(uid, forKey: kUidKey)
         ApiClient.shared.token = token
         currentUid = uid
-        withAnimation(.easeInOut(duration: 0.35)) {
-            isLoggedIn = true
-        }
+        isLoggedIn = true
         // Push auth token to Apple Watch for direct server uploads
         WatchSync.shared.sendAuthTokenToWatch(token: token, uid: uid)
     }

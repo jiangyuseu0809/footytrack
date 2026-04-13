@@ -6,11 +6,12 @@ class CloudSync {
     /// Upload all unsynced sessions to the cloud.
     /// Returns number of sessions synced.
     static func uploadPendingSessions(store: SessionStore, authManager: AuthManager) async throws -> Int {
-        guard let uid = authManager.currentUid else { return 0 }
+        guard authManager.isLoggedIn, let uid = authManager.currentUid else { return 0 }
 
-        // Assign owner to orphan sessions
-        let allSessions = store.sessions.filter { $0.ownerUid.isEmpty || $0.ownerUid == uid }
-        for session in allSessions where session.ownerUid.isEmpty {
+        // Assign owner to orphan sessions (empty, or still using anonymous device UUID)
+        let deviceUuid = authManager.deviceUuid
+        let allSessions = store.sessions.filter { $0.ownerUid.isEmpty || $0.ownerUid == uid || $0.ownerUid == deviceUuid }
+        for session in allSessions where session.ownerUid.isEmpty || session.ownerUid == deviceUuid {
             session.ownerUid = uid
         }
         try? store.context.save()
@@ -34,7 +35,7 @@ class CloudSync {
     /// Pull sessions from the cloud that don't exist locally.
     /// Returns number of sessions restored.
     static func pullFromCloud(store: SessionStore, authManager: AuthManager) async throws -> Int {
-        guard let uid = authManager.currentUid else { return 0 }
+        guard authManager.isLoggedIn, let uid = authManager.currentUid else { return 0 }
 
         let response = try await ApiClient.shared.getSessions(forceRefresh: true)
         let existingIds = Set(store.sessions.map(\.id))

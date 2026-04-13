@@ -134,18 +134,25 @@ struct HomeView: View {
 
             ScrollView(showsIndicators: false) {
                 VStack(alignment: .leading, spacing: 16) {
-                    topActionCards
+                    if store.sessions.isEmpty {
+                        // No data: show appropriate empty state
+                        emptyStateCard
+                    } else {
+                        // Has data: show normal dashboard
+                        topActionCards
 
-                    if let nextMatch = authManager.upcomingMatches.first(where: { match in
-                        let matchDate = Date(timeIntervalSince1970: TimeInterval(match.matchDate) / 1000.0)
-                        let matchEndDate = matchDate.addingTimeInterval(3 * 3600)
-                        return Date() < matchEndDate
-                    }) {
-                        upcomingMatchCard(nextMatch)
+                        if authManager.isLoggedIn,
+                           let nextMatch = authManager.upcomingMatches.first(where: { match in
+                            let matchDate = Date(timeIntervalSince1970: TimeInterval(match.matchDate) / 1000.0)
+                            let matchEndDate = matchDate.addingTimeInterval(3 * 3600)
+                            return Date() < matchEndDate
+                        }) {
+                            upcomingMatchCard(nextMatch)
+                        }
+
+                        keyStatsSection
+                        heatmapSection
                     }
-
-                    keyStatsSection
-                    heatmapSection
                 }
                 .padding(.horizontal, 16)
                 .padding(.top, 16)
@@ -569,43 +576,66 @@ struct HomeView: View {
 
     private var emptyStateCard: some View {
         VStack(spacing: 14) {
-            RoundedRectangle(cornerRadius: 20)
-                .fill(Color(hex: 0x1F2937))
-                .frame(width: 94, height: 94)
-                .overlay(
-                    Image(systemName: "applewatch")
-                        .font(.system(size: 42))
-                        .foregroundColor(AppColors.textSecondary)
-                )
-
-            Text("暂无数据")
-                .font(.title3.weight(.bold))
-                .foregroundColor(AppColors.textPrimary)
-
-            Text("连接 Apple Watch 后即可开始记录你的足球表现。")
-                .font(.subheadline)
-                .foregroundColor(AppColors.textSecondary)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 12)
-
-            Button {
-                showWatchAlert = true
-            } label: {
-                Text("连接 Apple Watch")
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundColor(.white)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 12)
-                    .background(
-                        LinearGradient(
-                            colors: [Color(hex: 0x3B82F6), Color(hex: 0x4F46E5)],
-                            startPoint: .leading,
-                            endPoint: .trailing
-                        )
+            if watchSync.isWatchConnected {
+                // Watch connected but no data yet
+                RoundedRectangle(cornerRadius: 20)
+                    .fill(Color(hex: 0x1F2937))
+                    .frame(width: 94, height: 94)
+                    .overlay(
+                        Image(systemName: "figure.soccer")
+                            .font(.system(size: 42))
+                            .foregroundColor(AppColors.neonBlue)
                     )
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
+
+                Text("准备就绪")
+                    .font(.title3.weight(.bold))
+                    .foregroundColor(AppColors.textPrimary)
+
+                Text("Apple Watch 已连接，打开手表上的野球记开始记录比赛吧！")
+                    .font(.subheadline)
+                    .foregroundColor(AppColors.textSecondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 12)
+            } else {
+                // Watch not connected
+                RoundedRectangle(cornerRadius: 20)
+                    .fill(Color(hex: 0x1F2937))
+                    .frame(width: 94, height: 94)
+                    .overlay(
+                        Image(systemName: "applewatch")
+                            .font(.system(size: 42))
+                            .foregroundColor(AppColors.textSecondary)
+                    )
+
+                Text("暂无数据")
+                    .font(.title3.weight(.bold))
+                    .foregroundColor(AppColors.textPrimary)
+
+                Text("连接 Apple Watch 后即可开始记录你的足球表现。")
+                    .font(.subheadline)
+                    .foregroundColor(AppColors.textSecondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 12)
+
+                Button {
+                    showWatchAlert = true
+                } label: {
+                    Text("连接 Apple Watch")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                        .background(
+                            LinearGradient(
+                                colors: [Color(hex: 0x3B82F6), Color(hex: 0x4F46E5)],
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
+                        )
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                }
+                .buttonStyle(.plain)
             }
-            .buttonStyle(.plain)
 
             VStack(spacing: 8) {
                 emptyFeatureRow(icon: "bolt.fill", title: "实时表现", desc: "比赛中实时查看关键数据")
