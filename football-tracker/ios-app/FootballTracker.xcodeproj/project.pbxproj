@@ -8,14 +8,16 @@
 
 /* Begin PBXBuildFile section */
 		012191B142DC845EEBB29A1B /* AppColors.swift in Sources */ = {isa = PBXBuildFile; fileRef = D30F5CE3D9C9CF74E94B4B90 /* AppColors.swift */; };
-		03F1A2B3C4D5E6F7089920C1 /* CreateMatchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 04F1A2B3C4D5E6F7089920C1 /* CreateMatchView.swift */; };
-		05A1B2C3D4E5F607A8B9C0D1 /* MatchDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 06A1B2C3D4E5F607A8B9C0D1 /* MatchDetailView.swift */; };
 		046B0A51704DD3EE532486E2 /* CloudSync.swift in Sources */ = {isa = PBXBuildFile; fileRef = 10A47937B735C6DF31421B3A /* CloudSync.swift */; };
+		0C0B0EF455B68F15D7791F2A /* MatchDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 562001D94BCA45C82BA31989 /* MatchDetailView.swift */; };
 		1501FB6DD67A8FD84F4C18E1 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 92AD7C951EE82977F1DCB23F /* SettingsView.swift */; };
 		1CCF85B16D0E6E506314C23F /* SessionStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 80B33E38BCB2D01074CF7D98 /* SessionStore.swift */; };
+		2D002CEC66E7E534CBDB39A0 /* WechatOpenSDK.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5B3DA0BDC3D1C9118EBE0485 /* WechatOpenSDK.xcframework */; };
 		2D7D7A92C0F2B702B4151E12 /* TeamListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C734DBFE843729083ED11899 /* TeamListView.swift */; };
 		31AB697318E8974368D10964 /* WatchSummaryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5F5B7186163F807377A07D1 /* WatchSummaryView.swift */; };
+		35F76D3425AC6EC6F84968F9 /* WeChatManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0826EFEAF923348062F4EE5 /* WeChatManager.swift */; };
 		3B43D48B1D7E90A9FA36CD5E /* FootballTrackerWatchApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 65A416238FFA973BB961135C /* FootballTrackerWatchApp.swift */; };
+		3F222C8195194F4AB3534984 /* WatchApiClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4D6359A351630934CE6C266 /* WatchApiClient.swift */; };
 		3F336471D75B0D9F33899B3E /* PhoneSync.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FDCB6010E2CDCEF85F43A02 /* PhoneSync.swift */; };
 		51D9E57038352CB89F7E0D6C /* TrackingManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC9529A100BB82C498512A2E /* TrackingManager.swift */; };
 		584BAA5B65257195268DECD2 /* StatsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F058CF3ECEDBF005C5223459 /* StatsView.swift */; };
@@ -26,25 +28,26 @@
 		6398953E3493F30D3B9EC3AE /* ApiModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = B8C1B75F43C086C7B2B783ED /* ApiModels.swift */; };
 		648E6726E868A18C272FEA75 /* TeamDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A21787C3A32BF8532A0BA98F /* TeamDetailView.swift */; };
 		659F7E6C9E1F5595AE9AA9CA /* HeatmapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 16174BC065AFC1C9C5C51525 /* HeatmapView.swift */; };
+		7867C10AEA6AFC91B9224487 /* WatchBindView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B8C3821D1DCA5514CFBF9AA3 /* WatchBindView.swift */; };
 		83627E21819162E4E2C18AC4 /* RegisterView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0121AC136016B27CD7DC492C /* RegisterView.swift */; };
+		871B13778C4509133B16AD23 /* CreateMatchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A66E76DEDF0B206269B34D79 /* CreateMatchView.swift */; };
 		9AFC3F692DA6EC3EEA478453 /* WatchTrackingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2ED27ECF7699FFFB237B72A3 /* WatchTrackingView.swift */; };
+		9BDC8EA0E869B316E2B395C1 /* RadarChartView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD147F462B299576461DD88B /* RadarChartView.swift */; };
 		9F8B5740DA85CA1157C9BBB9 /* AuthManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D2752D80E323CB4D978D060B /* AuthManager.swift */; };
 		A4CF37667E3CF10F116E13C3 /* HeatmapOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA6F44E157B2DA43DA6A12FC /* HeatmapOverlay.swift */; };
 		AC255495176844D056814B6C /* SpeedChart.swift in Sources */ = {isa = PBXBuildFile; fileRef = 22A0F1C7E56CE7F698E02541 /* SpeedChart.swift */; };
+		BD907EA2523160FEFD96EC2F /* WatchSessionQueue.swift in Sources */ = {isa = PBXBuildFile; fileRef = 259D21ADD96857818A92953F /* WatchSessionQueue.swift */; };
 		BE8487577C6EC8D651FDFC92 /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D25D605E8EF09E6663AD799E /* LoginView.swift */; };
 		BF4CDBC2F0531E306EC2D0FF /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F265F7DD0BE6099A998F644 /* HomeView.swift */; };
+		C589AA2AE507252613CF8E4E /* WeeklySummaryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB4F55A8ECDAED6B4ADB8F71 /* WeeklySummaryView.swift */; };
 		CA60D4570D15FDFDCC75AA1C /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 9ACD73F03A1F387CB2D398BE /* Assets.xcassets */; };
-		W1A2B3C4D5E6F7081920A1B2 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = W2B3C4D5E6F70819A1B2C3D4 /* Assets.xcassets */; };
-		C1A2B3D4E5F60718293A4B5C /* RadarChartView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4E5F6071829A3B4C5D6E7F8 /* RadarChartView.swift */; };
 		CE774E22735FC3A1D7455257 /* ProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 754C6ACB7B9D970C8F07EE85 /* ProfileView.swift */; };
+		D1E46F5187DE62AA43DE3921 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 36E61BCEB61187EC52C9B0A7 /* Assets.xcassets */; };
 		D80555D855E9816377F1558D /* SessionDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C33629BCDCE91E205E4B5BA0 /* SessionDetailView.swift */; };
-		A1B2C3D4E5F607182930B1C2 /* SessionNotificationsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2C3D4E5F6071829A1B2C3D5 /* SessionNotificationsView.swift */; };
-		E1A2B3C4D5E6F7089920A1B3 /* WeeklySummaryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A2B3C4D5E6F7089920A1B3 /* WeeklySummaryView.swift */; };
 		DE3F876A06775F463F7EA6C4 /* FootballTrackerApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B9B26AA77BCEEE349400CD5 /* FootballTrackerApp.swift */; };
+		EA51CBD68DD66BEEFF12BDE8 /* WechatOpenSDK.xcframework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 5B3DA0BDC3D1C9118EBE0485 /* WechatOpenSDK.xcframework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		EAD17DD90BDF6722DE9C2806 /* ApiClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 81D2A5230ED4A84374356B09 /* ApiClient.swift */; };
-		WN01A2B3C4D5E6F708992001 /* WatchApiClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = WN02A2B3C4D5E6F708992001 /* WatchApiClient.swift */; };
-		WN03A2B3C4D5E6F708992001 /* WatchSessionQueue.swift in Sources */ = {isa = PBXBuildFile; fileRef = WN04A2B3C4D5E6F708992001 /* WatchSessionQueue.swift */; };
-		WB01A2B3C4D5E6F708992001 /* WatchBindView.swift in Sources */ = {isa = PBXBuildFile; fileRef = WB02A2B3C4D5E6F708992001 /* WatchBindView.swift */; };
+		F05ECD52CB2C5E0C8EB92699 /* SessionNotificationsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7DE1B079D2C12ED4B16F31EE /* SessionNotificationsView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -69,57 +72,83 @@
 			name = "Embed Watch Content";
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		E2F75D4A1066A3CB92D06793 /* Embed Frameworks */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 10;
+			files = (
+				EA51CBD68DD66BEEFF12BDE8 /* WechatOpenSDK.xcframework in Embed Frameworks */,
+			);
+			name = "Embed Frameworks";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		04F1A2B3C4D5E6F7089920C1 /* CreateMatchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateMatchView.swift; sourceTree = "<group>"; };
-		06A1B2C3D4E5F607A8B9C0D1 /* MatchDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MatchDetailView.swift; sourceTree = "<group>"; };
 		0121AC136016B27CD7DC492C /* RegisterView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RegisterView.swift; sourceTree = "<group>"; };
 		10A47937B735C6DF31421B3A /* CloudSync.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CloudSync.swift; sourceTree = "<group>"; };
 		16174BC065AFC1C9C5C51525 /* HeatmapView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HeatmapView.swift; sourceTree = "<group>"; };
 		1F265F7DD0BE6099A998F644 /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
 		22A0F1C7E56CE7F698E02541 /* SpeedChart.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeedChart.swift; sourceTree = "<group>"; };
+		259D21ADD96857818A92953F /* WatchSessionQueue.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchSessionQueue.swift; sourceTree = "<group>"; };
 		2ED27ECF7699FFFB237B72A3 /* WatchTrackingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchTrackingView.swift; sourceTree = "<group>"; };
+		36E61BCEB61187EC52C9B0A7 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		38D7B5959FC0CC4C5C5CA45C /* FootballTrackerWatch.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = FootballTrackerWatch.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		4B9B26AA77BCEEE349400CD5 /* FootballTrackerApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FootballTrackerApp.swift; sourceTree = "<group>"; };
 		542F73FB28C8272221322D0A /* WatchSync.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchSync.swift; sourceTree = "<group>"; };
+		562001D94BCA45C82BA31989 /* MatchDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MatchDetailView.swift; sourceTree = "<group>"; };
+		5B3DA0BDC3D1C9118EBE0485 /* WechatOpenSDK.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; path = WechatOpenSDK.xcframework; sourceTree = "<group>"; };
+		64301642B02437C66FAF7923 /* FootballTracker.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = FootballTracker.entitlements; sourceTree = "<group>"; };
 		65A416238FFA973BB961135C /* FootballTrackerWatchApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FootballTrackerWatchApp.swift; sourceTree = "<group>"; };
 		6FDCB6010E2CDCEF85F43A02 /* PhoneSync.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhoneSync.swift; sourceTree = "<group>"; };
 		754C6ACB7B9D970C8F07EE85 /* ProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileView.swift; sourceTree = "<group>"; };
 		7BFC12AFE3EB83DBD7BEE626 /* BadgeWallView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BadgeWallView.swift; sourceTree = "<group>"; };
+		7DE1B079D2C12ED4B16F31EE /* SessionNotificationsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionNotificationsView.swift; sourceTree = "<group>"; };
 		80B33E38BCB2D01074CF7D98 /* SessionStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionStore.swift; sourceTree = "<group>"; };
 		81D2A5230ED4A84374356B09 /* ApiClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApiClient.swift; sourceTree = "<group>"; };
+		92231948B4AF4706A4F339A7 /* FootballTracker-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "FootballTracker-Bridging-Header.h"; sourceTree = "<group>"; };
 		92AD7C951EE82977F1DCB23F /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
-		9529D4B9E90C67269C94CA8F /* FootballTracker.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = FootballTracker.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		9529D4B9E90C67269C94CA8F /* FootballTracker.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = FootballTracker.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		9ACD73F03A1F387CB2D398BE /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		A0826EFEAF923348062F4EE5 /* WeChatManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeChatManager.swift; sourceTree = "<group>"; };
 		A21787C3A32BF8532A0BA98F /* TeamDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TeamDetailView.swift; sourceTree = "<group>"; };
+		A66E76DEDF0B206269B34D79 /* CreateMatchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateMatchView.swift; sourceTree = "<group>"; };
 		AA6F44E157B2DA43DA6A12FC /* HeatmapOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HeatmapOverlay.swift; sourceTree = "<group>"; };
+		AB4F55A8ECDAED6B4ADB8F71 /* WeeklySummaryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeeklySummaryView.swift; sourceTree = "<group>"; };
+		B4D6359A351630934CE6C266 /* WatchApiClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchApiClient.swift; sourceTree = "<group>"; };
 		B8C1B75F43C086C7B2B783ED /* ApiModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApiModels.swift; sourceTree = "<group>"; };
+		B8C3821D1DCA5514CFBF9AA3 /* WatchBindView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchBindView.swift; sourceTree = "<group>"; };
+		BD147F462B299576461DD88B /* RadarChartView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RadarChartView.swift; sourceTree = "<group>"; };
 		C33629BCDCE91E205E4B5BA0 /* SessionDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionDetailView.swift; sourceTree = "<group>"; };
-		B2C3D4E5F6071829A1B2C3D5 /* SessionNotificationsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionNotificationsView.swift; sourceTree = "<group>"; };
 		C734DBFE843729083ED11899 /* TeamListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TeamListView.swift; sourceTree = "<group>"; };
 		CC9529A100BB82C498512A2E /* TrackingManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrackingManager.swift; sourceTree = "<group>"; };
 		D25D605E8EF09E6663AD799E /* LoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginView.swift; sourceTree = "<group>"; };
 		D2752D80E323CB4D978D060B /* AuthManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthManager.swift; sourceTree = "<group>"; };
-		D4E5F6071829A3B4C5D6E7F8 /* RadarChartView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RadarChartView.swift; sourceTree = "<group>"; };
 		D30F5CE3D9C9CF74E94B4B90 /* AppColors.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppColors.swift; sourceTree = "<group>"; };
+		DE8A46751F32F7B04CA7EE28 /* FootballTrackerWatch.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = FootballTrackerWatch.entitlements; sourceTree = "<group>"; };
 		F058CF3ECEDBF005C5223459 /* StatsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatsView.swift; sourceTree = "<group>"; };
-		F1A2B3C4D5E6F7089920A1B3 /* WeeklySummaryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeeklySummaryView.swift; sourceTree = "<group>"; };
 		F5F5B7186163F807377A07D1 /* WatchSummaryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchSummaryView.swift; sourceTree = "<group>"; };
 		FCDCFF943267F00D39A478EA /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
-		W2B3C4D5E6F70819A1B2C3D4 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
-		W4D5E6F70819A1B2C3D4E5F6 /* FootballTrackerWatch.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = FootballTrackerWatch.entitlements; sourceTree = "<group>"; };
-		WN02A2B3C4D5E6F708992001 /* WatchApiClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchApiClient.swift; sourceTree = "<group>"; };
-		WN04A2B3C4D5E6F708992001 /* WatchSessionQueue.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchSessionQueue.swift; sourceTree = "<group>"; };
-		WB02A2B3C4D5E6F708992001 /* WatchBindView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchBindView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		FAF271DA336DC2FEA4519BC4 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				2D002CEC66E7E534CBDB39A0 /* WechatOpenSDK.xcframework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
 		09A647A6270F954A7C3D79E7 /* Components */ = {
 			isa = PBXGroup;
 			children = (
 				AA6F44E157B2DA43DA6A12FC /* HeatmapOverlay.swift */,
-				D4E5F6071829A3B4C5D6E7F8 /* RadarChartView.swift */,
+				BD147F462B299576461DD88B /* RadarChartView.swift */,
 				22A0F1C7E56CE7F698E02541 /* SpeedChart.swift */,
 			);
 			path = Components;
@@ -145,15 +174,24 @@
 		52D0B217DFEFFA934A74BAC9 /* FootballTrackerWatch */ = {
 			isa = PBXGroup;
 			children = (
-				W2B3C4D5E6F70819A1B2C3D4 /* Assets.xcassets */,
-				W4D5E6F70819A1B2C3D4E5F6 /* FootballTrackerWatch.entitlements */,
+				36E61BCEB61187EC52C9B0A7 /* Assets.xcassets */,
+				DE8A46751F32F7B04CA7EE28 /* FootballTrackerWatch.entitlements */,
 				65A416238FFA973BB961135C /* FootballTrackerWatchApp.swift */,
-				WN05A2B3C4D5E6F708992001 /* Network */,
+				59A7F8AC13C5B037B6B8C021 /* Network */,
 				DD8DB8BCDA2179FCD4B5AAAF /* Sync */,
 				CC0E03DF13339C62F81195A7 /* Tracking */,
-				WB03A2B3C4D5E6F708992001 /* Views */,
+				E825357A7BCDB5EADDB1916C /* Views */,
 			);
 			path = FootballTrackerWatch;
+			sourceTree = "<group>";
+		};
+		59A7F8AC13C5B037B6B8C021 /* Network */ = {
+			isa = PBXGroup;
+			children = (
+				B4D6359A351630934CE6C266 /* WatchApiClient.swift */,
+				259D21ADD96857818A92953F /* WatchSessionQueue.swift */,
+			);
+			path = Network;
 			sourceTree = "<group>";
 		};
 		7651B60367F9232C0752DDF6 /* Products */ = {
@@ -169,6 +207,8 @@
 			isa = PBXGroup;
 			children = (
 				9ACD73F03A1F387CB2D398BE /* Assets.xcassets */,
+				92231948B4AF4706A4F339A7 /* FootballTracker-Bridging-Header.h */,
+				64301642B02437C66FAF7923 /* FootballTracker.entitlements */,
 				4B9B26AA77BCEEE349400CD5 /* FootballTrackerApp.swift */,
 				A85E27AB2E78365287038D7D /* Auth */,
 				09A647A6270F954A7C3D79E7 /* Components */,
@@ -185,21 +225,21 @@
 			isa = PBXGroup;
 			children = (
 				7BFC12AFE3EB83DBD7BEE626 /* BadgeWallView.swift */,
-				04F1A2B3C4D5E6F7089920C1 /* CreateMatchView.swift */,
+				A66E76DEDF0B206269B34D79 /* CreateMatchView.swift */,
 				16174BC065AFC1C9C5C51525 /* HeatmapView.swift */,
 				1F265F7DD0BE6099A998F644 /* HomeView.swift */,
 				D25D605E8EF09E6663AD799E /* LoginView.swift */,
-				06A1B2C3D4E5F607A8B9C0D1 /* MatchDetailView.swift */,
+				562001D94BCA45C82BA31989 /* MatchDetailView.swift */,
 				FCDCFF943267F00D39A478EA /* OnboardingView.swift */,
 				754C6ACB7B9D970C8F07EE85 /* ProfileView.swift */,
 				0121AC136016B27CD7DC492C /* RegisterView.swift */,
 				C33629BCDCE91E205E4B5BA0 /* SessionDetailView.swift */,
-				B2C3D4E5F6071829A1B2C3D5 /* SessionNotificationsView.swift */,
+				7DE1B079D2C12ED4B16F31EE /* SessionNotificationsView.swift */,
 				92AD7C951EE82977F1DCB23F /* SettingsView.swift */,
 				F058CF3ECEDBF005C5223459 /* StatsView.swift */,
 				A21787C3A32BF8532A0BA98F /* TeamDetailView.swift */,
 				C734DBFE843729083ED11899 /* TeamListView.swift */,
-				F1A2B3C4D5E6F7089920A1B3 /* WeeklySummaryView.swift */,
+				AB4F55A8ECDAED6B4ADB8F71 /* WeeklySummaryView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -209,6 +249,7 @@
 			children = (
 				D2752D80E323CB4D978D060B /* AuthManager.swift */,
 				10A47937B735C6DF31421B3A /* CloudSync.swift */,
+				A0826EFEAF923348062F4EE5 /* WeChatManager.swift */,
 			);
 			path = Auth;
 			sourceTree = "<group>";
@@ -231,12 +272,28 @@
 			path = Tracking;
 			sourceTree = "<group>";
 		};
+		D5F14B27F01E069C59F50C6D /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				5B3DA0BDC3D1C9118EBE0485 /* WechatOpenSDK.xcframework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
 		DD8DB8BCDA2179FCD4B5AAAF /* Sync */ = {
 			isa = PBXGroup;
 			children = (
 				6FDCB6010E2CDCEF85F43A02 /* PhoneSync.swift */,
 			);
 			path = Sync;
+			sourceTree = "<group>";
+		};
+		E825357A7BCDB5EADDB1916C /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				B8C3821D1DCA5514CFBF9AA3 /* WatchBindView.swift */,
+			);
+			path = Views;
 			sourceTree = "<group>";
 		};
 		ECE6D27BC287504F93AC35E1 /* Sync */ = {
@@ -247,28 +304,12 @@
 			path = Sync;
 			sourceTree = "<group>";
 		};
-		WN05A2B3C4D5E6F708992001 /* Network */ = {
-			isa = PBXGroup;
-			children = (
-				WN02A2B3C4D5E6F708992001 /* WatchApiClient.swift */,
-				WN04A2B3C4D5E6F708992001 /* WatchSessionQueue.swift */,
-			);
-			path = Network;
-			sourceTree = "<group>";
-		};
-		WB03A2B3C4D5E6F708992001 /* Views */ = {
-			isa = PBXGroup;
-			children = (
-				WB02A2B3C4D5E6F708992001 /* WatchBindView.swift */,
-			);
-			path = Views;
-			sourceTree = "<group>";
-		};
 		EDCFE626AD020BF2048548E8 = {
 			isa = PBXGroup;
 			children = (
 				860377CA8192C147A7A882F3 /* FootballTracker */,
 				52D0B217DFEFFA934A74BAC9 /* FootballTrackerWatch */,
+				D5F14B27F01E069C59F50C6D /* Frameworks */,
 				7651B60367F9232C0752DDF6 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -282,6 +323,8 @@
 			buildPhases = (
 				849A99C4EDC282C43A3D9EA2 /* Sources */,
 				883C7996BF7290318A689792 /* Resources */,
+				FAF271DA336DC2FEA4519BC4 /* Frameworks */,
+				E2F75D4A1066A3CB92D06793 /* Embed Frameworks */,
 				0C125127877BF0051AD53377 /* Embed Watch Content */,
 			);
 			buildRules = (
@@ -301,7 +344,7 @@
 			buildConfigurationList = B2C1E14CF168BC6B922E4B1D /* Build configuration list for PBXNativeTarget "FootballTrackerWatch" */;
 			buildPhases = (
 				D01ACDF8AAF1E941DECAFFA1 /* Sources */,
-				W3C4D5E6F70819A1B2C3D4E5 /* Resources */,
+				04DD453C17CCBC9D0DF78B11 /* Resources */,
 			);
 			buildRules = (
 			);
@@ -324,11 +367,9 @@
 				LastUpgradeCheck = 1600;
 				TargetAttributes = {
 					0FDB8C13331326252968E476 = {
-						DevelopmentTeam = 25N63T38LP;
 						ProvisioningStyle = Automatic;
 					};
 					4BB3D2BC48AD81E9DB98C9FB = {
-						DevelopmentTeam = 25N63T38LP;
 						ProvisioningStyle = Automatic;
 					};
 				};
@@ -354,19 +395,19 @@
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
+		04DD453C17CCBC9D0DF78B11 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D1E46F5187DE62AA43DE3921 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		883C7996BF7290318A689792 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
 				CA60D4570D15FDFDCC75AA1C /* Assets.xcassets in Resources */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		W3C4D5E6F70819A1B2C3D4E5 /* Resources */ = {
-			isa = PBXResourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				W1A2B3C4D5E6F7081920A1B2 /* Assets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -383,19 +424,19 @@
 				9F8B5740DA85CA1157C9BBB9 /* AuthManager.swift in Sources */,
 				59E39D321C31DF56A6CE81C5 /* BadgeWallView.swift in Sources */,
 				046B0A51704DD3EE532486E2 /* CloudSync.swift in Sources */,
-				03F1A2B3C4D5E6F7089920C1 /* CreateMatchView.swift in Sources */,
+				871B13778C4509133B16AD23 /* CreateMatchView.swift in Sources */,
 				DE3F876A06775F463F7EA6C4 /* FootballTrackerApp.swift in Sources */,
 				A4CF37667E3CF10F116E13C3 /* HeatmapOverlay.swift in Sources */,
 				659F7E6C9E1F5595AE9AA9CA /* HeatmapView.swift in Sources */,
 				BF4CDBC2F0531E306EC2D0FF /* HomeView.swift in Sources */,
 				BE8487577C6EC8D651FDFC92 /* LoginView.swift in Sources */,
-				05A1B2C3D4E5F607A8B9C0D1 /* MatchDetailView.swift in Sources */,
+				0C0B0EF455B68F15D7791F2A /* MatchDetailView.swift in Sources */,
 				5DAE4A9F895D11577ECFE8D8 /* OnboardingView.swift in Sources */,
 				CE774E22735FC3A1D7455257 /* ProfileView.swift in Sources */,
-				C1A2B3D4E5F60718293A4B5C /* RadarChartView.swift in Sources */,
+				9BDC8EA0E869B316E2B395C1 /* RadarChartView.swift in Sources */,
 				83627E21819162E4E2C18AC4 /* RegisterView.swift in Sources */,
 				D80555D855E9816377F1558D /* SessionDetailView.swift in Sources */,
-				A1B2C3D4E5F607182930B1C2 /* SessionNotificationsView.swift in Sources */,
+				F05ECD52CB2C5E0C8EB92699 /* SessionNotificationsView.swift in Sources */,
 				1CCF85B16D0E6E506314C23F /* SessionStore.swift in Sources */,
 				1501FB6DD67A8FD84F4C18E1 /* SettingsView.swift in Sources */,
 				AC255495176844D056814B6C /* SpeedChart.swift in Sources */,
@@ -403,7 +444,8 @@
 				648E6726E868A18C272FEA75 /* TeamDetailView.swift in Sources */,
 				2D7D7A92C0F2B702B4151E12 /* TeamListView.swift in Sources */,
 				6355706A8FF7C7E477F8B277 /* WatchSync.swift in Sources */,
-				E1A2B3C4D5E6F7089920A1B3 /* WeeklySummaryView.swift in Sources */,
+				35F76D3425AC6EC6F84968F9 /* WeChatManager.swift in Sources */,
+				C589AA2AE507252613CF8E4E /* WeeklySummaryView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -414,11 +456,11 @@
 				3B43D48B1D7E90A9FA36CD5E /* FootballTrackerWatchApp.swift in Sources */,
 				3F336471D75B0D9F33899B3E /* PhoneSync.swift in Sources */,
 				51D9E57038352CB89F7E0D6C /* TrackingManager.swift in Sources */,
-				WN01A2B3C4D5E6F708992001 /* WatchApiClient.swift in Sources */,
-				WN03A2B3C4D5E6F708992001 /* WatchSessionQueue.swift in Sources */,
+				3F222C8195194F4AB3534984 /* WatchApiClient.swift in Sources */,
+				7867C10AEA6AFC91B9224487 /* WatchBindView.swift in Sources */,
+				BD907EA2523160FEFD96EC2F /* WatchSessionQueue.swift in Sources */,
 				31AB697318E8974368D10964 /* WatchSummaryView.swift in Sources */,
 				9AFC3F692DA6EC3EEA478453 /* WatchTrackingView.swift in Sources */,
-				WB01A2B3C4D5E6F708992001 /* WatchBindView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -437,10 +479,9 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				CODE_SIGN_ENTITLEMENTS = FootballTrackerWatch/FootballTrackerWatch.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = 25N63T38LP;
+				DEVELOPMENT_TEAM = UQ6JZQ5G3C;
 				INFOPLIST_FILE = FootballTrackerWatch/Info.plist;
 				PRODUCT_BUNDLE_IDENTIFIER = com.footballtracker.ios.watchkitapp;
 				SDKROOT = watchos;
@@ -455,10 +496,9 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				CODE_SIGN_ENTITLEMENTS = FootballTrackerWatch/FootballTrackerWatch.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = 25N63T38LP;
+				DEVELOPMENT_TEAM = UQ6JZQ5G3C;
 				INFOPLIST_FILE = FootballTrackerWatch/Info.plist;
 				PRODUCT_BUNDLE_IDENTIFIER = com.footballtracker.ios.watchkitapp;
 				SDKROOT = watchos;
@@ -473,16 +513,37 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = FootballTracker/FootballTracker.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = 25N63T38LP;
+				DEVELOPMENT_TEAM = UQ6JZQ5G3C;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"\".\"",
+				);
 				INFOPLIST_FILE = FootballTracker/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-ObjC",
+					"-lc++",
+					"-lsqlite3.0",
+					"-lz",
+					"-framework",
+					CoreGraphics,
+					"-framework",
+					Security,
+					"-framework",
+					UIKit,
+					"-framework",
+					WebKit,
+				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.footballtracker.ios;
 				SDKROOT = iphoneos;
+				SWIFT_OBJC_BRIDGING_HEADER = "FootballTracker/FootballTracker-Bridging-Header.h";
 				SWIFT_VERSION = 5.9;
 				TARGETED_DEVICE_FAMILY = 1;
 			};
@@ -492,16 +553,37 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = FootballTracker/FootballTracker.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = 25N63T38LP;
+				DEVELOPMENT_TEAM = UQ6JZQ5G3C;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"\".\"",
+				);
 				INFOPLIST_FILE = FootballTracker/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-ObjC",
+					"-lc++",
+					"-lsqlite3.0",
+					"-lz",
+					"-framework",
+					CoreGraphics,
+					"-framework",
+					Security,
+					"-framework",
+					UIKit,
+					"-framework",
+					WebKit,
+				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.footballtracker.ios;
 				SDKROOT = iphoneos;
+				SWIFT_OBJC_BRIDGING_HEADER = "FootballTracker/FootballTracker-Bridging-Header.h";
 				SWIFT_VERSION = 5.9;
 				TARGETED_DEVICE_FAMILY = 1;
 			};

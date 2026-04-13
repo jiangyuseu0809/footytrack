@@ -106,6 +106,46 @@ class AuthManager: ObservableObject {
         }
     }
 
+    // MARK: - WeChat Login
+
+    /// Start WeChat OAuth login flow. The callback is handled asynchronously via WeChatManager.
+    func loginWithWeChat(store: SessionStore? = nil) {
+        guard WeChatManager.shared.isWeChatInstalled else {
+            errorMessage = "未安装微信"
+            return
+        }
+        isLoading = true
+        errorMessage = nil
+
+        WeChatManager.shared.onAuthCodeReceived = { [weak self] result in
+            guard let self = self else { return }
+            Task { @MainActor in
+                switch result {
+                case .success(let code):
+                    print("[WeChat] Got auth code, calling backend...")
+                    do {
+                        let response = try await ApiClient.shared.wechatAppLogin(code: code)
+                        print("[WeChat] Backend login success, uid: \(response.uid)")
+                        self.saveAuth(token: response.token, uid: response.uid)
+                        if let store = store {
+                            self.migrateAnonymousSessions(store: store, newUid: response.uid)
+                        }
+                        await self.preloadData()
+                    } catch {
+                        print("[WeChat] Backend login failed: \(error)")
+                        self.errorMessage = error.localizedDescription
+                    }
+                case .failure(let error):
+                    print("[WeChat] Auth failed: \(error)")
+                    self.errorMessage = error.localizedDescription
+                }
+                self.isLoading = false
+            }
+        }
+
+        WeChatManager.shared.login()
+    }
+
     /// Re-assign all sessions owned by deviceUuid (or empty) to the real user uid.
     func migrateAnonymousSessions(store: SessionStore, newUid: String) {
         var changed = false

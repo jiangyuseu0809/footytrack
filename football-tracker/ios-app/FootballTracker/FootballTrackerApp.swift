@@ -1,17 +1,28 @@
 import SwiftUI
 import UserNotifications
 
-// MARK: - AppDelegate for foreground notifications
+// MARK: - AppDelegate for foreground notifications + WeChat SDK
 
 class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDelegate {
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
         UNUserNotificationCenter.current().delegate = self
+        WeChatManager.shared.register()
         return true
     }
 
     /// Show notification banner even when app is in foreground
     func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification, withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
         completionHandler([.banner, .sound])
+    }
+
+    /// Handle URL Scheme callback from WeChat
+    func application(_ app: UIApplication, open url: URL, options: [UIApplication.OpenURLOptionsKey: Any] = [:]) -> Bool {
+        return WeChatManager.shared.handleOpenURL(url)
+    }
+
+    /// Handle Universal Link callback from WeChat
+    func application(_ application: UIApplication, continue userActivity: NSUserActivity, restorationHandler: @escaping ([UIUserActivityRestoring]?) -> Void) -> Bool {
+        return WeChatManager.shared.handleOpenUniversalLink(userActivity)
     }
 }
 
@@ -30,6 +41,10 @@ struct FootballTrackerApp: App {
         WindowGroup {
             MainTabView(store: sessionStore, authManager: authManager)
                 .preferredColorScheme(.dark)
+                .onOpenURL { url in
+                    print("[WeChat] onOpenURL: \(url)")
+                    _ = WeChatManager.shared.handleOpenURL(url)
+                }
                 .onReceive(NotificationCenter.default.publisher(for: WatchSync.didReceiveDataNotification)) { notification in
                     if let data = notification.userInfo as? [String: Any] {
                         Task { @MainActor in

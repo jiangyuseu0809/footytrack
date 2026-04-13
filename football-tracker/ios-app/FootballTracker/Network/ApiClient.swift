@@ -137,6 +137,15 @@ final class ApiClient {
         )
     }
 
+    /// WeChat OAuth login for iOS app. Sends the auth code from WXApi to backend.
+    func wechatAppLogin(code: String) async throws -> AuthResponse {
+        try await request(
+            endpoint: "/api/auth/wechat",
+            method: "POST",
+            body: WeChatAppLoginRequest(code: code)
+        )
+    }
+
     // MARK: - User Profile
 
     func getProfile() async throws -> UserProfileResponse {

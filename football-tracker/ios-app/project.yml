@@ -26,10 +26,19 @@ targets:
           - armv7
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
+        CFBundleURLTypes:
+          - CFBundleURLSchemes:
+              - wx3d3b45f95f14dce4
+        LSApplicationQueriesSchemes:
+          - weixin
+          - weixinULAPI
+          - weixinURLParamsAPI
     dependencies:
       - target: FootballTrackerWatch
         embed: true
         codeSign: true
+      - framework: WechatOpenSDK.xcframework
+        embed: true
     entitlements:
       path: FootballTracker/FootballTracker.entitlements
     settings:
@@ -40,6 +49,8 @@ targets:
         CODE_SIGN_STYLE: Automatic
         CODE_SIGN_IDENTITY: "Apple Development"
         DEVELOPMENT_TEAM: 25N63T38LP
+        SWIFT_OBJC_BRIDGING_HEADER: FootballTracker/FootballTracker-Bridging-Header.h
+        OTHER_LDFLAGS: $(inherited) -ObjC -lc++ -lsqlite3.0 -lz -framework CoreGraphics -framework Security -framework UIKit -framework WebKit
 
   FootballTrackerWatch:
     type: application

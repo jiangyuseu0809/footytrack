@@ -19,6 +19,10 @@ struct RegisterRequest: Encodable {
     let password: String
 }
 
+struct WeChatAppLoginRequest: Encodable {
+    let code: String
+}
+
 struct AuthResponse: Decodable {
     let token: String
     let uid: String

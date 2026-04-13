@@ -3,6 +3,7 @@ import SwiftUI
 struct LoginView: View {
     @ObservedObject var authManager: AuthManager
     var store: SessionStore? = nil
+    @ObservedObject private var wechatManager = WeChatManager.shared
     @State private var username = ""
     @State private var password = ""
     @State private var showPassword = false
@@ -29,6 +30,40 @@ struct LoginView: View {
                         Text("记录你的每一场球")
                             .font(.subheadline)
                             .foregroundColor(AppColors.textSecondary)
+                    }
+
+                    // WeChat Login Button (primary)
+                    if wechatManager.isWeChatInstalled {
+                        Button {
+                            authManager.loginWithWeChat(store: store)
+                        } label: {
+                            HStack(spacing: 8) {
+                                Image(systemName: "message.fill")
+                                    .font(.system(size: 18))
+                                    .foregroundColor(.white)
+
+                                Text("微信登录")
+                                    .font(.headline)
+                                    .foregroundColor(.white)
+                            }
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 50)
+                            .background(Color(hex: 0x07C160))
+                            .cornerRadius(12)
+                        }
+                        .disabled(authManager.isLoading)
+                        .padding(.horizontal, 24)
+
+                        // Divider
+                        HStack {
+                            Rectangle().fill(AppColors.dividerColor).frame(height: 0.5)
+                            Text("或")
+                                .font(.caption)
+                                .foregroundColor(AppColors.textSecondary)
+                                .padding(.horizontal, 12)
+                            Rectangle().fill(AppColors.dividerColor).frame(height: 0.5)
+                        }
+                        .padding(.horizontal, 24)
                     }
 
                     // Input Fields
@@ -122,5 +157,8 @@ struct LoginView: View {
             RegisterView(authManager: authManager, store: store)
         }
         .navigationBarHidden(true)
+        .onAppear {
+            wechatManager.checkInstallation()
+        }
     }
 }
