@@ -25,22 +25,6 @@ struct SpeedChartView: View {
                 let w = size.width
                 let h = size.height
 
-                // Draw speed zone backgrounds (speed chart only)
-                if !showHeartRate {
-                    let zones: [(Double, Double, Color)] = [
-                        (0, 6, Color.green.opacity(0.1)),
-                        (6, 12, Color.yellow.opacity(0.1)),
-                        (12, 18, Color.orange.opacity(0.1)),
-                        (18, maxVal, Color.red.opacity(0.1))
-                    ]
-                    for (low, high, color) in zones {
-                        let y1 = h - (high / maxVal * h)
-                        let y2 = h - (low / maxVal * h)
-                        let rect = CGRect(x: 0, y: max(0, y1), width: w, height: max(0, y2 - y1))
-                        context.fill(Path(rect), with: .color(color))
-                    }
-                }
-
                 // Draw line
                 let lineColor: Color = showHeartRate ? .red : .blue
                 let step = max(1, values.count / Int(w / 2))

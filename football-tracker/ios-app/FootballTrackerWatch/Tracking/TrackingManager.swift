@@ -3,6 +3,15 @@ import CoreLocation
 import HealthKit
 import Combine
 
+struct SyncTrackPoint: Codable {
+    let timestamp: Double
+    let latitude: Double
+    let longitude: Double
+    let speed: Double
+    let heartRate: Int
+    let accuracy: Double
+}
+
 /// Manages GPS tracking, heart rate monitoring, and data sync for watchOS.
 @MainActor
 class TrackingManager: NSObject, ObservableObject {
@@ -101,8 +110,8 @@ class TrackingManager: NSObject, ObservableObject {
         summaryDistanceMeters = totalDistanceMeters
         summarySlackIndex = computeSlackIndex()
 
-        // Sync directly to server (or queue if offline)
-        syncToServer()
+        // Send session data to iPhone via WatchConnectivity
+        syncToPhone()
 
         showSummary = true
     }
@@ -210,56 +219,17 @@ class TrackingManager: NSObject, ObservableObject {
 
     // MARK: - Sync
 
-    private func syncToServer() {
+    private func syncToPhone() {
         let sessionId = UUID().uuidString
         let startTs = sessionStartTime?.timeIntervalSince1970 ?? 0
         let endTs = Date().timeIntervalSince1970
 
-        // Build analysis from track data
-        let totalDist = totalDistanceMeters
-        let duration = endTs - startTs
-        let avgSpeed = duration > 0 ? (totalDist / 1000.0) / (duration / 3600.0) : 0
-        let maxSpeed = trackPoints.map { $0.speed * 3.6 }.max() ?? 0
-
-        // Sprint count: segments where speed > 18 km/h
-        var sprintCount = 0
-        var inSprint = false
-        for pt in trackPoints {
-            if pt.speed * 3.6 > 18.0 {
-                if !inSprint { sprintCount += 1; inSprint = true }
-            } else {
-                inSprint = false
-            }
-        }
-
-        // High-intensity distance (speed > 12 km/h)
-        var highIntensityDist = 0.0
-        for i in 1..<trackPoints.count {
-            if trackPoints[i].speed * 3.6 > 12.0 {
-                let loc1 = CLLocation(latitude: trackPoints[i-1].lat, longitude: trackPoints[i-1].lon)
-                let loc2 = CLLocation(latitude: trackPoints[i].lat, longitude: trackPoints[i].lon)
-                highIntensityDist += loc2.distance(from: loc1)
-            }
-        }
-
-        // Heart rate stats
-        let avgHr = heartRateData.isEmpty ? 0 : heartRateData.map(\.bpm).reduce(0, +) / heartRateData.count
-        let maxHr = heartRateData.map(\.bpm).max() ?? 0
-
-        // Encode track points as JSON then base64
-        struct TrackPointRecord: Codable {
-            let timestamp: Double
-            let latitude: Double
-            let longitude: Double
-            let speed: Double
-            let heartRate: Int
-            let accuracy: Double
-        }
-        let records = trackPoints.map { pt -> TrackPointRecord in
+        // Build track point records
+        let records = trackPoints.map { pt -> SyncTrackPoint in
             let closestHr = heartRateData.min(by: {
                 abs($0.timestamp.timeIntervalSince(pt.timestamp)) < abs($1.timestamp.timeIntervalSince(pt.timestamp))
             })?.bpm ?? 0
-            return TrackPointRecord(
+            return SyncTrackPoint(
                 timestamp: pt.timestamp.timeIntervalSince1970,
                 latitude: pt.lat,
                 longitude: pt.lon,
@@ -268,53 +238,26 @@ class TrackingManager: NSObject, ObservableObject {
                 accuracy: pt.accuracy
             )
         }
-        let trackPointsBase64 = (try? JSONEncoder().encode(records))?.base64EncodedString()
 
-        let slackLabel: String
-        let slack = summarySlackIndex
-        switch slack {
-        case 0..<20: slackLabel = "全力以赴"
-        case 20..<40: slackLabel = "积极参与"
-        case 40..<60: slackLabel = "中规中矩"
-        case 60..<80: slackLabel = "有点摸鱼"
-        default: slackLabel = "躺平大师"
-        }
+        let latitudes = records.map { $0.latitude }
+        let longitudes = records.map { $0.longitude }
+        let timestamps = records.map { $0.timestamp }
+        let speeds = records.map { $0.speed }
+        let hrEntries: [[String: Any]] = records.map { ["ts": $0.timestamp, "bpm": $0.heartRate] }
 
-        let dto = WatchApiClient.WatchSessionDto(
-            id: sessionId,
-            startTime: Int64(startTs * 1000),
-            endTime: Int64(endTs * 1000),
-            playerWeightKg: 70.0,
-            playerAge: 25,
-            totalDistanceMeters: totalDist,
-            avgSpeedKmh: avgSpeed,
-            maxSpeedKmh: maxSpeed,
-            sprintCount: sprintCount,
-            highIntensityDistanceMeters: highIntensityDist,
-            avgHeartRate: avgHr,
-            maxHeartRate: maxHr,
-            caloriesBurned: summaryCalories,
-            slackIndex: slack,
-            slackLabel: slackLabel,
-            coveragePercent: 0,
-            trackPointsData: trackPointsBase64
-        )
+        let payload: [String: Any] = [
+            "session_id": sessionId,
+            "start_time": startTs,
+            "end_time": endTs,
+            "latitudes": latitudes,
+            "longitudes": longitudes,
+            "timestamps": timestamps,
+            "speeds": speeds,
+            "heart_rates": hrEntries
+        ]
 
-        // Try direct server upload; queue on failure
-        Task {
-            guard WatchApiClient.shared.isAuthenticated else {
-                print("[Sync] No auth token, queuing session")
-                WatchSessionQueue.shared.enqueue(dto)
-                return
-            }
-            do {
-                try await WatchApiClient.shared.syncSession(dto)
-                print("[Sync] Session uploaded to server")
-            } catch {
-                print("[Sync] Upload failed: \(error), queuing session")
-                WatchSessionQueue.shared.enqueue(dto)
-            }
-        }
+        PhoneSync.shared.sendSessionData(payload)
+        print("[Sync] Session sent to iPhone via WatchConnectivity")
     }
 }
 

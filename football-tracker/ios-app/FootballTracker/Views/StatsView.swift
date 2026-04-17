@@ -184,9 +184,19 @@ struct DaySummaryDetailView: View {
                     keyStatsSection
 
                     // Charts from merged track points
-                    if !allTrackPoints.isEmpty {
-                        chartSection(title: "速度", icon: "bolt.fill", iconColor: Color(hex: 0x3B82F6)) {
+                    chartSection(title: "速度", icon: "bolt.fill", iconColor: Color(hex: 0x3B82F6)) {
+                        if !allTrackPoints.isEmpty {
                             SpeedChartView(points: allTrackPoints, showHeartRate: false)
+                        } else {
+                            VStack(spacing: 10) {
+                                Image(systemName: "bolt.slash")
+                                    .font(.system(size: 28))
+                                    .foregroundColor(AppColors.textSecondary.opacity(0.5))
+                                Text("暂无速度数据")
+                                    .font(.system(size: 14))
+                                    .foregroundColor(AppColors.textSecondary)
+                            }
+                            .frame(maxWidth: .infinity, minHeight: 120)
                         }
                     }
 
@@ -216,8 +226,10 @@ struct DaySummaryDetailView: View {
                         }
                     }
 
-                    // Per-session list
-                    sessionsListSection
+                    // Per-session list (only when multiple sessions)
+                    if section.sessions.count > 1 {
+                        sessionsListSection
+                    }
                 }
                 .padding(.horizontal, 16)
                 .padding(.top, 12)

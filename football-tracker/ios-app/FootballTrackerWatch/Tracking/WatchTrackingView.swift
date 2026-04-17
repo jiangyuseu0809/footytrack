@@ -28,14 +28,6 @@ struct WatchTrackingView: View {
             }
             .buttonStyle(.plain)
             Spacer()
-
-            let pendingCount = WatchSessionQueue.shared.pendingCount
-            if pendingCount > 0 {
-                Text("\(pendingCount) 条数据待上传")
-                    .font(.system(size: 10))
-                    .foregroundColor(.yellow)
-                    .padding(.bottom, 4)
-            }
         }
     }
 

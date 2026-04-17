@@ -17,7 +17,6 @@
 		31AB697318E8974368D10964 /* WatchSummaryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5F5B7186163F807377A07D1 /* WatchSummaryView.swift */; };
 		35F76D3425AC6EC6F84968F9 /* WeChatManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0826EFEAF923348062F4EE5 /* WeChatManager.swift */; };
 		3B43D48B1D7E90A9FA36CD5E /* FootballTrackerWatchApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 65A416238FFA973BB961135C /* FootballTrackerWatchApp.swift */; };
-		3F222C8195194F4AB3534984 /* WatchApiClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4D6359A351630934CE6C266 /* WatchApiClient.swift */; };
 		3F336471D75B0D9F33899B3E /* PhoneSync.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FDCB6010E2CDCEF85F43A02 /* PhoneSync.swift */; };
 		51D9E57038352CB89F7E0D6C /* TrackingManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC9529A100BB82C498512A2E /* TrackingManager.swift */; };
 		584BAA5B65257195268DECD2 /* StatsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F058CF3ECEDBF005C5223459 /* StatsView.swift */; };
@@ -28,7 +27,6 @@
 		6398953E3493F30D3B9EC3AE /* ApiModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = B8C1B75F43C086C7B2B783ED /* ApiModels.swift */; };
 		648E6726E868A18C272FEA75 /* TeamDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A21787C3A32BF8532A0BA98F /* TeamDetailView.swift */; };
 		659F7E6C9E1F5595AE9AA9CA /* HeatmapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 16174BC065AFC1C9C5C51525 /* HeatmapView.swift */; };
-		7867C10AEA6AFC91B9224487 /* WatchBindView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B8C3821D1DCA5514CFBF9AA3 /* WatchBindView.swift */; };
 		83627E21819162E4E2C18AC4 /* RegisterView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0121AC136016B27CD7DC492C /* RegisterView.swift */; };
 		871B13778C4509133B16AD23 /* CreateMatchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A66E76DEDF0B206269B34D79 /* CreateMatchView.swift */; };
 		9AFC3F692DA6EC3EEA478453 /* WatchTrackingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2ED27ECF7699FFFB237B72A3 /* WatchTrackingView.swift */; };
@@ -36,7 +34,6 @@
 		9F8B5740DA85CA1157C9BBB9 /* AuthManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D2752D80E323CB4D978D060B /* AuthManager.swift */; };
 		A4CF37667E3CF10F116E13C3 /* HeatmapOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA6F44E157B2DA43DA6A12FC /* HeatmapOverlay.swift */; };
 		AC255495176844D056814B6C /* SpeedChart.swift in Sources */ = {isa = PBXBuildFile; fileRef = 22A0F1C7E56CE7F698E02541 /* SpeedChart.swift */; };
-		BD907EA2523160FEFD96EC2F /* WatchSessionQueue.swift in Sources */ = {isa = PBXBuildFile; fileRef = 259D21ADD96857818A92953F /* WatchSessionQueue.swift */; };
 		BE8487577C6EC8D651FDFC92 /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D25D605E8EF09E6663AD799E /* LoginView.swift */; };
 		BF4CDBC2F0531E306EC2D0FF /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F265F7DD0BE6099A998F644 /* HomeView.swift */; };
 		C589AA2AE507252613CF8E4E /* WeeklySummaryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB4F55A8ECDAED6B4ADB8F71 /* WeeklySummaryView.swift */; };
@@ -91,7 +88,6 @@
 		16174BC065AFC1C9C5C51525 /* HeatmapView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HeatmapView.swift; sourceTree = "<group>"; };
 		1F265F7DD0BE6099A998F644 /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
 		22A0F1C7E56CE7F698E02541 /* SpeedChart.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeedChart.swift; sourceTree = "<group>"; };
-		259D21ADD96857818A92953F /* WatchSessionQueue.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchSessionQueue.swift; sourceTree = "<group>"; };
 		2ED27ECF7699FFFB237B72A3 /* WatchTrackingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchTrackingView.swift; sourceTree = "<group>"; };
 		36E61BCEB61187EC52C9B0A7 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		38D7B5959FC0CC4C5C5CA45C /* FootballTrackerWatch.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = FootballTrackerWatch.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -116,9 +112,7 @@
 		A66E76DEDF0B206269B34D79 /* CreateMatchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateMatchView.swift; sourceTree = "<group>"; };
 		AA6F44E157B2DA43DA6A12FC /* HeatmapOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HeatmapOverlay.swift; sourceTree = "<group>"; };
 		AB4F55A8ECDAED6B4ADB8F71 /* WeeklySummaryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeeklySummaryView.swift; sourceTree = "<group>"; };
-		B4D6359A351630934CE6C266 /* WatchApiClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchApiClient.swift; sourceTree = "<group>"; };
 		B8C1B75F43C086C7B2B783ED /* ApiModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApiModels.swift; sourceTree = "<group>"; };
-		B8C3821D1DCA5514CFBF9AA3 /* WatchBindView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchBindView.swift; sourceTree = "<group>"; };
 		BD147F462B299576461DD88B /* RadarChartView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RadarChartView.swift; sourceTree = "<group>"; };
 		C33629BCDCE91E205E4B5BA0 /* SessionDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionDetailView.swift; sourceTree = "<group>"; };
 		C734DBFE843729083ED11899 /* TeamListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TeamListView.swift; sourceTree = "<group>"; };
@@ -177,21 +171,10 @@
 				36E61BCEB61187EC52C9B0A7 /* Assets.xcassets */,
 				DE8A46751F32F7B04CA7EE28 /* FootballTrackerWatch.entitlements */,
 				65A416238FFA973BB961135C /* FootballTrackerWatchApp.swift */,
-				59A7F8AC13C5B037B6B8C021 /* Network */,
 				DD8DB8BCDA2179FCD4B5AAAF /* Sync */,
 				CC0E03DF13339C62F81195A7 /* Tracking */,
-				E825357A7BCDB5EADDB1916C /* Views */,
 			);
 			path = FootballTrackerWatch;
-			sourceTree = "<group>";
-		};
-		59A7F8AC13C5B037B6B8C021 /* Network */ = {
-			isa = PBXGroup;
-			children = (
-				B4D6359A351630934CE6C266 /* WatchApiClient.swift */,
-				259D21ADD96857818A92953F /* WatchSessionQueue.swift */,
-			);
-			path = Network;
 			sourceTree = "<group>";
 		};
 		7651B60367F9232C0752DDF6 /* Products */ = {
@@ -286,14 +269,6 @@
 				6FDCB6010E2CDCEF85F43A02 /* PhoneSync.swift */,
 			);
 			path = Sync;
-			sourceTree = "<group>";
-		};
-		E825357A7BCDB5EADDB1916C /* Views */ = {
-			isa = PBXGroup;
-			children = (
-				B8C3821D1DCA5514CFBF9AA3 /* WatchBindView.swift */,
-			);
-			path = Views;
 			sourceTree = "<group>";
 		};
 		ECE6D27BC287504F93AC35E1 /* Sync */ = {
@@ -456,9 +431,6 @@
 				3B43D48B1D7E90A9FA36CD5E /* FootballTrackerWatchApp.swift in Sources */,
 				3F336471D75B0D9F33899B3E /* PhoneSync.swift in Sources */,
 				51D9E57038352CB89F7E0D6C /* TrackingManager.swift in Sources */,
-				3F222C8195194F4AB3534984 /* WatchApiClient.swift in Sources */,
-				7867C10AEA6AFC91B9224487 /* WatchBindView.swift in Sources */,
-				BD907EA2523160FEFD96EC2F /* WatchSessionQueue.swift in Sources */,
 				31AB697318E8974368D10964 /* WatchSummaryView.swift in Sources */,
 				9AFC3F692DA6EC3EEA478453 /* WatchTrackingView.swift in Sources */,
 			);

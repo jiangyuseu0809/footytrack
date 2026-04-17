@@ -79,40 +79,14 @@ class WatchSync: NSObject, ObservableObject, WCSessionDelegate {
         updateWatchState()
     }
 
-    // MARK: - Send Auth Token to Watch
+    // MARK: - Send Auth Token to Watch (no longer needed — Watch only syncs via WatchConnectivity)
 
-    /// Push the current auth token to the paired Apple Watch.
-    /// Call this after login/register so the watch can upload sessions directly.
     func sendAuthTokenToWatch(token: String, uid: String) {
-        guard WCSession.isSupported(),
-              WCSession.default.activationState == .activated else {
-            print("[WatchSync] Cannot send token — WCSession not ready")
-            return
-        }
-
-        let payload: [String: Any] = [
-            "auth_token": token,
-            "auth_uid": uid
-        ]
-
-        // updateApplicationContext overwrites previous value, ensuring watch always has latest token
-        do {
-            try WCSession.default.updateApplicationContext(payload)
-            print("[WatchSync] Auth token sent to watch via applicationContext")
-        } catch {
-            print("[WatchSync] Failed to send applicationContext: \(error)")
-            // Fallback to transferUserInfo (queued reliably)
-            WCSession.default.transferUserInfo(payload)
-            print("[WatchSync] Auth token sent to watch via transferUserInfo")
-        }
+        // No-op: Watch no longer uploads to server directly
     }
 
-    /// Clear the auth token on the watch (call on logout).
     func clearWatchAuthToken() {
-        guard WCSession.isSupported(),
-              WCSession.default.activationState == .activated else { return }
-
-        try? WCSession.default.updateApplicationContext(["auth_token": "", "auth_uid": ""])
+        // No-op: Watch no longer needs auth token
     }
 
     /// Called when the watch sends data via transferUserInfo
