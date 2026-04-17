@@ -6,6 +6,8 @@ struct SpeedChartView: View {
     let showHeartRate: Bool
 
     @State private var cachedSamples: [SamplePoint] = []
+    @State private var cachedRawMaxValue: Double = 0
+    @State private var cachedRawMinValue: Double = 0
 
     private struct SamplePoint {
         let t: Double
@@ -25,6 +27,8 @@ struct SpeedChartView: View {
     private func preprocessSamples() {
         guard let start = points.first?.timestamp else {
             cachedSamples = []
+            cachedRawMaxValue = 0
+            cachedRawMinValue = 0
             return
         }
 
@@ -34,23 +38,36 @@ struct SpeedChartView: View {
             return SamplePoint(t: p.timestamp - start, v: value)
         }
 
+        cachedRawMaxValue = raw.map(\.v).max() ?? 0
+        cachedRawMinValue = raw.map(\.v).min() ?? 0
+
         guard raw.count > 2 else {
             cachedSamples = raw
             return
         }
 
-        let targetCount = min(120, max(28, raw.count / 4))
-        let aggregated = aggregateAndPreservePeaks(raw, targetCount: targetCount)
-        cachedSamples = exponentialSmoothing(aggregated, alpha: showHeartRate ? 0.30 : 0.38)
+        if showHeartRate {
+            let targetCount = min(120, max(28, raw.count / 4))
+            let aggregated = aggregateAndPreservePeaks(raw, targetCount: targetCount)
+            cachedSamples = exponentialSmoothing(aggregated, alpha: 0.30)
+        } else {
+            let targetCount = min(140, max(36, raw.count / 3))
+            let aggregated = aggregateByTime(raw, targetCount: targetCount)
+            cachedSamples = preserveExtremesAndMatchAverage(aggregated: aggregated, raw: raw)
+        }
     }
 
     private var maxTime: Double {
         max(1, samples.last?.t ?? 1)
     }
 
+    private var displayPeakValue: Double {
+        showHeartRate ? (samples.map(\.v).max() ?? 0) : cachedRawMaxValue
+    }
+
     private var yMin: Double {
         guard !samples.isEmpty else { return showHeartRate ? 60 : 0 }
-        let minV = samples.map(\.v).min() ?? 0
+        let minV = showHeartRate ? (samples.map(\.v).min() ?? 0) : min(samples.map(\.v).min() ?? 0, cachedRawMinValue)
         if showHeartRate {
             return max(40, floor(minV * 0.9 / 10) * 10)
         }
@@ -59,7 +76,7 @@ struct SpeedChartView: View {
 
     private var yMax: Double {
         guard !samples.isEmpty else { return showHeartRate ? 180 : 30 }
-        let maxV = samples.map(\.v).max() ?? 1
+        let maxV = max(samples.map(\.v).max() ?? 1, cachedRawMaxValue)
         if showHeartRate {
             return max(yMin + 20, ceil(maxV * 1.1 / 10) * 10)
         }
@@ -81,6 +98,8 @@ struct SpeedChartView: View {
     }
 
     var body: some View {
+        let axisLabelX: CGFloat = 2
+
         VStack(alignment: .leading, spacing: 10) {
             Text(showHeartRate ? "心率曲线 (bpm)" : "速度曲线 (km/h)")
                 .font(.subheadline.weight(.medium))
@@ -97,15 +116,14 @@ struct SpeedChartView: View {
                     )
             } else {
                 Canvas { context, size in
-                    let axisLabelWidth: CGFloat = 32
-                    let leftPad: CGFloat = axisLabelWidth + 10
-                    let rightPad: CGFloat = 4
+                    let chartLeftPad: CGFloat = 10
+                    let rightPad: CGFloat = 2
                     let topPad: CGFloat = 8
-                    let bottomPad: CGFloat = 18
+                    let bottomPad: CGFloat = 10
                     let plotRect = CGRect(
-                        x: leftPad,
+                        x: chartLeftPad,
                         y: topPad,
-                        width: max(1, size.width - leftPad - rightPad),
+                        width: max(1, size.width - chartLeftPad - rightPad),
                         height: max(1, size.height - topPad - bottomPad)
                     )
 
@@ -117,8 +135,8 @@ struct SpeedChartView: View {
                         let y = plotRect.maxY - CGFloat(ratio) * plotRect.height
 
                         var grid = Path()
-                        grid.move(to: CGPoint(x: plotRect.minX, y: y))
-                        grid.addLine(to: CGPoint(x: plotRect.maxX, y: y))
+                        grid.move(to: CGPoint(x: chartLeftPad, y: y))
+                        grid.addLine(to: CGPoint(x: size.width, y: y))
                         context.stroke(grid, with: .color(Color.white.opacity(0.08)), lineWidth: 0.8)
 
                         let text = context.resolve(
@@ -126,19 +144,20 @@ struct SpeedChartView: View {
                                 .font(.system(size: 10, weight: .medium))
                                 .foregroundColor(AppColors.textSecondary)
                         )
-                        context.draw(text, at: CGPoint(x: axisLabelWidth, y: y), anchor: .trailing)
+                        context.draw(text, at: CGPoint(x: axisLabelX, y: y), anchor: .leading)
                     }
 
-                    var axisPath = Path()
-                    axisPath.move(to: CGPoint(x: plotRect.minX, y: plotRect.minY))
-                    axisPath.addLine(to: CGPoint(x: plotRect.minX, y: plotRect.maxY))
-                    context.stroke(axisPath, with: .color(Color.white.opacity(0.12)), lineWidth: 1)
+                    let normalizedSamples: [SamplePoint] = {
+                        guard let first = samples.first else { return samples }
+                        if first.t <= 0.0001 { return samples }
+                        return [SamplePoint(t: 0, v: first.v)] + samples
+                    }()
 
-                    let chartPoints = samples.map { item in
+                    let chartPoints = normalizedSamples.map { item in
                         let x = plotRect.minX + CGFloat(item.t / maxTime) * plotRect.width
                         let ratio = (item.v - yMin) / max(0.0001, (yMax - yMin))
                         let y = plotRect.maxY - CGFloat(ratio) * plotRect.height
-                        return CGPoint(x: x, y: y)
+                        return CGPoint(x: min(max(x, plotRect.minX), plotRect.maxX), y: min(max(y, plotRect.minY), plotRect.maxY))
                     }
 
                     guard chartPoints.count >= 2 else { return }
@@ -157,8 +176,8 @@ struct SpeedChartView: View {
                         )
                     )
 
-                    context.stroke(linePath, with: .color(glowColor.opacity(0.45)), lineWidth: 4)
-                    context.stroke(linePath, with: .color(lineColor), lineWidth: 2)
+                    context.stroke(linePath, with: .color(glowColor.opacity(0.08)), lineWidth: 2.2)
+                    context.stroke(linePath, with: .color(lineColor), lineWidth: 2.0)
                 }
                 .frame(height: 170)
                 .cornerRadius(10)
@@ -167,18 +186,26 @@ struct SpeedChartView: View {
                     Text("0 min")
                         .font(.caption2)
                         .foregroundColor(AppColors.textSecondary)
+                        .lineLimit(1)
+                        .fixedSize(horizontal: true, vertical: false)
                     Spacer()
                     Text("\(Int(maxTime / 60)) min")
                         .font(.caption2)
                         .foregroundColor(AppColors.textSecondary)
                 }
+                .padding(.leading, axisLabelX)
 
-                HStack(spacing: 12) {
-                    Text("平均 \(Int(samples.map(\.v).reduce(0, +) / Double(max(samples.count, 1))))")
-                    Text("峰值 \(Int(samples.map(\.v).max() ?? 0))")
+                HStack(spacing: 24) {
+                    legendStatItem(
+                        label: "平均 \(Int(samples.map(\.v).reduce(0, +) / Double(max(samples.count, 1))))",
+                        dotColor: lineColor.opacity(0.85)
+                    )
+                    legendStatItem(
+                        label: "峰值 \(Int(displayPeakValue))",
+                        dotColor: Color(hex: 0xF59E0B)
+                    )
                 }
-                .font(.caption)
-                .foregroundColor(AppColors.textSecondary)
+                .frame(maxWidth: .infinity, alignment: .center)
             }
         }
         .padding()
@@ -214,12 +241,56 @@ struct SpeedChartView: View {
             let avgT = slice.map(\.t).reduce(0, +) / Double(slice.count)
             let avgV = slice.map(\.v).reduce(0, +) / Double(slice.count)
             let peakV = slice.map(\.v).max() ?? avgV
-            let blended = showHeartRate ? (avgV * 0.85 + peakV * 0.15) : (avgV * 0.70 + peakV * 0.30)
+            let blended = avgV * 0.85 + peakV * 0.15
 
             result.append(SamplePoint(t: avgT, v: blended))
         }
 
         return result.sorted { $0.t < $1.t }
+    }
+
+    private func aggregateByTime(_ input: [SamplePoint], targetCount: Int) -> [SamplePoint] {
+        guard input.count > targetCount, targetCount > 1 else { return input }
+
+        var result: [SamplePoint] = []
+        result.reserveCapacity(targetCount)
+
+        let bucketSpan = Double(input.count - 1) / Double(targetCount - 1)
+        for bucket in 0..<targetCount {
+            let startIndex = Int((Double(bucket) * bucketSpan).rounded(.down))
+            let endIndex = Int((Double(bucket + 1) * bucketSpan).rounded(.down))
+            let safeStart = min(max(0, startIndex), input.count - 1)
+            let safeEnd = min(max(safeStart + 1, endIndex), input.count)
+            let slice = input[safeStart..<safeEnd]
+
+            let avgT = slice.map(\.t).reduce(0, +) / Double(slice.count)
+            let avgV = slice.map(\.v).reduce(0, +) / Double(slice.count)
+            result.append(SamplePoint(t: avgT, v: avgV))
+        }
+
+        return result.sorted { $0.t < $1.t }
+    }
+
+    private func preserveExtremesAndMatchAverage(aggregated: [SamplePoint], raw: [SamplePoint]) -> [SamplePoint] {
+        guard !aggregated.isEmpty, !raw.isEmpty else { return aggregated }
+
+        var adjusted = aggregated
+        let rawAvg = raw.map(\.v).reduce(0, +) / Double(raw.count)
+        let aggAvg = aggregated.map(\.v).reduce(0, +) / Double(aggregated.count)
+        let delta = rawAvg - aggAvg
+
+        for i in adjusted.indices {
+            adjusted[i] = SamplePoint(t: adjusted[i].t, v: max(0, adjusted[i].v + delta))
+        }
+
+        if let minIdx = adjusted.indices.min(by: { adjusted[$0].v < adjusted[$1].v }) {
+            adjusted[minIdx] = SamplePoint(t: adjusted[minIdx].t, v: cachedRawMinValue)
+        }
+        if let maxIdx = adjusted.indices.max(by: { adjusted[$0].v < adjusted[$1].v }) {
+            adjusted[maxIdx] = SamplePoint(t: adjusted[maxIdx].t, v: cachedRawMaxValue)
+        }
+
+        return adjusted
     }
 
     private func exponentialSmoothing(_ input: [SamplePoint], alpha: Double) -> [SamplePoint] {
@@ -239,11 +310,29 @@ struct SpeedChartView: View {
         return output
     }
 
+    private func legendStatItem(label: String, dotColor: Color) -> some View {
+        HStack(spacing: 6) {
+            Circle()
+                .fill(dotColor)
+                .frame(width: 8, height: 8)
+            Text(label)
+                .font(.caption)
+                .foregroundColor(AppColors.textSecondary)
+        }
+    }
+
     private func smoothPath(_ points: [CGPoint]) -> Path {
         var path = Path()
         guard let first = points.first else { return path }
         path.move(to: first)
         guard points.count > 1 else { return path }
+
+        if !showHeartRate {
+            for i in 1..<points.count {
+                path.addLine(to: points[i])
+            }
+            return path
+        }
 
         for i in 1..<points.count {
             let mid = CGPoint(
