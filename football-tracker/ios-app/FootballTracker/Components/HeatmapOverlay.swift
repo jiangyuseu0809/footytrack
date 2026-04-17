@@ -120,7 +120,7 @@ struct PitchHeatmapCanvas: View {
         let pitchW = w - margin * 2
         let pitchH = h - margin * 2
 
-        // Background — dark green
+        // Background — standard pitch green
         let bgRect = CGRect(origin: .zero, size: size)
         context.fill(Path(bgRect), with: .color(Color(red: 0.13, green: 0.42, blue: 0.20)))
 
@@ -250,31 +250,35 @@ struct PitchHeatmapCanvas: View {
         let pitchRect = CGRect(x: pitchX, y: pitchY, width: pitchW, height: pitchH)
         clippedContext.clip(to: Path(pitchRect))
 
-        // Fine-grained sampling with overlapping circles for smooth blending
-        let step: CGFloat = 2
-        let dotRadius: CGFloat = 3.5
+        // High-resolution upsampling + blur layer to remove residual grid texture.
+        let renderScale: CGFloat = 4
+        let sampleCols = max(cols * Int(renderScale), 120)
+        let sampleRows = max(rows * Int(renderScale), 80)
+        let cellW = pitchW / CGFloat(sampleCols)
+        let cellH = pitchH / CGFloat(sampleRows)
+        let minVisible = 0.01
 
-        var x = pitchX
-        while x < pitchX + pitchW {
-            var y = pitchY
-            while y < pitchY + pitchH {
-                let gc = Double((x - pitchX) / pitchW) * Double(cols - 1)
-                let gr = Double(rows - 1) - Double((y - pitchY) / pitchH) * Double(rows - 1)
+        clippedContext.drawLayer { layer in
+            let blurRadius = max(cellW, cellH) * 1.8
+            layer.addFilter(.blur(radius: blurRadius))
 
-                let raw = bilinearSample(grid: grid, row: gr, col: gc)
-                if raw > 0.03 {
-                    let color = heatColor(raw)
-                    let ellipse = Path(ellipseIn: CGRect(
-                        x: x - dotRadius,
-                        y: y - dotRadius,
-                        width: dotRadius * 2,
-                        height: dotRadius * 2
-                    ))
-                    clippedContext.fill(ellipse, with: .color(color))
+            for sr in 0..<sampleRows {
+                let y = pitchY + CGFloat(sr) * cellH
+                let gy = Double(sampleRows - 1 - sr) / Double(max(sampleRows - 1, 1)) * Double(rows - 1)
+
+                for sc in 0..<sampleCols {
+                    let x = pitchX + CGFloat(sc) * cellW
+                    let gx = Double(sc) / Double(max(sampleCols - 1, 1)) * Double(cols - 1)
+
+                    let raw = bilinearSample(grid: grid, row: gy, col: gx)
+                    if raw <= minVisible { continue }
+
+                    let normalized = (raw - minVisible) / (1 - minVisible)
+                    let color = heatColor(normalized).opacity(0.95)
+                    let rect = CGRect(x: x, y: y, width: cellW + 1.0, height: cellH + 1.0)
+                    layer.fill(Path(rect), with: .color(color))
                 }
-                y += step
             }
-            x += step
         }
     }
 
@@ -298,28 +302,22 @@ struct PitchHeatmapCanvas: View {
 
     private func heatColor(_ intensity: Double) -> Color {
         let i = max(0, min(1, intensity))
-        // Continuous color ramp: light yellow -> yellow -> orange -> red -> deep red
-        // Uses smooth interpolation across 7 color stops for rich gradient
 
-        // Color stops: (position, r, g, b, alpha)
+        // Slight shaping so low-mid activity has enough visual presence.
+        let shaped = pow(i, 0.84)
+
+        // Color stops: light yellow -> yellow -> red -> deep red.
         let stops: [(pos: Double, r: Double, g: Double, b: Double, a: Double)] = [
-            (0.00, 1.00, 0.98, 0.55, 0.04),  // barely visible pale yellow
-            (0.10, 1.00, 0.96, 0.45, 0.10),  // very faint yellow
-            (0.20, 1.00, 0.92, 0.30, 0.20),  // light yellow
-            (0.32, 1.00, 0.82, 0.10, 0.35),  // warm yellow
-            (0.44, 1.00, 0.68, 0.00, 0.46),  // yellow-orange
-            (0.56, 1.00, 0.50, 0.00, 0.56),  // orange
-            (0.68, 1.00, 0.35, 0.00, 0.64),  // dark orange
-            (0.80, 1.00, 0.20, 0.00, 0.72),  // orange-red
-            (0.90, 0.95, 0.10, 0.00, 0.82),  // red
-            (1.00, 0.80, 0.00, 0.00, 0.92),  // deep red
+            (0.00, 1.00, 0.96, 0.58, 0.16),  // light yellow
+            (0.38, 1.00, 0.86, 0.18, 0.34),  // yellow
+            (0.72, 0.98, 0.34, 0.14, 0.62),  // red
+            (1.00, 0.62, 0.00, 0.00, 0.88),  // deep red
         ]
 
-        // Find the two stops to interpolate between
         var lo = stops[0]
         var hi = stops[stops.count - 1]
         for idx in 0..<(stops.count - 1) {
-            if i >= stops[idx].pos && i <= stops[idx + 1].pos {
+            if shaped >= stops[idx].pos && shaped <= stops[idx + 1].pos {
                 lo = stops[idx]
                 hi = stops[idx + 1]
                 break
@@ -327,7 +325,8 @@ struct PitchHeatmapCanvas: View {
         }
 
         let range = hi.pos - lo.pos
-        let t = range > 0 ? (i - lo.pos) / range : 0
+        let tLinear = range > 0 ? (shaped - lo.pos) / range : 0
+        let t = tLinear * tLinear * (3 - 2 * tLinear) // smoothstep
 
         let r = lo.r + (hi.r - lo.r) * t
         let g = lo.g + (hi.g - lo.g) * t
