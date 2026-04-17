@@ -13,8 +13,9 @@ struct HomeView: View {
     @State private var navigateToTodayList = false
     @State private var navigateToWeeklyAnalysis = false
     @State private var isWatchPulseAnimating = false
-    @State private var navigateToCreateMatch = false
+    @State private var navigateToTeamEntry = false
     @State private var navigateToMatchDetail = false
+    @State private var annualAttendanceRank: Int?
 
     private struct MonthSection: Identifiable {
         let id: String
@@ -123,7 +124,77 @@ struct HomeView: View {
         activeSessions.map(\.maxSpeedKmh).max() ?? 0
     }
 
+    private var nextUpcomingMatch: MatchResponse? {
+        authManager.upcomingMatches.first { match in
+            let matchDate = Date(timeIntervalSince1970: TimeInterval(match.matchDate) / 1000.0)
+            let matchEndDate = matchDate.addingTimeInterval(3 * 3600)
+            return Date() < matchEndDate
+        }
+    }
+
+    private var teamEntryTitle: String {
+        authManager.teams.isEmpty ? "创建/加入球队" : "年度出勤"
+    }
+
+    private var teamEntrySubtitle: String {
+        if authManager.teams.isEmpty {
+            return "点击创建或加入球队"
+        }
+        if let rank = annualAttendanceRank {
+            return "第 \(rank) 名"
+        }
+        return "第 - 名"
+    }
+
+    private var teamEntryIcon: String {
+        authManager.teams.isEmpty ? "person.3.fill" : "trophy.fill"
+    }
+
     var body: some View {
+        contentRoot
+            .navigationTitle("野球记")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    watchButton
+                }
+            }
+            .alert("安装 Apple Watch 应用", isPresented: $showWatchAlert) {
+                Button("前往安装") {
+                    openWatchApp()
+                }
+                Button("取消", role: .cancel) {}
+            } message: {
+                Text("在 Apple Watch 上安装野球记，即可记录踢球数据并自动同步到手机。")
+            }
+            .onAppear {
+                if watchSync.isWatchConnected {
+                    isWatchPulseAnimating = true
+                }
+                Task {
+                    await refreshAnnualAttendanceRank()
+                }
+            }
+            .onChange(of: watchSync.isWatchConnected) { _, connected in
+                if connected {
+                    isWatchPulseAnimating = true
+                } else {
+                    isWatchPulseAnimating = false
+                }
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .matchCreated)) { _ in
+                Task {
+                    await authManager.loadMatchesIfNeeded(forceRefresh: true)
+                }
+            }
+            .onReceive(authManager.$teams.dropFirst()) { _ in
+                Task {
+                    await refreshAnnualAttendanceRank()
+                }
+            }
+    }
+
+    private var contentRoot: some View {
         ZStack {
             LinearGradient(
                 colors: [Color(hex: 0x0A1016), AppColors.darkBg],
@@ -134,62 +205,28 @@ struct HomeView: View {
 
             ScrollView(showsIndicators: false) {
                 VStack(alignment: .leading, spacing: 16) {
-                    if store.sessions.isEmpty {
-                        // No data: show appropriate empty state
-                        emptyStateCard
-                    } else {
-                        // Has data: show normal dashboard
-                        topActionCards
-
-                        if authManager.isLoggedIn,
-                           let nextMatch = authManager.upcomingMatches.first(where: { match in
-                            let matchDate = Date(timeIntervalSince1970: TimeInterval(match.matchDate) / 1000.0)
-                            let matchEndDate = matchDate.addingTimeInterval(3 * 3600)
-                            return Date() < matchEndDate
-                        }) {
-                            upcomingMatchCard(nextMatch)
-                        }
-
-                        keyStatsSection
-                        heatmapSection
-                    }
+                    dashboardContent
                 }
                 .padding(.horizontal, 16)
                 .padding(.top, 16)
                 .padding(.bottom, 20)
             }
         }
-        .navigationTitle("野球记")
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                watchButton
+    }
+
+    @ViewBuilder
+    private var dashboardContent: some View {
+        if store.sessions.isEmpty {
+            emptyStateCard
+        } else {
+            topActionCards
+
+            if authManager.isLoggedIn, let nextMatch = nextUpcomingMatch {
+                upcomingMatchCard(nextMatch)
             }
-        }
-        .alert("安装 Apple Watch 应用", isPresented: $showWatchAlert) {
-            Button("前往安装") {
-                openWatchApp()
-            }
-            Button("取消", role: .cancel) {}
-        } message: {
-            Text("在 Apple Watch 上安装野球记，即可记录踢球数据并自动同步到手机。")
-        }
-        .onAppear {
-            if watchSync.isWatchConnected {
-                isWatchPulseAnimating = true
-            }
-        }
-        .onChange(of: watchSync.isWatchConnected) { _, connected in
-            if connected {
-                isWatchPulseAnimating = true
-            } else {
-                isWatchPulseAnimating = false
-            }
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .matchCreated)) { _ in
-            Task {
-                await authManager.loadMatchesIfNeeded(forceRefresh: true)
-            }
+
+            keyStatsSection
+            heatmapSection
         }
     }
 
@@ -351,20 +388,33 @@ struct HomeView: View {
             .frame(maxWidth: .infinity, minHeight: 150, maxHeight: 150)
 
             Button {
-                navigateToCreateMatch = true
+                navigateToTeamEntry = true
             } label: {
-                TopActionCard(
-                    title: "发起比赛",
-                    subtitle: "邀请球友参赛",
-                    icon: "person.2.fill",
-                    iconBg: AppColors.neonBlue.opacity(0.16),
-                    iconColor: AppColors.neonBlue
-                )
+                if authManager.teams.isEmpty {
+                    TopActionCard(
+                        title: teamEntryTitle,
+                        subtitle: teamEntrySubtitle,
+                        icon: teamEntryIcon,
+                        iconBg: AppColors.neonBlue.opacity(0.16),
+                        iconColor: AppColors.neonBlue
+                    )
+                } else {
+                    AttendanceTopActionCard(
+                        title: "年度出勤",
+                        value: annualAttendanceRank.map(String.init) ?? "-",
+                        unit: "名",
+                        icon: "trophy.fill",
+                        iconBg: AppColors.neonBlue.opacity(0.16),
+                        iconColor: AppColors.neonBlue,
+                        cardBg: AppColors.cardBg,
+                        borderColor: AppColors.neonBlue.opacity(0.2)
+                    )
+                }
             }
             .buttonStyle(.plain)
             .frame(maxWidth: .infinity, minHeight: 150, maxHeight: 150)
-            .navigationDestination(isPresented: $navigateToCreateMatch) {
-                CreateMatchView()
+            .navigationDestination(isPresented: $navigateToTeamEntry) {
+                TeamListView(authManager: authManager)
             }
         }
     }
@@ -451,6 +501,37 @@ struct HomeView: View {
             return "\(minutes)分"
         }
         return "\(hours)小时\(minutes)分"
+    }
+
+    private func refreshAnnualAttendanceRank() async {
+        guard let team = authManager.teams.first else {
+            annualAttendanceRank = nil
+            return
+        }
+
+        let currentUid = authManager.currentUid ?? authManager.effectiveUid
+        guard !currentUid.isEmpty else {
+            annualAttendanceRank = nil
+            return
+        }
+
+        guard let detail = await authManager.loadTeamDetailIfNeeded(teamId: team.id, forceRefresh: true) else {
+            annualAttendanceRank = nil
+            return
+        }
+
+        let rankedMembers = detail.members.sorted {
+            if $0.sessionCount == $1.sessionCount {
+                return $0.joinedAt < $1.joinedAt
+            }
+            return $0.sessionCount > $1.sessionCount
+        }
+
+        if let index = rankedMembers.firstIndex(where: { $0.userUid == currentUid }) {
+            annualAttendanceRank = index + 1
+        } else {
+            annualAttendanceRank = nil
+        }
     }
 
     private var heatmapEntryCard: some View {
@@ -951,6 +1032,64 @@ struct TopActionCard: View {
         .overlay(
             RoundedRectangle(cornerRadius: 16)
                 .stroke(Color.white.opacity(0.05), lineWidth: 1)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 16))
+    }
+}
+
+struct AttendanceTopActionCard: View {
+    let title: String
+    let value: String
+    let unit: String
+    let icon: String
+    let iconBg: Color
+    let iconColor: Color
+    let cardBg: Color
+    let borderColor: Color
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(iconBg)
+                    .frame(width: 30, height: 30)
+                    .overlay(
+                        Image(systemName: icon)
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundColor(iconColor)
+                    )
+
+                Spacer()
+            }
+
+            Text(title)
+                .font(.system(size: 17, weight: .semibold))
+                .foregroundColor(.white)
+
+            Spacer(minLength: 0)
+
+            HStack(alignment: .bottom, spacing: 6) {
+                Text(value)
+                    .font(.system(size: 44, weight: .bold))
+                    .monospacedDigit()
+                    .foregroundColor(.white)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+
+                Spacer()
+
+                Text(unit)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(.white.opacity(0.9))
+                    .padding(.bottom, 6)
+            }
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, minHeight: 120, alignment: .topLeading)
+        .background(cardBg)
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(borderColor, lineWidth: 1)
         )
         .clipShape(RoundedRectangle(cornerRadius: 16))
     }
