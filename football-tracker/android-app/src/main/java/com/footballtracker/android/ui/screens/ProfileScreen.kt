@@ -316,7 +316,7 @@ fun ProfileScreen(
                     Column(modifier = Modifier.weight(1f)) {
                         Text("Device Connection", fontSize = 14.sp, fontWeight = FontWeight.Medium, color = TextPrimary)
                         Text(
-                            if (deviceConnected) "Connected to Apple Watch" else "No device connected",
+                            if (deviceConnected) "Connected to Wear OS Watch" else "No device connected",
                             fontSize = 12.sp,
                             color = TextSecondary
                         )

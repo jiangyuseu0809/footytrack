@@ -37,7 +37,9 @@ import androidx.compose.ui.unit.sp
 import com.footballtracker.android.data.db.SessionEntity
 import com.footballtracker.android.network.ApiClient
 import com.footballtracker.android.network.MatchResponse
+import com.footballtracker.android.sync.WatchController
 import com.footballtracker.android.ui.theme.*
+import kotlinx.coroutines.launch
 import java.util.*
 
 private val AccentGreen = Color(0xFF16C784)
@@ -50,11 +52,22 @@ private val CardBorder = Color.White.copy(alpha = 0.10f)
 @Composable
 fun HomeScreen(
     sessions: List<SessionEntity>,
+    watchController: WatchController,
     onSessionClick: (String) -> Unit,
     onNavigateCreateMatch: () -> Unit,
     onNavigateMatchDetail: (String) -> Unit
 ) {
     var activeTab by remember { mutableStateOf("week") }
+    val coroutineScope = rememberCoroutineScope()
+
+    // Watch state
+    val watchStatus by watchController.watchStatus.collectAsState()
+    val watchName by watchController.connectedWatchName.collectAsState()
+
+    // Refresh connection on mount
+    LaunchedEffect(Unit) {
+        watchController.refreshConnection()
+    }
 
     val todaySessions = remember(sessions) {
         val cal = Calendar.getInstance()
@@ -128,26 +141,55 @@ fun HomeScreen(
                     )
                 }
                 OutlinedButton(
-                    onClick = { /* Watch connect */ },
+                    onClick = {
+                        coroutineScope.launch { watchController.refreshConnection() }
+                    },
                     shape = RoundedCornerShape(12.dp),
                     border = ButtonDefaults.outlinedButtonBorder(enabled = true).copy(
                         brush = Brush.linearGradient(
-                            listOf(AccentGreen.copy(alpha = 0.3f), AccentGreen.copy(alpha = 0.3f))
+                            listOf(
+                                when (watchStatus) {
+                                    WatchController.WatchStatus.TRACKING -> AccentGreen.copy(alpha = 0.5f)
+                                    WatchController.WatchStatus.CONNECTED, WatchController.WatchStatus.STOPPED -> AccentGreen.copy(alpha = 0.3f)
+                                    WatchController.WatchStatus.DISCONNECTED -> Color.Gray.copy(alpha = 0.3f)
+                                },
+                                when (watchStatus) {
+                                    WatchController.WatchStatus.TRACKING -> AccentGreen.copy(alpha = 0.5f)
+                                    WatchController.WatchStatus.CONNECTED, WatchController.WatchStatus.STOPPED -> AccentGreen.copy(alpha = 0.3f)
+                                    WatchController.WatchStatus.DISCONNECTED -> Color.Gray.copy(alpha = 0.3f)
+                                }
+                            )
                         )
                     ),
                     colors = ButtonDefaults.outlinedButtonColors(
-                        containerColor = AccentGreen.copy(alpha = 0.15f)
+                        containerColor = when (watchStatus) {
+                            WatchController.WatchStatus.TRACKING -> AccentGreen.copy(alpha = 0.25f)
+                            WatchController.WatchStatus.CONNECTED, WatchController.WatchStatus.STOPPED -> AccentGreen.copy(alpha = 0.15f)
+                            WatchController.WatchStatus.DISCONNECTED -> Color.Gray.copy(alpha = 0.10f)
+                        }
                     ),
                     contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
                 ) {
+                    val watchIcon = Icons.Rounded.Watch
+                    val watchColor = when (watchStatus) {
+                        WatchController.WatchStatus.TRACKING -> AccentGreen
+                        WatchController.WatchStatus.CONNECTED, WatchController.WatchStatus.STOPPED -> AccentGreen
+                        WatchController.WatchStatus.DISCONNECTED -> Color.Gray
+                    }
+                    val watchLabel = when (watchStatus) {
+                        WatchController.WatchStatus.TRACKING -> "Tracking"
+                        WatchController.WatchStatus.CONNECTED -> watchName ?: "Connected"
+                        WatchController.WatchStatus.STOPPED -> watchName ?: "Connected"
+                        WatchController.WatchStatus.DISCONNECTED -> "No Watch"
+                    }
                     Icon(
-                        Icons.Rounded.Watch,
+                        watchIcon,
                         contentDescription = null,
-                        tint = AccentGreen,
+                        tint = watchColor,
                         modifier = Modifier.size(18.dp)
                     )
                     Spacer(Modifier.width(6.dp))
-                    Text("Connect", fontSize = 13.sp, fontWeight = FontWeight.Medium, color = AccentGreen)
+                    Text(watchLabel, fontSize = 13.sp, fontWeight = FontWeight.Medium, color = watchColor)
                 }
             }
         }
@@ -224,6 +266,108 @@ fun HomeScreen(
                             contentDescription = null,
                             tint = AccentGreen,
                             modifier = Modifier.size(40.dp)
+                        )
+                    }
+                }
+            }
+        }
+
+        // ── Watch Tracking Control ──
+        item {
+            val isConnected = watchStatus != WatchController.WatchStatus.DISCONNECTED
+            val isTracking = watchStatus == WatchController.WatchStatus.TRACKING
+
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(
+                        Brush.linearGradient(
+                            if (isTracking) {
+                                listOf(Color(0xFFFF6B35).copy(alpha = 0.20f), Color(0xFFFF6B35).copy(alpha = 0.05f))
+                            } else {
+                                listOf(NeonBlue.copy(alpha = 0.15f), NeonBlue.copy(alpha = 0.05f))
+                            }
+                        )
+                    )
+                    .border(
+                        1.dp,
+                        if (isTracking) Color(0xFFFF6B35).copy(alpha = 0.30f) else NeonBlue.copy(alpha = 0.20f),
+                        RoundedCornerShape(16.dp)
+                    )
+                    .padding(20.dp)
+            ) {
+                Column {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column {
+                            Text(
+                                "Watch Tracking",
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = TextPrimary
+                            )
+                            Spacer(Modifier.height(4.dp))
+                            Text(
+                                when (watchStatus) {
+                                    WatchController.WatchStatus.TRACKING -> "Recording in progress..."
+                                    WatchController.WatchStatus.CONNECTED -> "Ready to start"
+                                    WatchController.WatchStatus.STOPPED -> "Session ended"
+                                    WatchController.WatchStatus.DISCONNECTED -> "Connect a Wear OS watch"
+                                },
+                                fontSize = 13.sp,
+                                color = TextSecondary
+                            )
+                        }
+                        // Status indicator dot
+                        Box(
+                            modifier = Modifier
+                                .size(12.dp)
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(
+                                    when (watchStatus) {
+                                        WatchController.WatchStatus.TRACKING -> Color(0xFFFF6B35)
+                                        WatchController.WatchStatus.CONNECTED, WatchController.WatchStatus.STOPPED -> AccentGreen
+                                        WatchController.WatchStatus.DISCONNECTED -> Color.Gray
+                                    }
+                                )
+                        )
+                    }
+                    Spacer(Modifier.height(16.dp))
+                    Button(
+                        onClick = {
+                            coroutineScope.launch {
+                                if (isTracking) {
+                                    watchController.sendStopTracking()
+                                } else {
+                                    watchController.sendStartTracking()
+                                }
+                            }
+                        },
+                        enabled = isConnected,
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = if (isTracking) Color(0xFFFF6B35) else AccentGreen,
+                            contentColor = Color.White,
+                            disabledContainerColor = Color.Gray.copy(alpha = 0.3f),
+                            disabledContentColor = Color.Gray
+                        ),
+                        contentPadding = PaddingValues(vertical = 14.dp)
+                    ) {
+                        Icon(
+                            if (isTracking) Icons.Rounded.Stop else Icons.Rounded.PlayArrow,
+                            contentDescription = null,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            if (isTracking) "Stop Tracking" else "Start Tracking",
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.SemiBold
                         )
                     }
                 }

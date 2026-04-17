@@ -98,6 +98,8 @@ struct HeatmapOverlayView: View {
 struct PitchHeatmapCanvas: View {
     let grid: [[Double]]
 
+    private static let downsampleScale: CGFloat = 2
+
     var body: some View {
         if grid.isEmpty {
             EmptyView()
@@ -250,10 +252,10 @@ struct PitchHeatmapCanvas: View {
         let pitchRect = CGRect(x: pitchX, y: pitchY, width: pitchW, height: pitchH)
         clippedContext.clip(to: Path(pitchRect))
 
-        // High-resolution upsampling + blur layer to remove residual grid texture.
-        let renderScale: CGFloat = 4
-        let sampleCols = max(cols * Int(renderScale), 120)
-        let sampleRows = max(rows * Int(renderScale), 80)
+        // Downsampled render to reduce scroll-time rasterization cost.
+        let renderScale = Self.downsampleScale
+        let sampleCols = max(cols * Int(renderScale), 64)
+        let sampleRows = max(rows * Int(renderScale), 40)
         let cellW = pitchW / CGFloat(sampleCols)
         let cellH = pitchH / CGFloat(sampleRows)
         let minVisible = 0.01

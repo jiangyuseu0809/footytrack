@@ -33,8 +33,8 @@ class DataLayerSync(private val context: Context) {
                 putLong("sync_time", System.currentTimeMillis())
 
                 // Serialize track points as parallel arrays for efficiency
-                putDoubleArray("latitudes", trackPoints.map { it.latitude }.toDoubleArray())
-                putDoubleArray("longitudes", trackPoints.map { it.longitude }.toDoubleArray())
+                putFloatArray("latitudes", trackPoints.map { it.latitude.toFloat() }.toFloatArray())
+                putFloatArray("longitudes", trackPoints.map { it.longitude.toFloat() }.toFloatArray())
                 putLongArray("timestamps", trackPoints.map { it.timestamp }.toLongArray())
                 putFloatArray("speeds", trackPoints.map { it.speed.toFloat() }.toFloatArray())
                 putFloatArray("accuracies", trackPoints.map { it.accuracy }.toFloatArray())

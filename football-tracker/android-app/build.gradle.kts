@@ -71,6 +71,7 @@ dependencies {
 
     // Coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.7.3")
 
     // Network - Retrofit + OkHttp
     implementation("com.squareup.retrofit2:retrofit:2.9.0")

@@ -9,6 +9,7 @@ import androidx.health.services.client.data.DataType
 import androidx.health.services.client.data.DeltaDataType
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.guava.await
 
 /**
  * Collects heart rate data using Health Services API on Wear OS.
@@ -48,7 +49,7 @@ class HeartRateTracker(context: Context) {
     }
 
     suspend fun stopMonitoring() {
-        measureClient.unregisterMeasureCallback(DataType.HEART_RATE_BPM, callback)
+        measureClient.unregisterMeasureCallbackAsync(DataType.HEART_RATE_BPM, callback).await()
     }
 
     fun reset() {

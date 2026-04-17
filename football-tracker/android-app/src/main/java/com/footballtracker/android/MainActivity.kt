@@ -23,6 +23,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.footballtracker.android.data.db.SessionEntity
 import com.footballtracker.android.data.model.UserProfile
+import com.footballtracker.android.sync.WatchController
 import com.footballtracker.android.ui.screens.*
 import com.footballtracker.android.ui.theme.*
 import com.footballtracker.core.model.SessionStats
@@ -61,9 +62,16 @@ class MainActivity : ComponentActivity() {
         val sessionRepo = appContainer.sessionRepo
         val cloudSync = appContainer.cloudSync
         val weChatHelper = appContainer.weChatAuthHelper
+        val watchController = appContainer.watchController
 
         val currentUser by authRepo.currentUser.collectAsState()
         val navController = rememberNavController()
+
+        // Manage watch listener lifecycle
+        DisposableEffect(Unit) {
+            watchController.startListening()
+            onDispose { watchController.stopListening() }
+        }
 
         var sessions by remember { mutableStateOf<List<SessionEntity>>(emptyList()) }
         var selectedSession by remember { mutableStateOf<SessionEntity?>(null) }
@@ -226,6 +234,7 @@ class MainActivity : ComponentActivity() {
                 composable("home") {
                     HomeScreen(
                         sessions = sessions,
+                        watchController = watchController,
                         onSessionClick = { sessionId ->
                             lifecycleScope.launch {
                                 val result = sessionRepo.getSessionWithStats(sessionId)

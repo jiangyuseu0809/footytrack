@@ -5,12 +5,18 @@ struct SessionDetailView: View {
     let session: FootballSession
     @ObservedObject var store: SessionStore
 
+    @State private var cachedTrackPoints: [TrackPointRecord] = []
+    @State private var cachedStats: SessionAnalysisResult?
+    @State private var cachedHasHeartRate = false
+    @State private var cachedLatRange: (min: Double, max: Double)?
+    @State private var cachedLonRange: (min: Double, max: Double)?
+
     private var trackPoints: [TrackPointRecord] {
-        store.getTrackPoints(for: session)
+        cachedTrackPoints
     }
 
     private var stats: SessionAnalysisResult {
-        store.computeStats(from: trackPoints)
+        cachedStats ?? store.computeStats(from: trackPoints)
     }
 
     private var dateStr: String {
@@ -37,7 +43,7 @@ struct SessionDetailView: View {
             AppColors.darkBg.ignoresSafeArea()
 
             ScrollView {
-                VStack(spacing: 16) {
+                LazyVStack(spacing: 16) {
                     // Venue & Time Card
                     venueTimeCard
 
@@ -52,7 +58,7 @@ struct SessionDetailView: View {
                     }
 
                     // Heart Rate Chart
-                    if trackPoints.contains(where: { $0.heartRate > 0 }) {
+                    if cachedHasHeartRate {
                         chartSection(title: "心率", icon: "heart.fill", iconColor: Color(hex: 0xEF4444)) {
                             SpeedChartView(points: trackPoints, showHeartRate: true)
                         }
@@ -66,16 +72,14 @@ struct SessionDetailView: View {
                     }
 
                     // Heatmap
-                    if !trackPoints.isEmpty {
-                        let lats = trackPoints.map(\.latitude)
-                        let lons = trackPoints.map(\.longitude)
+                    if let latRange = cachedLatRange, let lonRange = cachedLonRange {
                         chartSection(title: "活动热图", icon: "map.fill", iconColor: Color(hex: 0x10B981)) {
                             HeatmapOverlayView(
                                 grid: stats.heatmapGrid,
-                                minLat: lats.min()!,
-                                maxLat: lats.max()!,
-                                minLon: lons.min()!,
-                                maxLon: lons.max()!
+                                minLat: latRange.min,
+                                maxLat: latRange.max,
+                                minLon: lonRange.min,
+                                maxLon: lonRange.max
                             )
                         }
                     }
@@ -88,7 +92,22 @@ struct SessionDetailView: View {
         .navigationTitle("比赛详情")
         .navigationBarTitleDisplayMode(.inline)
         .toolbarTitleDisplayMode(.inline)
-        .onAppear {
+        .task(id: session.id) {
+            let points = store.getTrackPoints(for: session)
+            let computedStats = store.computeStats(from: points)
+            cachedTrackPoints = points
+            cachedStats = computedStats
+            cachedHasHeartRate = points.contains { $0.heartRate > 0 }
+            if let minLat = points.map(\.latitude).min(),
+               let maxLat = points.map(\.latitude).max(),
+               let minLon = points.map(\.longitude).min(),
+               let maxLon = points.map(\.longitude).max() {
+                cachedLatRange = (min: minLat, max: maxLat)
+                cachedLonRange = (min: minLon, max: maxLon)
+            } else {
+                cachedLatRange = nil
+                cachedLonRange = nil
+            }
             Self.markAsRead(sessionId: session.id)
         }
     }
@@ -192,9 +211,9 @@ struct SessionDetailView: View {
 
             // Second row: heart rate + slack
             LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 3), spacing: 10) {
-                keyStatCard(icon: "heart.fill", label: "平均心率", value: "\(session.avgHeartRate)", unit: "bpm",
+                keyStatCard(icon: "heart.fill", label: "平均心率", value: "\(session.avgHeartRate > 0 ? session.avgHeartRate : stats.avgHeartRate)", unit: "bpm",
                             gradient: [Color(hex: 0xEF4444), Color(hex: 0xEC4899)])
-                keyStatCard(icon: "heart.circle.fill", label: "最高心率", value: "\(session.maxHeartRate)", unit: "bpm",
+                keyStatCard(icon: "heart.circle.fill", label: "最高心率", value: "\(session.maxHeartRate > 0 ? session.maxHeartRate : stats.maxHeartRate)", unit: "bpm",
                             gradient: [Color(hex: 0xDC2626), Color(hex: 0xEF4444)])
                 keyStatCard(icon: "circle.hexagongrid.fill", label: "覆盖率", value: String(format: "%.0f", session.coveragePercent), unit: "%",
                             gradient: [Color(hex: 0x8B5CF6), Color(hex: 0xA855F7)])

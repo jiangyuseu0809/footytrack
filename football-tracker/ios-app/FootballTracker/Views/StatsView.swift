@@ -27,8 +27,9 @@ struct DaySection: Identifiable {
         sessions.reduce(0) { $0 + $1.caloriesBurned }
     }
     var avgHeartRate: Int {
-        // Duration-weighted average
-        let pairs = sessions.map { s -> (duration: Double, hr: Int) in
+        // Duration-weighted average (ignore sessions without HR)
+        let pairs = sessions.compactMap { s -> (duration: Double, hr: Int)? in
+            guard s.avgHeartRate > 0 else { return nil }
             let dur = s.endTime.timeIntervalSince(s.startTime)
             return (dur, s.avgHeartRate)
         }
@@ -163,15 +164,20 @@ struct DaySummaryDetailView: View {
     @State private var showCloudDeleteAlert = false
     @State private var selectedSession: FootballSession?
     @State private var navigateToDetail = false
+    @State private var cachedTrackPoints: [TrackPointRecord] = []
+    @State private var cachedMergedStats: SessionAnalysisResult?
+    @State private var cachedHasHeartRate = false
+    @State private var cachedLatRange: (min: Double, max: Double)?
+    @State private var cachedLonRange: (min: Double, max: Double)?
 
-    private var allTrackPoints: [TrackPointRecord] {
-        section.sessions
-            .sorted { $0.startTime < $1.startTime }
-            .flatMap { store.getTrackPoints(for: $0) }
-    }
+    private var allTrackPoints: [TrackPointRecord] { cachedTrackPoints }
 
     private var mergedStats: SessionAnalysisResult {
-        store.computeStats(from: allTrackPoints)
+        cachedMergedStats ?? store.computeStats(from: allTrackPoints)
+    }
+
+    private var sessionIdsSignature: String {
+        section.sessions.map(\.id).sorted().joined(separator: "|")
     }
 
     var body: some View {
@@ -179,28 +185,12 @@ struct DaySummaryDetailView: View {
             AppColors.darkBg.ignoresSafeArea()
 
             ScrollView {
-                VStack(spacing: 16) {
+                LazyVStack(spacing: 16) {
                     topInfoCard
                     keyStatsSection
 
                     // Charts from merged track points
-                    chartSection(title: "速度", icon: "bolt.fill", iconColor: Color(hex: 0x3B82F6)) {
-                        if !allTrackPoints.isEmpty {
-                            SpeedChartView(points: allTrackPoints, showHeartRate: false)
-                        } else {
-                            VStack(spacing: 10) {
-                                Image(systemName: "bolt.slash")
-                                    .font(.system(size: 28))
-                                    .foregroundColor(AppColors.textSecondary.opacity(0.5))
-                                Text("暂无速度数据")
-                                    .font(.system(size: 14))
-                                    .foregroundColor(AppColors.textSecondary)
-                            }
-                            .frame(maxWidth: .infinity, minHeight: 120)
-                        }
-                    }
-
-                    if allTrackPoints.contains(where: { $0.heartRate > 0 }) {
+                    if cachedHasHeartRate {
                         chartSection(title: "心率", icon: "heart.fill", iconColor: Color(hex: 0xEF4444)) {
                             SpeedChartView(points: allTrackPoints, showHeartRate: true)
                         }
@@ -212,16 +202,14 @@ struct DaySummaryDetailView: View {
                         }
                     }
 
-                    if !allTrackPoints.isEmpty {
-                        let lats = allTrackPoints.map(\.latitude)
-                        let lons = allTrackPoints.map(\.longitude)
+                    if let latRange = cachedLatRange, let lonRange = cachedLonRange {
                         chartSection(title: "活动热图", icon: "map.fill", iconColor: Color(hex: 0x10B981)) {
                             HeatmapOverlayView(
                                 grid: mergedStats.heatmapGrid,
-                                minLat: lats.min()!,
-                                maxLat: lats.max()!,
-                                minLon: lons.min()!,
-                                maxLon: lons.max()!
+                                minLat: latRange.min,
+                                maxLat: latRange.max,
+                                minLon: lonRange.min,
+                                maxLon: lonRange.max
                             )
                         }
                     }
@@ -239,6 +227,24 @@ struct DaySummaryDetailView: View {
         .navigationTitle("日汇总")
         .navigationBarTitleDisplayMode(.inline)
         .toolbarTitleDisplayMode(.inline)
+        .task(id: sessionIdsSignature) {
+            let sessions = section.sessions.sorted { $0.startTime < $1.startTime }
+            let points = sessions.flatMap { store.getTrackPoints(for: $0) }
+            let stats = store.computeStats(from: points)
+            cachedTrackPoints = points
+            cachedMergedStats = stats
+            cachedHasHeartRate = points.contains { $0.heartRate > 0 }
+            if let minLat = points.map(\.latitude).min(),
+               let maxLat = points.map(\.latitude).max(),
+               let minLon = points.map(\.longitude).min(),
+               let maxLon = points.map(\.longitude).max() {
+                cachedLatRange = (min: minLat, max: maxLat)
+                cachedLonRange = (min: minLon, max: maxLon)
+            } else {
+                cachedLatRange = nil
+                cachedLonRange = nil
+            }
+        }
         .navigationDestination(isPresented: $navigateToDetail) {
             if let session = selectedSession {
                 SessionDetailView(session: session, store: store)
@@ -419,7 +425,7 @@ struct DaySummaryDetailView: View {
                     .foregroundColor(AppColors.textPrimary)
             }
 
-            List {
+            LazyVStack(spacing: 10) {
                 ForEach(section.sessions, id: \.id) { session in
                     MatchHistoryRow(session: session)
                         .contentShape(Rectangle())
@@ -439,14 +445,8 @@ struct DaySummaryDetailView: View {
                                 Label("删除", systemImage: "trash")
                             }
                         }
-                        .listRowBackground(Color.clear)
-                        .listRowInsets(EdgeInsets(top: 5, leading: 0, bottom: 5, trailing: 0))
-                        .listRowSeparator(.hidden)
                 }
             }
-            .listStyle(.plain)
-            .scrollContentBackground(.hidden)
-            .frame(minHeight: CGFloat(section.sessions.count) * 130)
         }
     }
 

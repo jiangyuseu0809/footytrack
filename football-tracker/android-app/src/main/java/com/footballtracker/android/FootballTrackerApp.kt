@@ -8,6 +8,7 @@ import com.footballtracker.android.data.repository.SessionRepo
 import com.footballtracker.android.data.repository.UserRepository
 import com.footballtracker.android.network.ApiClient
 import com.footballtracker.android.network.TokenStore
+import com.footballtracker.android.sync.WatchController
 
 class FootballTrackerApp : Application() {
 
@@ -40,4 +41,6 @@ class AppContainer(private val context: android.content.Context) {
     }
 
     val weChatAuthHelper: WeChatAuthHelper by lazy { WeChatAuthHelper(context) }
+
+    val watchController: WatchController by lazy { WatchController(context) }
 }

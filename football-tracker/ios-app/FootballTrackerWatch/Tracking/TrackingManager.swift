@@ -243,7 +243,11 @@ class TrackingManager: NSObject, ObservableObject {
         let longitudes = records.map { $0.longitude }
         let timestamps = records.map { $0.timestamp }
         let speeds = records.map { $0.speed }
-        let hrEntries: [[String: Any]] = records.map { ["ts": $0.timestamp, "bpm": $0.heartRate] }
+
+        // Prefer raw HealthKit HR timeline to avoid sparse/zero values after nearest-point projection.
+        let hrEntries: [[String: Any]] = heartRateData
+            .filter { $0.bpm > 0 }
+            .map { ["ts": $0.timestamp.timeIntervalSince1970, "bpm": $0.bpm] }
 
         let payload: [String: Any] = [
             "session_id": sessionId,

@@ -184,8 +184,13 @@ class WatchSync: NSObject, ObservableObject, WCSessionDelegate {
             }
         }
 
+        let count = min(latitudes.count, longitudes.count, timestamps.count, speeds.count)
+        guard count > 0 else { return false }
+
         var trackPoints: [TrackPointRecord] = []
-        for i in latitudes.indices {
+        trackPoints.reserveCapacity(count)
+
+        for i in 0..<count {
             let ts = timestamps[i]
             let closestHr = findClosestHr(targetTs: ts, hrData: hrMap)
             trackPoints.append(TrackPointRecord(
@@ -259,6 +264,8 @@ class WatchSync: NSObject, ObservableObject, WCSessionDelegate {
                 bestIdx = i
             }
         }
-        return bestDiff < 5.0 ? hrData[bestIdx].bpm : 0
+
+        // HealthKit heart-rate cadence can be sparse. Keep a wider matching window.
+        return bestDiff <= 45.0 ? hrData[bestIdx].bpm : 0
     }
 }
