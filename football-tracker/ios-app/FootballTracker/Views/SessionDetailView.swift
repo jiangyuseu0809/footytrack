@@ -10,6 +10,9 @@ struct SessionDetailView: View {
     @State private var cachedHasHeartRate = false
     @State private var cachedLatRange: (min: Double, max: Double)?
     @State private var cachedLonRange: (min: Double, max: Double)?
+    @State private var showShareSheet = false
+    @State private var posterImage: UIImage?
+    @State private var isGeneratingPoster = false
 
     private var trackPoints: [TrackPointRecord] {
         cachedTrackPoints
@@ -92,6 +95,32 @@ struct SessionDetailView: View {
         .navigationTitle("比赛详情")
         .navigationBarTitleDisplayMode(.inline)
         .toolbarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    isGeneratingPoster = true
+                    posterImage = nil
+                    showShareSheet = true
+                } label: {
+                    Image(systemName: "square.and.arrow.up")
+                        .font(.system(size: 15, weight: .medium))
+                        .foregroundColor(.white)
+                }
+            }
+        }
+        .sheet(isPresented: $showShareSheet) {
+            SessionShareSheetWrapper(
+                session: session,
+                stats: stats,
+                trackPoints: trackPoints,
+                posterImage: $posterImage,
+                isGenerating: $isGeneratingPoster,
+                onDismiss: { showShareSheet = false }
+            )
+            .presentationDetents([.medium, .large])
+            .presentationDragIndicator(.hidden)
+            .presentationBackground(Color(hex: 0x1C2333))
+        }
         .task(id: session.id) {
             let points = store.getTrackPoints(for: session)
             let computedStats = store.computeStats(from: points)

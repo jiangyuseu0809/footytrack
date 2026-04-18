@@ -34,6 +34,7 @@
 		9F8B5740DA85CA1157C9BBB9 /* AuthManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D2752D80E323CB4D978D060B /* AuthManager.swift */; };
 		A4CF37667E3CF10F116E13C3 /* HeatmapOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA6F44E157B2DA43DA6A12FC /* HeatmapOverlay.swift */; };
 		AC255495176844D056814B6C /* SpeedChart.swift in Sources */ = {isa = PBXBuildFile; fileRef = 22A0F1C7E56CE7F698E02541 /* SpeedChart.swift */; };
+		B1A2C3D4E5F60718293A4B5C /* SessionShareSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4D5E6F708192A3B4C5D6E7F /* SessionShareSheet.swift */; };
 		BE8487577C6EC8D651FDFC92 /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D25D605E8EF09E6663AD799E /* LoginView.swift */; };
 		BF4CDBC2F0531E306EC2D0FF /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F265F7DD0BE6099A998F644 /* HomeView.swift */; };
 		C589AA2AE507252613CF8E4E /* WeeklySummaryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB4F55A8ECDAED6B4ADB8F71 /* WeeklySummaryView.swift */; };
@@ -115,6 +116,7 @@
 		B8C1B75F43C086C7B2B783ED /* ApiModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApiModels.swift; sourceTree = "<group>"; };
 		BD147F462B299576461DD88B /* RadarChartView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RadarChartView.swift; sourceTree = "<group>"; };
 		C33629BCDCE91E205E4B5BA0 /* SessionDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionDetailView.swift; sourceTree = "<group>"; };
+		C4D5E6F708192A3B4C5D6E7F /* SessionShareSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionShareSheet.swift; sourceTree = "<group>"; };
 		C734DBFE843729083ED11899 /* TeamListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TeamListView.swift; sourceTree = "<group>"; };
 		CC9529A100BB82C498512A2E /* TrackingManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrackingManager.swift; sourceTree = "<group>"; };
 		D25D605E8EF09E6663AD799E /* LoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginView.swift; sourceTree = "<group>"; };
@@ -143,6 +145,7 @@
 			children = (
 				AA6F44E157B2DA43DA6A12FC /* HeatmapOverlay.swift */,
 				BD147F462B299576461DD88B /* RadarChartView.swift */,
+				C4D5E6F708192A3B4C5D6E7F /* SessionShareSheet.swift */,
 				22A0F1C7E56CE7F698E02541 /* SpeedChart.swift */,
 			);
 			path = Components;
@@ -411,6 +414,7 @@
 				9BDC8EA0E869B316E2B395C1 /* RadarChartView.swift in Sources */,
 				83627E21819162E4E2C18AC4 /* RegisterView.swift in Sources */,
 				D80555D855E9816377F1558D /* SessionDetailView.swift in Sources */,
+				B1A2C3D4E5F60718293A4B5C /* SessionShareSheet.swift in Sources */,
 				F05ECD52CB2C5E0C8EB92699 /* SessionNotificationsView.swift in Sources */,
 				1CCF85B16D0E6E506314C23F /* SessionStore.swift in Sources */,
 				1501FB6DD67A8FD84F4C18E1 /* SettingsView.swift in Sources */,
