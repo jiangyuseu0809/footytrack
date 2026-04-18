@@ -711,7 +711,7 @@ struct StatsView: View {
 
     private var overviewSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            sectionHeader(title: "生涯总览", icon: "chart.bar.fill", showShare: true)
+            sectionHeader(title: "生涯总览", icon: "chart.bar.fill", showShare: false)
 
             LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
                 StatsMetricCard(label: "总场次", value: "\(totalSessions)", icon: "calendar", color: Color(hex: 0x22C55E))
@@ -729,7 +729,7 @@ struct StatsView: View {
 
     private var abilitiesSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            sectionHeader(title: "球员能力", icon: "scope", showShare: true)
+            sectionHeader(title: "球员能力", icon: "scope", showShare: false)
             StatsRadarView(metrics: abilityMetrics)
                 .frame(height: 260)
         }
