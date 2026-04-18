@@ -326,11 +326,13 @@ extension TrackingManager: HKLiveWorkoutBuilderDelegate {
             guard let quantityType = type as? HKQuantityType,
                   quantityType == HKQuantityType.quantityType(forIdentifier: .heartRate) else { continue }
 
-            if let stats = workoutBuilder.statistics(for: quantityType) {
-                let bpm = Int(stats.mostRecentQuantity()?.doubleValue(for: .count().unitDivided(by: .minute())) ?? 0)
+            if let stats = workoutBuilder.statistics(for: quantityType),
+               let quantity = stats.mostRecentQuantity() {
+                let bpm = Int(quantity.doubleValue(for: .count().unitDivided(by: .minute())))
+                guard bpm > 0 else { continue }
                 Task { @MainActor in
-                    currentHeartRate = bpm
-                    heartRateData.append((timestamp: Date(), bpm: bpm))
+                    self.currentHeartRate = bpm
+                    self.heartRateData.append((timestamp: Date(), bpm: bpm))
                 }
             }
         }
