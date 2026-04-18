@@ -1,6 +1,7 @@
 import Foundation
 import WatchConnectivity
 import CoreLocation
+import MapKit
 import UserNotifications
 
 /// Receives session data from the paired Apple Watch via WatchConnectivity.
@@ -232,20 +233,41 @@ class WatchSync: NSObject, ObservableObject, WCSessionDelegate {
             NotificationCenter.default.post(name: .sessionRecorded, object: nil)
         }
 
-        // Reverse geocode the first GPS point to get location name
+        // Search for nearby football fields, fallback to reverse geocode
         if let firstPoint = trackPoints.first {
             let location = CLLocation(latitude: firstPoint.latitude, longitude: firstPoint.longitude)
-            CLGeocoder().reverseGeocodeLocation(location) { placemarks, error in
-                guard let placemark = placemarks?.first, error == nil else { return }
-                let name = placemark.name
-                    ?? placemark.thoroughfare
-                    ?? placemark.subLocality
-                    ?? placemark.locality
-                    ?? ""
-                guard !name.isEmpty else { return }
-                Task { @MainActor in
-                    session.locationName = name
-                    try? store.context.save()
+            let coordinate = CLLocationCoordinate2D(latitude: firstPoint.latitude, longitude: firstPoint.longitude)
+
+            // Store GPS coordinates
+            Task { @MainActor in
+                session.locationLatitude = firstPoint.latitude
+                session.locationLongitude = firstPoint.longitude
+                try? store.context.save()
+            }
+
+            // Search for nearby football/soccer fields within 500m
+            Task {
+                let fieldName = await Self.searchNearbyFootballField(coordinate: coordinate)
+                if let fieldName = fieldName {
+                    await MainActor.run {
+                        session.locationName = fieldName
+                        try? store.context.save()
+                    }
+                } else {
+                    // Fallback to reverse geocoding
+                    CLGeocoder().reverseGeocodeLocation(location) { placemarks, error in
+                        guard let placemark = placemarks?.first, error == nil else { return }
+                        let name = placemark.name
+                            ?? placemark.thoroughfare
+                            ?? placemark.subLocality
+                            ?? placemark.locality
+                            ?? ""
+                        guard !name.isEmpty else { return }
+                        Task { @MainActor in
+                            session.locationName = name
+                            try? store.context.save()
+                        }
+                    }
                 }
             }
         }
@@ -267,5 +289,40 @@ class WatchSync: NSObject, ObservableObject, WCSessionDelegate {
 
         // HealthKit heart-rate cadence can be sparse. Keep a wider matching window.
         return bestDiff <= 45.0 ? hrData[bestIdx].bpm : 0
+    }
+
+    /// Search for nearby football/soccer fields using MKLocalSearch
+    static func searchNearbyFootballField(coordinate: CLLocationCoordinate2D, radiusMeters: Double = 500) async -> String? {
+        let queries = ["足球场", "football field", "soccer field"]
+        for query in queries {
+            let request = MKLocalSearch.Request()
+            request.naturalLanguageQuery = query
+            request.region = MKCoordinateRegion(
+                center: coordinate,
+                latitudinalMeters: radiusMeters * 2,
+                longitudinalMeters: radiusMeters * 2
+            )
+            do {
+                let search = MKLocalSearch(request: request)
+                let response = try await search.start()
+                let location = CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude)
+                let nearby = response.mapItems
+                    .filter { item in
+                        guard let itemLoc = item.placemark.location else { return false }
+                        return location.distance(from: itemLoc) <= radiusMeters
+                    }
+                    .sorted { a, b in
+                        let distA = location.distance(from: a.placemark.location!)
+                        let distB = location.distance(from: b.placemark.location!)
+                        return distA < distB
+                    }
+                if let best = nearby.first, let name = best.name, !name.isEmpty {
+                    return name
+                }
+            } catch {
+                continue
+            }
+        }
+        return nil
     }
 }

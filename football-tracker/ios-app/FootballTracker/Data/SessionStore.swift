@@ -23,6 +23,8 @@ final class FootballSession {
     var slackLabel: String
     var coveragePercent: Double
     var locationName: String
+    var locationLatitude: Double
+    var locationLongitude: Double
     var syncedToCloud: Bool
     var ownerUid: String
 
@@ -47,6 +49,8 @@ final class FootballSession {
         slackLabel: String = "",
         coveragePercent: Double = 0,
         locationName: String = "",
+        locationLatitude: Double = 0,
+        locationLongitude: Double = 0,
         syncedToCloud: Bool = false,
         ownerUid: String = "",
         trackPointsData: Data? = nil
@@ -68,6 +72,8 @@ final class FootballSession {
         self.slackLabel = slackLabel
         self.coveragePercent = coveragePercent
         self.locationName = locationName
+        self.locationLatitude = locationLatitude
+        self.locationLongitude = locationLongitude
         self.syncedToCloud = syncedToCloud
         self.ownerUid = ownerUid
         self.trackPointsData = trackPointsData

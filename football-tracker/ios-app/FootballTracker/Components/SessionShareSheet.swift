@@ -283,7 +283,6 @@ struct SessionPosterView: View {
                         minLat: latRange.min, maxLat: latRange.max,
                         minLon: lonRange.min, maxLon: lonRange.max
                     )
-                    .frame(height: 200)
                     .padding(12)
                     .background(Color(hex: 0x1C2333))
                     .cornerRadius(12)

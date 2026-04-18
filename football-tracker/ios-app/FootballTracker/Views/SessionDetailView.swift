@@ -1,4 +1,6 @@
 import SwiftUI
+import MapKit
+import CoreLocation
 
 /// Detailed view of a single football session with all stats, charts, and heatmap.
 struct SessionDetailView: View {
@@ -13,6 +15,7 @@ struct SessionDetailView: View {
     @State private var showShareSheet = false
     @State private var posterImage: UIImage?
     @State private var isGeneratingPoster = false
+    @State private var showLocationEditor = false
 
     private var trackPoints: [TrackPointRecord] {
         cachedTrackPoints
@@ -121,6 +124,12 @@ struct SessionDetailView: View {
             .presentationDragIndicator(.hidden)
             .presentationBackground(Color(hex: 0x1C2333))
         }
+        .sheet(isPresented: $showLocationEditor) {
+            LocationEditorView(session: session, store: store, trackPoints: cachedTrackPoints)
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
+                .presentationBackground(Color(hex: 0x1C2333))
+        }
         .task(id: session.id) {
             let points = store.getTrackPoints(for: session)
             let computedStats = store.computeStats(from: points)
@@ -162,27 +171,35 @@ struct SessionDetailView: View {
 
     private var venueTimeCard: some View {
         VStack(spacing: 12) {
-            // Venue
-            HStack(spacing: 12) {
-                RoundedRectangle(cornerRadius: 8)
-                    .fill(LinearGradient(colors: [Color(hex: 0xA855F7), Color(hex: 0xEC4899)], startPoint: .topLeading, endPoint: .bottomTrailing))
-                    .frame(width: 32, height: 32)
-                    .overlay(
-                        Image(systemName: "mappin.and.ellipse")
-                            .font(.system(size: 14, weight: .semibold))
-                            .foregroundColor(.white)
-                    )
+            // Venue (tappable to edit)
+            Button {
+                showLocationEditor = true
+            } label: {
+                HStack(spacing: 12) {
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(LinearGradient(colors: [Color(hex: 0xA855F7), Color(hex: 0xEC4899)], startPoint: .topLeading, endPoint: .bottomTrailing))
+                        .frame(width: 32, height: 32)
+                        .overlay(
+                            Image(systemName: "mappin.and.ellipse")
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundColor(.white)
+                        )
 
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("场地")
-                        .font(.system(size: 11))
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("场地")
+                            .font(.system(size: 11))
+                            .foregroundColor(AppColors.textSecondary)
+                        Text(session.locationName.isEmpty ? "球场训练" : session.locationName)
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundColor(AppColors.textPrimary)
+                    }
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 12, weight: .medium))
                         .foregroundColor(AppColors.textSecondary)
-                    Text(session.locationName.isEmpty ? "球场训练" : session.locationName)
-                        .font(.system(size: 15, weight: .semibold))
-                        .foregroundColor(AppColors.textPrimary)
                 }
-                Spacer()
             }
+            .buttonStyle(.plain)
 
             // Time
             HStack(spacing: 12) {
