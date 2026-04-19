@@ -712,21 +712,70 @@ struct StatsView: View {
     }
 
     private var overviewSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        let totalGoals = sessions.reduce(0) { $0 + $1.goals }
+        let totalAssists = sessions.reduce(0) { $0 + $1.assists }
+
+        return VStack(alignment: .leading, spacing: 12) {
             sectionHeader(title: "生涯总览", icon: "chart.bar.fill", showShare: false)
 
-            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
-                StatsMetricCard(label: "总场次", value: "\(totalSessions)", icon: "calendar", color: Color(hex: 0x22C55E))
-                StatsMetricCard(label: "总距离(km)", value: String(format: "%.1f", totalDistanceKm), icon: "figure.run", color: Color(hex: 0x3B82F6))
-                StatsMetricCard(label: "总卡路里", value: String(format: "%.0f", totalCalories), icon: "flame.fill", color: Color(hex: 0xF97316))
-                StatsMetricCard(label: "最高速度", value: String(format: "%.1f", maxSpeed), icon: "gauge.with.dots.needle.67percent", color: Color(hex: 0x06B6D4))
-                StatsMetricCard(label: "场均冲刺", value: String(format: "%.0f", avgSprints), icon: "bolt.fill", color: Color(hex: 0xF59E0B))
-                StatsMetricCard(label: "平均摸鱼", value: String(format: "%.0f", avgSlack), icon: "zzz", color: Color(hex: 0xA855F7))
+            VStack(spacing: 8) {
+                // Row 1: Goals + Assists (2 columns)
+                HStack(spacing: 8) {
+                    overviewStatCard(icon: "soccerball", label: "总进球", value: "\(totalGoals)", unit: "", color: Color(hex: 0x10B981))
+                    overviewStatCard(icon: "hand.point.up.fill", label: "总助攻", value: "\(totalAssists)", unit: "", color: Color(hex: 0x3B82F6))
+                }
+                // Row 2: Sessions + Distance + Calories (3 columns)
+                HStack(spacing: 8) {
+                    overviewStatCard(icon: "calendar", label: "总场次", value: "\(totalSessions)", unit: "场", color: Color(hex: 0x22C55E))
+                    overviewStatCard(icon: "location.fill", label: "总距离", value: String(format: "%.1f", totalDistanceKm), unit: "km", color: Color(hex: 0x3B82F6))
+                    overviewStatCard(icon: "flame.fill", label: "总卡路里", value: String(format: "%.0f", totalCalories), unit: "kcal", color: Color(hex: 0xEF4444))
+                }
+                // Row 3: Max Speed + Avg Sprints + Avg Slack (3 columns)
+                HStack(spacing: 8) {
+                    overviewStatCard(icon: "speedometer", label: "最高速度", value: String(format: "%.1f", maxSpeed), unit: "km/h", color: Color(hex: 0x06B6D4))
+                    overviewStatCard(icon: "bolt.fill", label: "场均冲刺", value: String(format: "%.0f", avgSprints), unit: "次", color: Color(hex: 0xF59E0B))
+                    overviewStatCard(icon: "zzz", label: "平均摸鱼", value: String(format: "%.0f", avgSlack), unit: "%", color: Color(hex: 0xA855F7))
+                }
+            }
+            .padding(10)
+            .background(AppColors.cardBg)
+            .cornerRadius(16)
+            .overlay(
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(Color.white.opacity(0.08), lineWidth: 0.5)
+            )
+        }
+    }
+
+    private func overviewStatCard(icon: String, label: String, value: String, unit: String, color: Color) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 4) {
+                Image(systemName: icon)
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundColor(color)
+                Text(label)
+                    .font(.system(size: 12))
+                    .foregroundColor(AppColors.textSecondary)
+                    .lineLimit(1)
+            }
+            HStack(alignment: .lastTextBaseline, spacing: 2) {
+                Text(value)
+                    .font(.system(size: 24, weight: .bold, design: .rounded))
+                    .foregroundColor(AppColors.textPrimary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+                if !unit.isEmpty {
+                    Text(unit)
+                        .font(.system(size: 11))
+                        .foregroundColor(AppColors.textSecondary)
+                }
             }
         }
-        .padding(14)
-        .background(AppColors.cardBg)
-        .cornerRadius(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 10)
+        .background(Color.white.opacity(0.04))
+        .cornerRadius(10)
     }
 
     private var abilitiesSection: some View {
