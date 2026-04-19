@@ -439,34 +439,77 @@ struct HomeView: View {
     }
 
     private func keyStatsFace(for sessions: [FootballSession], modeTag: String, rotation: Double, opacity: Double) -> some View {
-        let totalDistanceKm = sessions.reduce(0.0) { $0 + $1.totalDistanceMeters } / 1000.0
-        let totalCalories = sessions.reduce(0.0) { $0 + $1.caloriesBurned }
-        let totalSprints = sessions.reduce(0) { $0 + $1.sprintCount }
+        let totalGoals = sessions.reduce(0) { $0 + $1.goals }
+        let totalAssists = sessions.reduce(0) { $0 + $1.assists }
         let totalMinutes = sessions.reduce(0) { result, session in
             result + Int(session.endTime.timeIntervalSince(session.startTime) / 60)
         }
-        let maxSpeed = sessions.map(\.maxSpeedKmh).max() ?? 0
+        let totalDistanceKm = sessions.reduce(0.0) { $0 + $1.totalDistanceMeters } / 1000.0
+        let totalSprints = sessions.reduce(0) { $0 + $1.sprintCount }
+        let totalCalories = sessions.reduce(0.0) { $0 + $1.caloriesBurned }
+        let avgCoverage: Double = sessions.isEmpty ? 0 : sessions.map(\.coveragePercent).reduce(0, +) / Double(sessions.count)
+        let hrSessions = sessions.filter { $0.avgHeartRate > 0 }
+        let avgHR = hrSessions.isEmpty ? 0 : hrSessions.map(\.avgHeartRate).reduce(0, +) / hrSessions.count
 
-        return VStack(spacing: 12) {
-            HStack(spacing: 12) {
-                DashboardStatTile(title: "跑动距离", value: String(format: "%.1f km", totalDistanceKm), icon: "figure.run", iconColor: Color(hex: 0xA855F7), changeText: modeTag)
-                DashboardStatTile(title: "冲刺次数", value: "\(totalSprints)", icon: "bolt.fill", iconColor: Color(hex: 0xF97316), changeText: "+\(totalSprints)")
+        return VStack(spacing: 8) {
+            // Row 1: Goals + Assists (2 columns)
+            HStack(spacing: 8) {
+                homeStatCard(icon: "soccerball", label: "进球", value: "\(totalGoals)", unit: "", color: Color(hex: 0x10B981))
+                homeStatCard(icon: "hand.point.up.fill", label: "助攻", value: "\(totalAssists)", unit: "", color: Color(hex: 0x3B82F6))
             }
-
-            HStack(spacing: 12) {
-                DashboardStatTile(title: "消耗热量", value: String(format: "%.0f", totalCalories), icon: "flame.fill", iconColor: Color(hex: 0xEF4444), changeText: "+\(Int(totalCalories))")
-                DashboardStatTile(title: "训练时长", value: formatDuration(totalMinutes), icon: "clock.fill", iconColor: Color(hex: 0x22D3EE), changeText: String(format: "%.1f km/h", maxSpeed))
+            // Row 2: Duration + Distance + Sprints (3 columns)
+            HStack(spacing: 8) {
+                homeStatCard(icon: "clock.fill", label: "时长", value: formatDuration(totalMinutes), unit: "", color: Color(hex: 0x3B82F6))
+                homeStatCard(icon: "location.fill", label: "距离", value: String(format: "%.1f", totalDistanceKm), unit: "km", color: Color(hex: 0xA855F7))
+                homeStatCard(icon: "bolt.fill", label: "冲刺", value: "\(totalSprints)", unit: "次", color: Color(hex: 0xF59E0B))
+            }
+            // Row 3: Calories + Coverage + Avg HR (3 columns)
+            HStack(spacing: 8) {
+                homeStatCard(icon: "flame.fill", label: "卡路里", value: "\(Int(totalCalories))", unit: "kcal", color: Color(hex: 0xEF4444))
+                homeStatCard(icon: "circle.hexagongrid.fill", label: "覆盖率", value: String(format: "%.0f", avgCoverage), unit: "%", color: Color(hex: 0x8B5CF6))
+                homeStatCard(icon: "heart.fill", label: "均心率", value: "\(avgHR)", unit: "bpm", color: Color(hex: 0xEF4444))
             }
         }
-        .padding(14)
+        .padding(10)
         .background(AppColors.cardBg)
-        .clipShape(RoundedRectangle(cornerRadius: 18))
+        .clipShape(RoundedRectangle(cornerRadius: 16))
         .overlay(
-            RoundedRectangle(cornerRadius: 18)
-                .stroke(Color.white.opacity(0.08), lineWidth: 0.8)
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(Color.white.opacity(0.08), lineWidth: 0.5)
         )
         .rotation3DEffect(.degrees(rotation), axis: (x: 0, y: 1, z: 0))
         .opacity(opacity)
+    }
+
+    private func homeStatCard(icon: String, label: String, value: String, unit: String, color: Color) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 4) {
+                Image(systemName: icon)
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundColor(color)
+                Text(label)
+                    .font(.system(size: 12))
+                    .foregroundColor(AppColors.textSecondary)
+                    .lineLimit(1)
+            }
+            HStack(alignment: .lastTextBaseline, spacing: 2) {
+                Text(value)
+                    .font(.system(size: 24, weight: .bold, design: .rounded))
+                    .foregroundColor(AppColors.textPrimary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+                if !unit.isEmpty {
+                    Text(unit)
+                        .font(.system(size: 11))
+                        .foregroundColor(AppColors.textSecondary)
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 10)
+        .background(Color.white.opacity(0.04))
+        .cornerRadius(10)
     }
 
     private var heatmapSection: some View {
