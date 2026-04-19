@@ -531,13 +531,6 @@ struct StatsView: View {
         ]
     }
 
-    private var trendData: [TrendPoint] {
-        let recent = Array(sessions.prefix(7).reversed())
-        return recent.enumerated().map { index, session in
-            let score = performanceScore(for: session)
-            return TrendPoint(index: index + 1, score: score)
-        }
-    }
 
     private var recentDaySections: [DaySection] {
         Array(buildDaySections(from: sessions).prefix(3))
@@ -790,29 +783,7 @@ struct StatsView: View {
     }
 
     private var trendSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                sectionHeader(title: "表现趋势", icon: "chart.line.uptrend.xyaxis", showShare: false)
-                Spacer()
-                if let delta = trendDelta {
-                    HStack(spacing: 4) {
-                        Image(systemName: delta >= 0 ? "arrow.up.right" : "arrow.down.right")
-                        Text(String(format: "%.1f", abs(delta)))
-                    }
-                    .font(.caption.weight(.semibold))
-                    .foregroundColor(delta >= 0 ? AppColors.speedGreen : AppColors.heartRed)
-                }
-            }
-
-            StatsTrendChart(points: trendData)
-                .frame(height: 170)
-                .padding(10)
-                .background(AppColors.cardBgLight)
-                .cornerRadius(12)
-        }
-        .padding(14)
-        .background(AppColors.cardBg)
-        .cornerRadius(16)
+        StatsTrendSectionView(sessions: sessions)
     }
 
     private var achievementsSection: some View {
@@ -954,11 +925,6 @@ struct StatsView: View {
         .frame(maxWidth: .infinity)
         .background(AppColors.cardBg)
         .cornerRadius(16)
-    }
-
-    private var trendDelta: Double? {
-        guard trendData.count >= 2 else { return nil }
-        return trendData.last!.score - trendData.first!.score
     }
 
     private func badgeIcon(_ iconName: String) -> String {
@@ -1154,6 +1120,123 @@ private struct RadarPolygon: Shape {
     }
 }
 
+private enum StatsTrendTab: String, CaseIterable {
+    case goals = "总进球"
+    case assists = "总助攻"
+    case duration = "总时间"
+    case distance = "总距离"
+
+    var unit: String {
+        switch self {
+        case .goals: return "球"
+        case .assists: return "次"
+        case .duration: return "min"
+        case .distance: return "km"
+        }
+    }
+
+    var color: Color {
+        switch self {
+        case .goals: return Color(hex: 0xEF4444)
+        case .assists: return Color(hex: 0x8B5CF6)
+        case .duration: return Color(hex: 0x10B981)
+        case .distance: return Color(hex: 0xF59E0B)
+        }
+    }
+}
+
+private struct StatsTrendSectionView: View {
+    let sessions: [FootballSession]
+    @State private var selectedTab: StatsTrendTab = .goals
+
+    private var trendData: [TrendPoint] {
+        let recent = Array(sessions.prefix(7).reversed())
+        return recent.enumerated().map { index, session in
+            let value: Double
+            switch selectedTab {
+            case .goals:
+                value = Double(session.goals)
+            case .assists:
+                value = Double(session.assists)
+            case .duration:
+                value = session.endTime.timeIntervalSince(session.startTime) / 60.0
+            case .distance:
+                value = session.totalDistanceMeters / 1000.0
+            }
+            return TrendPoint(index: index + 1, score: value)
+        }
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 9) {
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(AppColors.neonBlue.opacity(0.16))
+                    .frame(width: 26, height: 26)
+                    .overlay(
+                        Image(systemName: "chart.line.uptrend.xyaxis")
+                            .font(.caption.weight(.semibold))
+                            .foregroundColor(AppColors.neonBlue)
+                    )
+                Text("表现趋势")
+                    .font(.headline.weight(.semibold))
+                    .foregroundColor(AppColors.textPrimary)
+                Spacer()
+                Text("单位: \(selectedTab.unit)")
+                    .font(.system(size: 11))
+                    .foregroundColor(AppColors.textSecondary)
+            }
+
+            // Tab buttons
+            HStack(spacing: 0) {
+                ForEach(StatsTrendTab.allCases, id: \.self) { tab in
+                    Button {
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            selectedTab = tab
+                        }
+                    } label: {
+                        Text(tab.rawValue)
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundColor(selectedTab == tab ? AppColors.textPrimary : AppColors.textSecondary)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 8)
+                            .background(
+                                selectedTab == tab
+                                ? AppColors.cardBgLight
+                                : Color.clear
+                            )
+                            .cornerRadius(8)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(3)
+            .background(Color.white.opacity(0.06))
+            .cornerRadius(10)
+
+            if trendData.isEmpty {
+                Text("暂无数据")
+                    .font(.caption)
+                    .foregroundColor(AppColors.textSecondary)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 40)
+            } else {
+                StatsTrendChart(points: trendData, color: selectedTab.color, unit: selectedTab.unit)
+                    .frame(height: 170)
+                    .padding(.leading, 30)
+                    .padding(.bottom, 20)
+                    .padding(.trailing, 10)
+                    .padding(.top, 10)
+                    .background(AppColors.cardBgLight)
+                    .cornerRadius(12)
+            }
+        }
+        .padding(14)
+        .background(AppColors.cardBg)
+        .cornerRadius(16)
+    }
+}
+
 private struct TrendPoint: Identifiable {
     let id: Int
     let index: Int
@@ -1168,16 +1251,50 @@ private struct TrendPoint: Identifiable {
 
 private struct StatsTrendChart: View {
     let points: [TrendPoint]
+    var color: Color = AppColors.neonBlue
+    var unit: String = ""
+
+    private var yRange: (min: Double, max: Double) {
+        let scores = points.map(\.score)
+        let rawMax = scores.max() ?? 1
+        // Use integer-friendly range: 0 to a nice ceiling
+        let ceil = niceIntCeiling(rawMax)
+        return (0, Double(ceil))
+    }
+
+    private var yTicks: [Int] {
+        let (_, maxY) = yRange
+        let top = Int(maxY)
+        return (0...4).map { i in
+            top * i / 4
+        }
+    }
+
+    /// Round up to a "nice" integer ceiling divisible by 4 for even tick spacing.
+    private func niceIntCeiling(_ value: Double) -> Int {
+        let v = Int(ceil(value))
+        if v <= 0 { return 4 }
+        // Round up to next multiple of 4
+        return ((v + 3) / 4) * 4
+    }
 
     var body: some View {
         GeometryReader { proxy in
             let w = proxy.size.width
             let h = proxy.size.height
+            let (minY, maxY) = yRange
 
-            let minY = 6.0
-            let maxY = 10.0
+            ZStack(alignment: .topLeading) {
+                // Y-axis labels
+                ForEach(Array(yTicks.enumerated()), id: \.offset) { idx, tick in
+                    let yPos = h * CGFloat(1 - Double(idx) / 4.0)
+                    Text("\(tick)")
+                        .font(.system(size: 8))
+                        .foregroundColor(AppColors.textSecondary)
+                        .position(x: -18, y: yPos)
+                }
 
-            ZStack {
+                // Grid lines
                 VStack(spacing: 0) {
                     ForEach(0..<4, id: \.self) { idx in
                         Rectangle()
@@ -1189,32 +1306,61 @@ private struct StatsTrendChart: View {
                     }
                 }
 
+                // Smooth curve
                 Path { path in
-                    guard !points.isEmpty else { return }
-                    for (idx, point) in points.enumerated() {
-                        let x = xPosition(for: idx, total: points.count, width: w)
-                        let y = yPosition(value: point.score, minY: minY, maxY: maxY, height: h)
-                        if idx == 0 {
+                    guard points.count >= 2 else {
+                        if let pt = points.first {
+                            let x = xPosition(for: 0, total: points.count, width: w)
+                            let y = yPosition(value: pt.score, minY: minY, maxY: maxY, height: h)
                             path.move(to: CGPoint(x: x, y: y))
-                        } else {
-                            path.addLine(to: CGPoint(x: x, y: y))
                         }
+                        return
+                    }
+                    let pts = points.enumerated().map { idx, point in
+                        CGPoint(
+                            x: xPosition(for: idx, total: points.count, width: w),
+                            y: yPosition(value: point.score, minY: minY, maxY: maxY, height: h)
+                        )
+                    }
+                    path.move(to: pts[0])
+                    for i in 1..<pts.count {
+                        let prev = pts[i - 1]
+                        let cur = pts[i]
+                        let midX = (prev.x + cur.x) / 2
+                        path.addCurve(
+                            to: cur,
+                            control1: CGPoint(x: midX, y: prev.y),
+                            control2: CGPoint(x: midX, y: cur.y)
+                        )
                     }
                 }
-                .stroke(AppColors.neonBlue, style: StrokeStyle(lineWidth: 3, lineCap: .round, lineJoin: .round))
+                .stroke(color, style: StrokeStyle(lineWidth: 3, lineCap: .round, lineJoin: .round))
 
+                // Dots
                 ForEach(Array(points.enumerated()), id: \.element.id) { idx, point in
                     Circle()
-                        .fill(AppColors.neonBlue)
+                        .fill(color)
                         .frame(width: 8, height: 8)
                         .position(
                             x: xPosition(for: idx, total: points.count, width: w),
                             y: yPosition(value: point.score, minY: minY, maxY: maxY, height: h)
                         )
                 }
+
+                // X-axis labels
+                ForEach(Array(points.enumerated()), id: \.element.id) { idx, point in
+                    Text("\(point.index)场")
+                        .font(.system(size: 8))
+                        .foregroundColor(AppColors.textSecondary)
+                        .position(
+                            x: xPosition(for: idx, total: points.count, width: w),
+                            y: h + 12
+                        )
+                }
             }
         }
     }
+
 
     private func xPosition(for index: Int, total: Int, width: CGFloat) -> CGFloat {
         guard total > 1 else { return width / 2 }
