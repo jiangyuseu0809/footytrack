@@ -625,9 +625,7 @@ struct HomeView: View {
             }
         }
         .navigationDestination(isPresented: $navigateToTodayList) {
-            if let section = buildDaySections(from: todaySessions).first {
-                DaySummaryDetailView(section: section, store: store)
-            }
+            TodaySessionsListView(sessions: todaySessions, store: store)
         }
     }
 
@@ -1361,5 +1359,44 @@ struct SlackBadge: View {
             .padding(.vertical, 4)
             .background(bgColor)
             .clipShape(RoundedRectangle(cornerRadius: 6))
+    }
+}
+
+// MARK: - Today Sessions List
+
+struct TodaySessionsListView: View {
+    let sessions: [FootballSession]
+    @ObservedObject var store: SessionStore
+    @State private var selectedSession: FootballSession?
+    @State private var navigateToDetail = false
+
+    var body: some View {
+        ZStack {
+            AppColors.darkBg.ignoresSafeArea()
+
+            ScrollView {
+                LazyVStack(spacing: 10) {
+                    ForEach(sessions.sorted(by: { $0.startTime > $1.startTime }), id: \.id) { session in
+                        MatchHistoryRow(session: session)
+                            .contentShape(Rectangle())
+                            .onTapGesture {
+                                selectedSession = session
+                                navigateToDetail = true
+                            }
+                    }
+                }
+                .padding(.horizontal, 16)
+                .padding(.top, 12)
+                .padding(.bottom, 20)
+            }
+        }
+        .navigationTitle("今日比赛")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbarTitleDisplayMode(.inline)
+        .navigationDestination(isPresented: $navigateToDetail) {
+            if let session = selectedSession {
+                SessionDetailView(session: session, store: store)
+            }
+        }
     }
 }
