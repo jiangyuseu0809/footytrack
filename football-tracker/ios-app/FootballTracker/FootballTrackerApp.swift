@@ -240,6 +240,22 @@ struct TeamHubView: View {
 
                 Spacer()
 
+                Button {
+                    showMemberList = true
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "person.2.fill")
+                        Text("成员")
+                    }
+                    .font(.caption.weight(.semibold))
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(Color.white.opacity(0.2))
+                    .cornerRadius(8)
+                }
+                .buttonStyle(.plain)
+
                 ShareLink(item: "来加入我的球队「\(team?.name ?? "")」！\n在 FootyTrack App 中输入邀请码：\(team?.inviteCode ?? "")") {
                     HStack(spacing: 4) {
                         Image(systemName: "person.badge.plus")
@@ -265,41 +281,6 @@ struct TeamHubView: View {
                     .fill(Color.white.opacity(0.2))
                     .frame(height: 1)
             }
-
-            // Member list entry
-            Button {
-                showMemberList = true
-            } label: {
-                HStack {
-                    // Stacked avatars
-                    HStack(spacing: -8) {
-                        ForEach(Array(teamMembers.prefix(4).enumerated()), id: \.element.userUid) { idx, member in
-                            Circle()
-                                .fill(Color.white.opacity(0.25))
-                                .frame(width: 28, height: 28)
-                                .overlay(
-                                    Text(avatarText(member))
-                                        .font(.system(size: 13))
-                                )
-                                .zIndex(Double(4 - idx))
-                        }
-                    }
-                    if teamMembers.count > 4 {
-                        Text("+\(teamMembers.count - 4)")
-                            .font(.caption.weight(.semibold))
-                            .foregroundColor(Color.white.opacity(0.85))
-                    }
-                    Spacer()
-                    Text("查看成员")
-                        .font(.caption.weight(.medium))
-                        .foregroundColor(Color.white.opacity(0.85))
-                    Image(systemName: "chevron.right")
-                        .font(.caption2)
-                        .foregroundColor(Color.white.opacity(0.6))
-                }
-                .padding(.top, 4)
-            }
-            .buttonStyle(.plain)
         }
         .padding(16)
         .background(
@@ -504,7 +485,7 @@ struct TeamHubView: View {
     }
 
     private func avatarText(_ member: TeamMemberResponse) -> String {
-        member.role == "owner" ? "👑" : "⚽️"
+        "⚽️"
     }
 
     private func teamStatItem(value: String, label: String) -> some View {
@@ -592,7 +573,7 @@ private struct TeamLeaderboardSection: View {
     }
 
     private func avatarText(_ member: TeamMemberResponse) -> String {
-        member.role == "owner" ? "👑" : "⚽️"
+        "⚽️"
     }
 
     private var sortedMembers: [(member: TeamMemberResponse, value: String)] {
@@ -741,7 +722,7 @@ struct TeamMemberListView: View {
     }
 
     private func avatarText(_ member: TeamMemberResponse) -> String {
-        member.role == "owner" ? "👑" : "⚽️"
+        "⚽️"
     }
 
     var body: some View {
