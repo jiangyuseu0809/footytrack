@@ -625,7 +625,7 @@ struct ProfileView: View {
     }
 }
 
-private struct AvatarCircleView: View {
+struct AvatarCircleView: View {
     let url: URL
     @StateObject private var loader = AvatarImageLoader()
 
@@ -646,7 +646,7 @@ private struct AvatarCircleView: View {
 }
 
 @MainActor
-private final class AvatarImageLoader: ObservableObject {
+final class AvatarImageLoader: ObservableObject {
     @Published private(set) var image: UIImage?
     private static let memoryCache = NSCache<NSURL, UIImage>()
 

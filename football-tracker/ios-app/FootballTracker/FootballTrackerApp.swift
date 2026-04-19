@@ -191,7 +191,7 @@ struct TeamHubView: View {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 16) {
                         teamInfoCard
-                        TeamLeaderboardSection(members: teamMembers)
+                        TeamLeaderboardSection(members: teamMembers, currentUserUid: authManager.currentUid, currentUserAvatarUrl: authManager.userProfile?.avatarUrl)
                         leaveTeamSection
                     }
                     .padding(.horizontal, 16)
@@ -209,7 +209,7 @@ struct TeamHubView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbarTitleDisplayMode(.inline)
         .navigationDestination(isPresented: $showMemberList) {
-            TeamMemberListView(members: teamMembers)
+            TeamMemberListView(members: teamMembers, currentUserUid: authManager.currentUid, currentUserAvatarUrl: authManager.userProfile?.avatarUrl)
         }
         .task {
             await loadTeamData()
@@ -303,20 +303,17 @@ struct TeamHubView: View {
                 Spacer()
                 if isLeaving {
                     ProgressView()
-                        .tint(.red)
+                        .tint(.white)
                 } else {
                     Text(isOwner ? "解散球队" : "退出球队")
                         .font(.subheadline.weight(.medium))
+                        .foregroundColor(.white)
                 }
                 Spacer()
             }
             .padding(.vertical, 14)
-            .background(AppColors.cardBg)
+            .background(Color.red)
             .cornerRadius(12)
-            .overlay(
-                RoundedRectangle(cornerRadius: 12)
-                    .stroke(Color.red.opacity(0.3), lineWidth: 0.5)
-            )
         }
         .disabled(isLeaving)
     }
@@ -484,9 +481,6 @@ struct TeamHubView: View {
         member.nickname.isEmpty ? "球员" : member.nickname
     }
 
-    private func avatarText(_ member: TeamMemberResponse) -> String {
-        "⚽️"
-    }
 
     private func teamStatItem(value: String, label: String) -> some View {
         VStack(spacing: 2) {
@@ -566,14 +560,12 @@ private enum TeamLeaderTab: String, CaseIterable {
 
 private struct TeamLeaderboardSection: View {
     let members: [TeamMemberResponse]
+    var currentUserUid: String? = nil
+    var currentUserAvatarUrl: String? = nil
     @State private var selectedTab: TeamLeaderTab = .goals
 
     private func displayName(_ member: TeamMemberResponse) -> String {
         member.nickname.isEmpty ? "球员" : member.nickname
-    }
-
-    private func avatarText(_ member: TeamMemberResponse) -> String {
-        "⚽️"
     }
 
     private var sortedMembers: [(member: TeamMemberResponse, value: String)] {
@@ -662,13 +654,7 @@ private struct TeamLeaderboardSection: View {
                                 .font(index < 3 ? .body : .caption.weight(.medium))
                                 .frame(width: 28)
 
-                            Circle()
-                                .fill(AppColors.cardBgLight)
-                                .frame(width: 36, height: 36)
-                                .overlay(
-                                    Text(avatarText(item.member))
-                                        .font(.body)
-                                )
+                            MemberAvatarView(member: item.member, size: 36, currentUserUid: currentUserUid, currentUserAvatarUrl: currentUserAvatarUrl)
 
                             VStack(alignment: .leading, spacing: 2) {
                                 HStack(spacing: 4) {
@@ -712,17 +698,46 @@ private struct TeamLeaderboardSection: View {
     }
 }
 
+// MARK: - Member Avatar View
+
+private struct MemberAvatarView: View {
+    let member: TeamMemberResponse
+    var size: CGFloat = 44
+    var currentUserUid: String? = nil
+    var currentUserAvatarUrl: String? = nil
+
+    private var resolvedAvatarUrl: String? {
+        // Use member's own avatarUrl if available
+        if let url = member.avatarUrl, !url.isEmpty { return url }
+        // Fall back to current user's profile avatar if this member is the current user
+        if let uid = currentUserUid, uid == member.userUid,
+           let url = currentUserAvatarUrl, !url.isEmpty { return url }
+        return nil
+    }
+
+    var body: some View {
+        if let urlStr = resolvedAvatarUrl, let url = URL(string: urlStr) {
+            AvatarCircleView(url: url)
+                .frame(width: size, height: size)
+                .clipShape(Circle())
+        } else {
+            Circle()
+                .fill(AppColors.cardBgLight)
+                .frame(width: size, height: size)
+                .overlay(Text("⚽️").font(.system(size: size * 0.45)))
+        }
+    }
+}
+
 // MARK: - Team Member List Page
 
 struct TeamMemberListView: View {
     let members: [TeamMemberResponse]
+    var currentUserUid: String? = nil
+    var currentUserAvatarUrl: String? = nil
 
     private func displayName(_ member: TeamMemberResponse) -> String {
         member.nickname.isEmpty ? "球员" : member.nickname
-    }
-
-    private func avatarText(_ member: TeamMemberResponse) -> String {
-        "⚽️"
     }
 
     var body: some View {
@@ -733,13 +748,7 @@ struct TeamMemberListView: View {
                 VStack(spacing: 0) {
                     ForEach(Array(members.enumerated()), id: \.element.userUid) { index, member in
                         HStack(spacing: 12) {
-                            Circle()
-                                .fill(AppColors.cardBgLight)
-                                .frame(width: 44, height: 44)
-                                .overlay(
-                                    Text(avatarText(member))
-                                        .font(.title3)
-                                )
+                            MemberAvatarView(member: member, size: 44, currentUserUid: currentUserUid, currentUserAvatarUrl: currentUserAvatarUrl)
 
                             VStack(alignment: .leading, spacing: 3) {
                                 HStack(spacing: 5) {

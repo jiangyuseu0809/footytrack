@@ -135,6 +135,7 @@ struct TeamMemberResponse: Codable {
     let totalDistanceMeters: Double
     var totalGoals: Int64?
     var totalAssists: Int64?
+    var avatarUrl: String?
 }
 
 struct TeamDetailResponse: Codable {
