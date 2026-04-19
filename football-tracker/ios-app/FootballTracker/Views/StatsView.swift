@@ -911,8 +911,8 @@ struct StatsView: View {
                     .foregroundColor(AppColors.neonBlue)
                 }
 
-                ForEach(recentDaySections) { section in
-                    DayHistoryRow(section: section)
+                ForEach(Array(sessions.sorted(by: { $0.startTime > $1.startTime }).prefix(3)), id: \.id) { session in
+                    MatchHistoryRow(session: session)
                 }
             }
             .padding(14)
@@ -1355,25 +1355,21 @@ private struct EmptyPreviewCard: View {
 struct AllMatchesView: View {
     @ObservedObject var store: SessionStore
 
-    @State private var sectionToDelete: DaySection?
-    @State private var showDeleteAlert = false
+    @State private var sessionToDelete: FootballSession?
+    @State private var showLocalDeleteAlert = false
     @State private var showCloudDeleteAlert = false
-    @State private var selectedSection: DaySection?
+    @State private var selectedSession: FootballSession?
     @State private var navigateToDetail = false
 
-    private var daySections: [DaySection] {
-        buildDaySections(from: store.sessions)
-    }
-
-    private var hasCloudSession: Bool {
-        sectionToDelete?.sessions.contains(where: \.syncedToCloud) ?? false
+    private var sortedSessions: [FootballSession] {
+        store.sessions.sorted { $0.startTime > $1.startTime }
     }
 
     var body: some View {
         ZStack {
             AppColors.darkBg.ignoresSafeArea()
 
-            if daySections.isEmpty {
+            if sortedSessions.isEmpty {
                 VStack(spacing: 12) {
                     Image(systemName: "sportscourt")
                         .font(.system(size: 40))
@@ -1388,20 +1384,20 @@ struct AllMatchesView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 List {
-                    ForEach(daySections) { section in
-                        DayHistoryRow(section: section)
+                    ForEach(sortedSessions, id: \.id) { session in
+                        MatchHistoryRow(session: session)
                             .contentShape(Rectangle())
                             .onTapGesture {
-                                selectedSection = section
+                                selectedSession = session
                                 navigateToDetail = true
                             }
                             .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                                 Button(role: .destructive) {
-                                    sectionToDelete = section
-                                    if hasCloudSession {
+                                    sessionToDelete = session
+                                    if session.syncedToCloud {
                                         showCloudDeleteAlert = true
                                     } else {
-                                        showDeleteAlert = true
+                                        showLocalDeleteAlert = true
                                     }
                                 } label: {
                                     Label("删除", systemImage: "trash")
@@ -1420,48 +1416,40 @@ struct AllMatchesView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbarTitleDisplayMode(.inline)
         .navigationDestination(isPresented: $navigateToDetail) {
-            if let section = selectedSection {
-                DaySummaryDetailView(section: section, store: store)
+            if let session = selectedSession {
+                SessionDetailView(session: session, store: store)
             }
         }
-        .alert("确认删除", isPresented: $showDeleteAlert) {
-            Button("取消", role: .cancel) { sectionToDelete = nil }
-            Button("删除", role: .destructive) { deleteAllLocal() }
+        .alert("确认删除", isPresented: $showLocalDeleteAlert) {
+            Button("取消", role: .cancel) { sessionToDelete = nil }
+            Button("删除", role: .destructive) { deleteLocal() }
         } message: {
-            if let section = sectionToDelete {
-                Text("将删除\(section.displayDate)的\(section.sessionCount)场比赛记录，删除后无法恢复。")
-            }
+            Text("该记录删除后将无法恢复。")
         }
         .alert("确认删除", isPresented: $showCloudDeleteAlert) {
-            Button("取消", role: .cancel) { sectionToDelete = nil }
-            Button("仅删除本地", role: .destructive) { deleteAllLocal() }
-            Button("同时删除云端", role: .destructive) { deleteAllWithCloud() }
+            Button("取消", role: .cancel) { sessionToDelete = nil }
+            Button("仅删除本地", role: .destructive) { deleteLocal() }
+            Button("同时删除云端", role: .destructive) { deleteWithCloud() }
         } message: {
-            if let section = sectionToDelete {
-                Text("将删除\(section.displayDate)的\(section.sessionCount)场比赛记录，部分已同步到云端，是否同时删除云端数据？")
-            }
+            Text("该记录已同步到云端，是否同时删除云端数据？")
         }
     }
 
-    private func deleteAllLocal() {
-        guard let section = sectionToDelete else { return }
-        for session in section.sessions {
-            store.deleteSession(session)
-        }
-        sectionToDelete = nil
+    private func deleteLocal() {
+        guard let session = sessionToDelete else { return }
+        store.deleteSession(session)
+        sessionToDelete = nil
     }
 
-    private func deleteAllWithCloud() {
-        guard let section = sectionToDelete else { return }
-        let cloudIds = section.sessions.filter(\.syncedToCloud).map(\.id)
-        for session in section.sessions {
-            store.deleteSession(session)
-        }
-        sectionToDelete = nil
-
-        Task {
-            for id in cloudIds {
-                _ = try? await ApiClient.shared.deleteSession(id: id)
+    private func deleteWithCloud() {
+        guard let session = sessionToDelete else { return }
+        let sessionId = session.id
+        let isSynced = session.syncedToCloud
+        store.deleteSession(session)
+        sessionToDelete = nil
+        if isSynced {
+            Task {
+                _ = try? await ApiClient.shared.deleteSession(id: sessionId)
             }
         }
     }
