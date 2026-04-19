@@ -191,7 +191,13 @@ struct TeamHubView: View {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 16) {
                         teamInfoCard
-                        TeamLeaderboardSection(members: teamMembers, currentUserUid: authManager.currentUid, currentUserAvatarUrl: authManager.userProfile?.avatarUrl)
+                        TeamLeaderboardSection(
+                            members: teamMembers,
+                            currentUserUid: authManager.currentUid,
+                            currentUserAvatarUrl: authManager.userProfile?.avatarUrl,
+                            localGoals: Int64(store.sessions.reduce(0) { $0 + $1.goals }),
+                            localAssists: Int64(store.sessions.reduce(0) { $0 + $1.assists })
+                        )
                         leaveTeamSection
                     }
                     .padding(.horizontal, 16)
@@ -209,7 +215,13 @@ struct TeamHubView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbarTitleDisplayMode(.inline)
         .navigationDestination(isPresented: $showMemberList) {
-            TeamMemberListView(members: teamMembers, currentUserUid: authManager.currentUid, currentUserAvatarUrl: authManager.userProfile?.avatarUrl)
+            TeamMemberListView(
+                members: teamMembers,
+                currentUserUid: authManager.currentUid,
+                currentUserAvatarUrl: authManager.userProfile?.avatarUrl,
+                localGoals: Int64(store.sessions.reduce(0) { $0 + $1.goals }),
+                localAssists: Int64(store.sessions.reduce(0) { $0 + $1.assists })
+            )
         }
         .task {
             await loadTeamData()
@@ -562,23 +574,37 @@ private struct TeamLeaderboardSection: View {
     let members: [TeamMemberResponse]
     var currentUserUid: String? = nil
     var currentUserAvatarUrl: String? = nil
+    var localGoals: Int64 = 0
+    var localAssists: Int64 = 0
     @State private var selectedTab: TeamLeaderTab = .goals
+
+    /// Members with current user's goals/assists overridden from local data
+    private var enrichedMembers: [TeamMemberResponse] {
+        members.map { m in
+            guard let uid = currentUserUid, m.userUid == uid else { return m }
+            var copy = m
+            copy.totalGoals = localGoals
+            copy.totalAssists = localAssists
+            return copy
+        }
+    }
 
     private func displayName(_ member: TeamMemberResponse) -> String {
         member.nickname.isEmpty ? "球员" : member.nickname
     }
 
     private var sortedMembers: [(member: TeamMemberResponse, value: String)] {
+        let all = enrichedMembers
         let sorted: [TeamMemberResponse]
         switch selectedTab {
         case .goals:
-            sorted = members.sorted { ($0.totalGoals ?? 0) > ($1.totalGoals ?? 0) }
+            sorted = all.sorted { ($0.totalGoals ?? 0) > ($1.totalGoals ?? 0) }
         case .assists:
-            sorted = members.sorted { ($0.totalAssists ?? 0) > ($1.totalAssists ?? 0) }
+            sorted = all.sorted { ($0.totalAssists ?? 0) > ($1.totalAssists ?? 0) }
         case .attendance:
-            sorted = members.sorted { $0.sessionCount > $1.sessionCount }
+            sorted = all.sorted { $0.sessionCount > $1.sessionCount }
         case .distance:
-            sorted = members.sorted { $0.totalDistanceMeters > $1.totalDistanceMeters }
+            sorted = all.sorted { $0.totalDistanceMeters > $1.totalDistanceMeters }
         }
 
         return sorted.map { m in
@@ -735,6 +761,18 @@ struct TeamMemberListView: View {
     let members: [TeamMemberResponse]
     var currentUserUid: String? = nil
     var currentUserAvatarUrl: String? = nil
+    var localGoals: Int64 = 0
+    var localAssists: Int64 = 0
+
+    private var enrichedMembers: [TeamMemberResponse] {
+        members.map { m in
+            guard let uid = currentUserUid, m.userUid == uid else { return m }
+            var copy = m
+            copy.totalGoals = localGoals
+            copy.totalAssists = localAssists
+            return copy
+        }
+    }
 
     private func displayName(_ member: TeamMemberResponse) -> String {
         member.nickname.isEmpty ? "球员" : member.nickname
@@ -746,7 +784,7 @@ struct TeamMemberListView: View {
 
             ScrollView {
                 VStack(spacing: 0) {
-                    ForEach(Array(members.enumerated()), id: \.element.userUid) { index, member in
+                    ForEach(Array(enrichedMembers.enumerated()), id: \.element.userUid) { index, member in
                         HStack(spacing: 12) {
                             MemberAvatarView(member: member, size: 44, currentUserUid: currentUserUid, currentUserAvatarUrl: currentUserAvatarUrl)
 
@@ -797,7 +835,7 @@ struct TeamMemberListView: View {
                         .padding(.horizontal, 14)
                         .padding(.vertical, 12)
 
-                        if index < members.count - 1 {
+                        if index < enrichedMembers.count - 1 {
                             Divider()
                                 .overlay(AppColors.dividerColor.opacity(0.6))
                                 .padding(.leading, 70)

@@ -74,6 +74,9 @@ struct SessionDto: Codable {
     let slackLabel: String?
     let coveragePercent: Double?
     let trackPointsData: String?
+    var goals: Int?
+    var assists: Int?
+    var locationName: String?
 }
 
 struct SyncRequest: Encodable {

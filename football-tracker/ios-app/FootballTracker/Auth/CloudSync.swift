@@ -3,10 +3,21 @@ import Foundation
 @MainActor
 class CloudSync {
 
+    private static let goalsAssistsSyncKey = "cloud_sync_goals_assists_v1"
+
     /// Upload all unsynced sessions to the cloud.
     /// Returns number of sessions synced.
     static func uploadPendingSessions(store: SessionStore, authManager: AuthManager) async throws -> Int {
         guard authManager.isLoggedIn, let uid = authManager.currentUid else { return 0 }
+
+        // One-time: force re-sync all sessions to upload goals/assists fields
+        if !UserDefaults.standard.bool(forKey: goalsAssistsSyncKey) {
+            for session in store.sessions {
+                session.syncedToCloud = false
+            }
+            try? store.context.save()
+            UserDefaults.standard.set(true, forKey: goalsAssistsSyncKey)
+        }
 
         // Assign owner to orphan sessions (empty, or still using anonymous device UUID)
         let deviceUuid = authManager.deviceUuid
@@ -62,6 +73,9 @@ class CloudSync {
                 slackLabel: dto.slackLabel ?? "",
                 coveragePercent: dto.coveragePercent ?? 0
             )
+            session.goals = dto.goals ?? 0
+            session.assists = dto.assists ?? 0
+            session.locationName = dto.locationName ?? ""
             if let base64Str = dto.trackPointsData,
                let data = Data(base64Encoded: base64Str) {
                 session.trackPointsData = data
@@ -98,7 +112,10 @@ extension FootballSession {
             slackIndex: slackIndex,
             slackLabel: slackLabel,
             coveragePercent: coveragePercent,
-            trackPointsData: trackPointsBase64
+            trackPointsData: trackPointsBase64,
+            goals: goals,
+            assists: assists,
+            locationName: locationName
         )
     }
 }
