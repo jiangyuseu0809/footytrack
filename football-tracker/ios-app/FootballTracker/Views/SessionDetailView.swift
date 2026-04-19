@@ -8,14 +8,16 @@ struct SessionDetailView: View {
     @ObservedObject var store: SessionStore
 
     @State private var cachedTrackPoints: [TrackPointRecord] = []
+    @State private var cachedContinuousPoints: [TrackPointRecord] = []
     @State private var cachedStats: SessionAnalysisResult?
-    @State private var cachedHasHeartRate = false
+
     @State private var cachedLatRange: (min: Double, max: Double)?
     @State private var cachedLonRange: (min: Double, max: Double)?
     @State private var showShareSheet = false
     @State private var posterImage: UIImage?
     @State private var isGeneratingPoster = false
     @State private var showLocationEditor = false
+    @State private var showAttackEnd = true
 
     private var trackPoints: [TrackPointRecord] {
         cachedTrackPoints
@@ -60,17 +62,18 @@ struct SessionDetailView: View {
                     halvesSection
 
                     // Speed Chart
-                    if !trackPoints.isEmpty {
+                    if !cachedContinuousPoints.isEmpty {
                         chartSection(title: "速度", icon: "bolt.fill", iconColor: Color(hex: 0x3B82F6)) {
-                            SpeedChartView(points: trackPoints, showHeartRate: false)
+                            SpeedChartView(points: cachedContinuousPoints, showHeartRate: false)
                         }
                     }
 
                     // Heart Rate Chart
-                    if cachedHasHeartRate {
-                        chartSection(title: "心率", icon: "heart.fill", iconColor: Color(hex: 0xEF4444)) {
-                            SpeedChartView(points: trackPoints, showHeartRate: true)
-                        }
+                    chartSection(title: "心率", icon: "heart.fill", iconColor: Color(hex: 0xEF4444)) {
+                        SpeedChartView(
+                            points: cachedContinuousPoints.isEmpty ? trackPoints : cachedContinuousPoints,
+                            showHeartRate: true
+                        )
                     }
 
                     // Fatigue Chart
@@ -80,15 +83,23 @@ struct SessionDetailView: View {
                         }
                     }
 
+                    // Radar Chart
+                    chartSection(title: "能力雷达", icon: "pentagon.fill", iconColor: Color(hex: 0xA855F7)) {
+                        RadarChartView(axes: radarAxes, size: 240)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 8)
+                    }
+
                     // Heatmap
                     if let latRange = cachedLatRange, let lonRange = cachedLonRange {
                         chartSection(title: "活动热图", icon: "map.fill", iconColor: Color(hex: 0x10B981)) {
                             HeatmapOverlayView(
-                                grid: stats.heatmapGrid,
+                                grid: showAttackEnd ? stats.heatmapGrid : flipGridHorizontally(stats.heatmapGrid),
                                 minLat: latRange.min,
                                 maxLat: latRange.max,
                                 minLon: lonRange.min,
-                                maxLon: lonRange.max
+                                maxLon: lonRange.max,
+                                attackEndToggle: $showAttackEnd
                             )
                         }
                     }
@@ -138,7 +149,7 @@ struct SessionDetailView: View {
             let computedStats = store.computeStats(from: points)
             cachedTrackPoints = points
             cachedStats = computedStats
-            cachedHasHeartRate = points.contains { $0.heartRate > 0 }
+            cachedContinuousPoints = buildContinuousPoints(points: points)
             if let minLat = points.map(\.latitude).min(),
                let maxLat = points.map(\.latitude).max(),
                let minLon = points.map(\.longitude).min(),
@@ -402,6 +413,69 @@ struct SessionDetailView: View {
                         .stroke(Color.white.opacity(0.08), lineWidth: 0.5)
                 )
         }
+    }
+
+    // MARK: - Radar Chart Axes
+
+    private var radarAxes: [(label: String, value: Double)] {
+        let speed = min(1.0, stats.maxSpeedKmh / 30.0)
+        let distance = min(1.0, session.totalDistanceMeters / 10000.0)
+        let stamina = min(1.0, session.endTime.timeIntervalSince(session.startTime) / 5400.0) // 90 min
+        let sprint = min(1.0, Double(session.sprintCount) / 30.0)
+        let coverage = min(1.0, session.coveragePercent / 100.0)
+        let intensity = min(1.0, stats.highIntensityDistanceMeters / 3000.0)
+        return [
+            (label: "速度", value: speed),
+            (label: "跑量", value: distance),
+            (label: "体力", value: stamina),
+            (label: "冲刺", value: sprint),
+            (label: "覆盖", value: coverage),
+            (label: "强度", value: intensity),
+        ]
+    }
+
+    // MARK: - Continuous Points (remove halftime gaps)
+
+    /// Rebuilds track points with continuous elapsed timestamps,
+    /// removing halftime gaps so charts show uninterrupted playing time.
+    private func buildContinuousPoints(points: [TrackPointRecord]) -> [TrackPointRecord] {
+        let halves = cachedHalves
+        guard halves.count > 1 else { return points }
+
+        // Build time ranges for each half
+        var halfRanges: [(start: TimeInterval, end: TimeInterval)] = []
+        for h in halves {
+            halfRanges.append((start: h.startTime, end: h.endTime))
+        }
+
+        var result: [TrackPointRecord] = []
+        var cumulativeOffset: TimeInterval = 0
+
+        for (idx, range) in halfRanges.enumerated() {
+            let halfPoints = points.filter { $0.timestamp >= range.start && $0.timestamp <= range.end }
+            for p in halfPoints {
+                let adjustedTs = (p.timestamp - range.start) + cumulativeOffset
+                result.append(TrackPointRecord(
+                    timestamp: adjustedTs,
+                    latitude: p.latitude,
+                    longitude: p.longitude,
+                    speed: p.speed,
+                    heartRate: p.heartRate,
+                    accuracy: p.accuracy
+                ))
+            }
+            if idx < halfRanges.count - 1 {
+                cumulativeOffset += (range.end - range.start)
+            }
+        }
+
+        return result.isEmpty ? points : result
+    }
+
+    // MARK: - Heatmap Flip
+
+    private func flipGridHorizontally(_ grid: [[Double]]) -> [[Double]] {
+        grid.map { $0.reversed() }
     }
 }
 

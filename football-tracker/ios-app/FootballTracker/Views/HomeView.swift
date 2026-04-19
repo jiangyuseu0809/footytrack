@@ -911,7 +911,9 @@ struct HomeAnalysisDetailView: View {
                             minLat: lats.min() ?? 0,
                             maxLat: lats.max() ?? 0,
                             minLon: lons.min() ?? 0,
-                            maxLon: lons.max() ?? 0
+                            maxLon: lons.max() ?? 0,
+                            attackEndToggle: .constant(true),
+                            showToggle: false
                         )
 
                         SpeedChartView(points: points, showHeartRate: false)

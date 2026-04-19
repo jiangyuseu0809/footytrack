@@ -285,7 +285,9 @@ struct SessionPosterView: View {
                     HeatmapOverlayView(
                         grid: stats.heatmapGrid,
                         minLat: latRange.min, maxLat: latRange.max,
-                        minLon: lonRange.min, maxLon: lonRange.max
+                        minLon: lonRange.min, maxLon: lonRange.max,
+                        attackEndToggle: .constant(true),
+                        showToggle: false
                     )
                     .padding(12)
                     .background(Color(hex: 0x1C2333))

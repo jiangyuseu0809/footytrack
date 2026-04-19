@@ -8,12 +8,35 @@ struct HeatmapOverlayView: View {
     let maxLat: Double
     let minLon: Double
     let maxLon: Double
+    @Binding var attackEndToggle: Bool
+    var showToggle: Bool = true
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("球场热力图")
-                .font(.subheadline.weight(.medium))
-                .foregroundColor(AppColors.textPrimary)
+            HStack {
+                Text("球场热力图")
+                    .font(.subheadline.weight(.medium))
+                    .foregroundColor(AppColors.textPrimary)
+                Spacer()
+                if showToggle {
+                    HStack(spacing: 6) {
+                        Text("进攻方向")
+                            .font(.system(size: 12))
+                            .foregroundColor(AppColors.textSecondary)
+                        Button {
+                            attackEndToggle.toggle()
+                        } label: {
+                            Image(systemName: "arrow.left.arrow.right")
+                                .font(.system(size: 14, weight: .medium))
+                                .foregroundColor(.white)
+                                .padding(6)
+                                .background(Color.white.opacity(0.10))
+                                .cornerRadius(8)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            }
 
             PitchHeatmapCanvas(grid: grid)
                 .aspectRatio(1.55, contentMode: .fit)

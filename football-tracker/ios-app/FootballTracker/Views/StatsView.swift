@@ -209,7 +209,9 @@ struct DaySummaryDetailView: View {
                                 minLat: latRange.min,
                                 maxLat: latRange.max,
                                 minLon: lonRange.min,
-                                maxLon: lonRange.max
+                                maxLon: lonRange.max,
+                                attackEndToggle: .constant(true),
+                                showToggle: false
                             )
                         }
                     }
