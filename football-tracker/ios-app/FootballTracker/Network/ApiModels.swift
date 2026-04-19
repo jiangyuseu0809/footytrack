@@ -133,6 +133,8 @@ struct TeamMemberResponse: Codable {
     let joinedAt: Int64
     let sessionCount: Int64
     let totalDistanceMeters: Double
+    var totalGoals: Int64?
+    var totalAssists: Int64?
 }
 
 struct TeamDetailResponse: Codable {

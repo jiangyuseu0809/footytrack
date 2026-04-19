@@ -140,6 +140,7 @@ struct TeamHubView: View {
     @State private var isLoading = true
     @State private var showLeaveAlert = false
     @State private var isLeaving = false
+    @State private var showMemberList = false
 
     private var team: TeamResponse? {
         teamDetail?.team ?? authManager.teams.first
@@ -177,27 +178,6 @@ struct TeamHubView: View {
         return teamMembers.reduce(0) { $0 + $1.totalDistanceMeters } / Double(teamMembers.count) / 1000
     }
 
-    private var attendanceBoard: [TeamLeaderItem] {
-        teamMembers
-            .sorted { $0.sessionCount > $1.sessionCount }
-            .prefix(3)
-            .enumerated()
-            .map { idx, m in
-                TeamLeaderItem(name: displayName(m), value: "\(m.sessionCount) 场", avatar: avatarText(m), rank: idx + 1)
-            }
-    }
-
-    private var distanceBoard: [TeamLeaderItem] {
-        teamMembers
-            .sorted { $0.totalDistanceMeters > $1.totalDistanceMeters }
-            .prefix(3)
-            .enumerated()
-            .map { idx, m in
-                TeamLeaderItem(name: displayName(m), value: String(format: "%.1f km", m.totalDistanceMeters / 1000), avatar: avatarText(m), rank: idx + 1)
-            }
-    }
-
-
     var body: some View {
         ZStack {
             AppColors.darkBg.ignoresSafeArea()
@@ -211,8 +191,7 @@ struct TeamHubView: View {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 16) {
                         teamInfoCard
-                        squadSection
-                        leaderboardsSection
+                        TeamLeaderboardSection(members: teamMembers)
                         leaveTeamSection
                     }
                     .padding(.horizontal, 16)
@@ -229,6 +208,9 @@ struct TeamHubView: View {
         .navigationTitle("球队")
         .navigationBarTitleDisplayMode(.inline)
         .toolbarTitleDisplayMode(.inline)
+        .navigationDestination(isPresented: $showMemberList) {
+            TeamMemberListView(members: teamMembers)
+        }
         .task {
             await loadTeamData()
         }
@@ -241,6 +223,8 @@ struct TeamHubView: View {
             Text(isOwner ? "解散后所有成员将被移除，且无法恢复。确定解散球队吗？" : "退出后可通过邀请码重新加入。确定退出球队吗？")
         }
     }
+
+    // MARK: - Team Info Card
 
     private var teamInfoCard: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -256,10 +240,18 @@ struct TeamHubView: View {
 
                 Spacer()
 
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(Color.white.opacity(0.2))
-                    .frame(width: 44, height: 44)
-                    .overlay(Text("⚡").font(.title3))
+                ShareLink(item: "来加入我的球队「\(team?.name ?? "")」！\n在 FootyTrack App 中输入邀请码：\(team?.inviteCode ?? "")") {
+                    HStack(spacing: 4) {
+                        Image(systemName: "person.badge.plus")
+                        Text("邀请")
+                    }
+                    .font(.caption.weight(.semibold))
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(Color.white.opacity(0.2))
+                    .cornerRadius(8)
+                }
             }
 
             HStack(spacing: 0) {
@@ -273,6 +265,41 @@ struct TeamHubView: View {
                     .fill(Color.white.opacity(0.2))
                     .frame(height: 1)
             }
+
+            // Member list entry
+            Button {
+                showMemberList = true
+            } label: {
+                HStack {
+                    // Stacked avatars
+                    HStack(spacing: -8) {
+                        ForEach(Array(teamMembers.prefix(4).enumerated()), id: \.element.userUid) { idx, member in
+                            Circle()
+                                .fill(Color.white.opacity(0.25))
+                                .frame(width: 28, height: 28)
+                                .overlay(
+                                    Text(avatarText(member))
+                                        .font(.system(size: 13))
+                                )
+                                .zIndex(Double(4 - idx))
+                        }
+                    }
+                    if teamMembers.count > 4 {
+                        Text("+\(teamMembers.count - 4)")
+                            .font(.caption.weight(.semibold))
+                            .foregroundColor(Color.white.opacity(0.85))
+                    }
+                    Spacer()
+                    Text("查看成员")
+                        .font(.caption.weight(.medium))
+                        .foregroundColor(Color.white.opacity(0.85))
+                    Image(systemName: "chevron.right")
+                        .font(.caption2)
+                        .foregroundColor(Color.white.opacity(0.6))
+                }
+                .padding(.top, 4)
+            }
+            .buttonStyle(.plain)
         }
         .padding(16)
         .background(
@@ -285,82 +312,7 @@ struct TeamHubView: View {
         .cornerRadius(18)
     }
 
-    private var squadSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack {
-                Text("阵容")
-                    .font(.title3.weight(.semibold))
-                    .foregroundColor(AppColors.textPrimary)
-                Spacer()
-                ShareLink(item: "来加入我的球队「\(team?.name ?? "")」！\n在 FootyTrack App 中输入邀请码：\(team?.inviteCode ?? "")") {
-                    HStack(spacing: 4) {
-                        Image(systemName: "person.badge.plus")
-                        Text("邀请加入")
-                    }
-                    .font(.subheadline.weight(.medium))
-                    .foregroundColor(AppColors.neonBlue)
-                }
-            }
-
-            VStack(spacing: 0) {
-                ForEach(Array(teamMembers.enumerated()), id: \.element.userUid) { index, member in
-                    HStack(spacing: 10) {
-                        Circle()
-                            .fill(AppColors.cardBgLight)
-                            .frame(width: 44, height: 44)
-                            .overlay(
-                                Text(avatarText(member))
-                                    .font(.title3)
-                            )
-
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(displayName(member))
-                                .font(.subheadline.weight(.medium))
-                                .foregroundColor(AppColors.textPrimary)
-                            Text(member.role == "owner" ? "队长" : "成员")
-                                .font(.caption)
-                                .foregroundColor(AppColors.textSecondary)
-                        }
-
-                        Spacer()
-
-                        HStack(spacing: 3) {
-                            Text("★")
-                                .foregroundColor(Color(hex: 0xFBBF24))
-                            Text(String(format: "%.1f", memberRating(member)))
-                                .font(.subheadline.weight(.semibold))
-                                .foregroundColor(AppColors.textPrimary)
-                        }
-                    }
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 12)
-
-                    if index < teamMembers.count - 1 {
-                        Divider().overlay(AppColors.dividerColor.opacity(0.6))
-                    }
-                }
-            }
-            .background(AppColors.cardBg)
-            .cornerRadius(16)
-            .overlay(
-                RoundedRectangle(cornerRadius: 16)
-                    .stroke(Color.white.opacity(0.08), lineWidth: 0.5)
-            )
-        }
-    }
-
-    private var leaderboardsSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text("排行榜")
-                .font(.title3.weight(.semibold))
-                .foregroundColor(AppColors.textPrimary)
-
-            VStack(spacing: 12) {
-                leaderboardCard(title: "出勤榜", icon: "calendar", colors: [Color(hex: 0xF59E0B), Color(hex: 0xF97316)], items: attendanceBoard)
-                leaderboardCard(title: "跑动王者", icon: "bolt.fill", colors: [Color(hex: 0xA855F7), Color(hex: 0xEC4899)], items: distanceBoard)
-            }
-        }
-    }
+    // MARK: - Leave Team
 
     private var leaveTeamSection: some View {
         Button(role: .destructive) {
@@ -402,61 +354,7 @@ struct TeamHubView: View {
         isLeaving = false
     }
 
-    private func leaderboardCard(title: String, icon: String, colors: [Color], items: [TeamLeaderItem]) -> some View {
-        VStack(spacing: 0) {
-            HStack(spacing: 8) {
-                Image(systemName: icon)
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundColor(.white)
-                Text(title)
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundColor(.white)
-                Spacer()
-            }
-            .padding(12)
-            .background(LinearGradient(colors: colors, startPoint: .leading, endPoint: .trailing))
-
-            VStack(spacing: 0) {
-                if items.isEmpty {
-                    Text("暂无数据")
-                        .font(.subheadline)
-                        .foregroundColor(AppColors.textSecondary)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 14)
-                } else {
-                    ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
-                        HStack(spacing: 10) {
-                            Text(rankEmoji(item.rank))
-                                .frame(width: 28)
-                            Circle()
-                                .fill(AppColors.cardBgLight)
-                                .frame(width: 34, height: 34)
-                                .overlay(Text(item.avatar).font(.body))
-                            Text(item.name)
-                                .font(.subheadline.weight(.medium))
-                                .foregroundColor(AppColors.textPrimary)
-                            Spacer()
-                            Text(item.value)
-                                .font(.caption.weight(.semibold))
-                                .foregroundColor(AppColors.textSecondary)
-                        }
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 10)
-
-                        if index < items.count - 1 {
-                            Divider().overlay(AppColors.dividerColor.opacity(0.6))
-                        }
-                    }
-                }
-            }
-            .background(AppColors.cardBg)
-        }
-        .cornerRadius(16)
-        .overlay(
-            RoundedRectangle(cornerRadius: 16)
-                .stroke(Color.white.opacity(0.08), lineWidth: 0.5)
-        )
-    }
+    // MARK: - Helpers
 
     @State private var showTeamLoginSheet = false
 
@@ -609,21 +507,6 @@ struct TeamHubView: View {
         member.role == "owner" ? "👑" : "⚽️"
     }
 
-    private func memberRating(_ member: TeamMemberResponse) -> Double {
-        let distanceScore = min(1.0, (member.totalDistanceMeters / 1000.0) / 80.0)
-        let attendanceScore = min(1.0, Double(member.sessionCount) / 30.0)
-        return 6.8 + (distanceScore * 1.0 + attendanceScore * 0.7)
-    }
-
-    private func rankEmoji(_ rank: Int) -> String {
-        switch rank {
-        case 1: return "🥇"
-        case 2: return "🥈"
-        case 3: return "🥉"
-        default: return "\(rank)"
-        }
-    }
-
     private func teamStatItem(value: String, label: String) -> some View {
         VStack(spacing: 2) {
             Text(value)
@@ -643,7 +526,6 @@ struct TeamHubView: View {
             isLoading = false
             return
         }
-        // Show cached data instantly if available
         if let firstTeam = authManager.teams.first {
             if let cachedDetail = authManager.getCachedTeamDetail(teamId: firstTeam.id) {
                 teamDetail = cachedDetail
@@ -674,12 +556,278 @@ struct TeamHubView: View {
     }
 }
 
-private struct TeamLeaderItem: Identifiable {
-    let id = UUID()
-    let name: String
-    let value: String
-    let avatar: String
-    let rank: Int
+// MARK: - Team Leaderboard Section (isolated state)
+
+private enum TeamLeaderTab: String, CaseIterable {
+    case goals = "射手榜"
+    case assists = "助攻榜"
+    case attendance = "出勤率"
+    case distance = "跑动榜"
+
+    var icon: String {
+        switch self {
+        case .goals: return "soccerball"
+        case .assists: return "hands.clap.fill"
+        case .attendance: return "calendar"
+        case .distance: return "figure.run"
+        }
+    }
+
+    var colors: [Color] {
+        switch self {
+        case .goals: return [Color(hex: 0xEF4444), Color(hex: 0xF97316)]
+        case .assists: return [Color(hex: 0x8B5CF6), Color(hex: 0xA855F7)]
+        case .attendance: return [Color(hex: 0xF59E0B), Color(hex: 0xF97316)]
+        case .distance: return [Color(hex: 0x10B981), Color(hex: 0x06B6D4)]
+        }
+    }
+}
+
+private struct TeamLeaderboardSection: View {
+    let members: [TeamMemberResponse]
+    @State private var selectedTab: TeamLeaderTab = .goals
+
+    private func displayName(_ member: TeamMemberResponse) -> String {
+        member.nickname.isEmpty ? "球员" : member.nickname
+    }
+
+    private func avatarText(_ member: TeamMemberResponse) -> String {
+        member.role == "owner" ? "👑" : "⚽️"
+    }
+
+    private var sortedMembers: [(member: TeamMemberResponse, value: String)] {
+        let sorted: [TeamMemberResponse]
+        switch selectedTab {
+        case .goals:
+            sorted = members.sorted { ($0.totalGoals ?? 0) > ($1.totalGoals ?? 0) }
+        case .assists:
+            sorted = members.sorted { ($0.totalAssists ?? 0) > ($1.totalAssists ?? 0) }
+        case .attendance:
+            sorted = members.sorted { $0.sessionCount > $1.sessionCount }
+        case .distance:
+            sorted = members.sorted { $0.totalDistanceMeters > $1.totalDistanceMeters }
+        }
+
+        return sorted.map { m in
+            let value: String
+            switch selectedTab {
+            case .goals:
+                value = "\(m.totalGoals ?? 0) 球"
+            case .assists:
+                value = "\(m.totalAssists ?? 0) 次"
+            case .attendance:
+                value = "\(m.sessionCount) 场"
+            case .distance:
+                value = String(format: "%.1f km", m.totalDistanceMeters / 1000)
+            }
+            return (member: m, value: value)
+        }
+    }
+
+    private func rankEmoji(_ rank: Int) -> String {
+        switch rank {
+        case 1: return "🥇"
+        case 2: return "🥈"
+        case 3: return "🥉"
+        default: return "\(rank)"
+        }
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("排行榜")
+                .font(.title3.weight(.semibold))
+                .foregroundColor(AppColors.textPrimary)
+
+            // Tab buttons
+            HStack(spacing: 0) {
+                ForEach(TeamLeaderTab.allCases, id: \.self) { tab in
+                    Button {
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            selectedTab = tab
+                        }
+                    } label: {
+                        Text(tab.rawValue)
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundColor(selectedTab == tab ? AppColors.textPrimary : AppColors.textSecondary)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 8)
+                            .background(
+                                selectedTab == tab
+                                ? AppColors.cardBgLight
+                                : Color.clear
+                            )
+                            .cornerRadius(8)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(3)
+            .background(Color.white.opacity(0.06))
+            .cornerRadius(10)
+
+            // Leaderboard list
+            VStack(spacing: 0) {
+                if sortedMembers.isEmpty {
+                    Text("暂无数据")
+                        .font(.subheadline)
+                        .foregroundColor(AppColors.textSecondary)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 24)
+                } else {
+                    ForEach(Array(sortedMembers.enumerated()), id: \.element.member.userUid) { index, item in
+                        HStack(spacing: 10) {
+                            Text(rankEmoji(index + 1))
+                                .font(index < 3 ? .body : .caption.weight(.medium))
+                                .frame(width: 28)
+
+                            Circle()
+                                .fill(AppColors.cardBgLight)
+                                .frame(width: 36, height: 36)
+                                .overlay(
+                                    Text(avatarText(item.member))
+                                        .font(.body)
+                                )
+
+                            VStack(alignment: .leading, spacing: 2) {
+                                HStack(spacing: 4) {
+                                    Text(displayName(item.member))
+                                        .font(.subheadline.weight(.medium))
+                                        .foregroundColor(AppColors.textPrimary)
+                                    if item.member.role == "owner" {
+                                        Text("队长")
+                                            .font(.system(size: 9, weight: .medium))
+                                            .foregroundColor(Color(hex: 0xFBBF24))
+                                            .padding(.horizontal, 4)
+                                            .padding(.vertical, 1)
+                                            .background(Color(hex: 0xFBBF24).opacity(0.15))
+                                            .cornerRadius(4)
+                                    }
+                                }
+                            }
+
+                            Spacer()
+
+                            Text(item.value)
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundColor(selectedTab.colors.first ?? AppColors.neonBlue)
+                        }
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 10)
+
+                        if index < sortedMembers.count - 1 {
+                            Divider().overlay(AppColors.dividerColor.opacity(0.6))
+                        }
+                    }
+                }
+            }
+            .background(AppColors.cardBg)
+            .cornerRadius(16)
+            .overlay(
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(Color.white.opacity(0.08), lineWidth: 0.5)
+            )
+        }
+    }
+}
+
+// MARK: - Team Member List Page
+
+struct TeamMemberListView: View {
+    let members: [TeamMemberResponse]
+
+    private func displayName(_ member: TeamMemberResponse) -> String {
+        member.nickname.isEmpty ? "球员" : member.nickname
+    }
+
+    private func avatarText(_ member: TeamMemberResponse) -> String {
+        member.role == "owner" ? "👑" : "⚽️"
+    }
+
+    var body: some View {
+        ZStack {
+            AppColors.darkBg.ignoresSafeArea()
+
+            ScrollView {
+                VStack(spacing: 0) {
+                    ForEach(Array(members.enumerated()), id: \.element.userUid) { index, member in
+                        HStack(spacing: 12) {
+                            Circle()
+                                .fill(AppColors.cardBgLight)
+                                .frame(width: 44, height: 44)
+                                .overlay(
+                                    Text(avatarText(member))
+                                        .font(.title3)
+                                )
+
+                            VStack(alignment: .leading, spacing: 3) {
+                                HStack(spacing: 5) {
+                                    Text(displayName(member))
+                                        .font(.subheadline.weight(.semibold))
+                                        .foregroundColor(AppColors.textPrimary)
+                                    if member.role == "owner" {
+                                        Text("队长")
+                                            .font(.system(size: 9, weight: .medium))
+                                            .foregroundColor(Color(hex: 0xFBBF24))
+                                            .padding(.horizontal, 4)
+                                            .padding(.vertical, 1)
+                                            .background(Color(hex: 0xFBBF24).opacity(0.15))
+                                            .cornerRadius(4)
+                                    }
+                                }
+
+                                HStack(spacing: 12) {
+                                    Label("\(member.sessionCount) 场", systemImage: "calendar")
+                                    Label(String(format: "%.1f km", member.totalDistanceMeters / 1000), systemImage: "figure.run")
+                                }
+                                .font(.caption)
+                                .foregroundColor(AppColors.textSecondary)
+                            }
+
+                            Spacer()
+
+                            VStack(alignment: .trailing, spacing: 2) {
+                                HStack(spacing: 3) {
+                                    Image(systemName: "soccerball")
+                                        .font(.system(size: 10))
+                                    Text("\(member.totalGoals ?? 0)")
+                                        .font(.caption.weight(.semibold))
+                                }
+                                .foregroundColor(Color(hex: 0xEF4444))
+
+                                HStack(spacing: 3) {
+                                    Image(systemName: "hands.clap.fill")
+                                        .font(.system(size: 10))
+                                    Text("\(member.totalAssists ?? 0)")
+                                        .font(.caption.weight(.semibold))
+                                }
+                                .foregroundColor(Color(hex: 0x8B5CF6))
+                            }
+                        }
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 12)
+
+                        if index < members.count - 1 {
+                            Divider()
+                                .overlay(AppColors.dividerColor.opacity(0.6))
+                                .padding(.leading, 70)
+                        }
+                    }
+                }
+                .background(AppColors.cardBg)
+                .cornerRadius(16)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16)
+                        .stroke(Color.white.opacity(0.08), lineWidth: 0.5)
+                )
+                .padding(.horizontal, 16)
+                .padding(.top, 12)
+                .padding(.bottom, 20)
+            }
+        }
+        .navigationTitle("球队成员")
+        .navigationBarTitleDisplayMode(.inline)
+    }
 }
 
 // MARK: - Auth Flow (kept for profile login sheet)
