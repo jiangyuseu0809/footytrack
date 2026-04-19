@@ -243,102 +243,74 @@ struct SessionDetailView: View {
                 .font(.system(size: 20, weight: .semibold))
                 .foregroundColor(AppColors.textPrimary)
 
-            // Goals & assists row (if any)
-            if session.goals > 0 || session.assists > 0 {
-                LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 3), spacing: 10) {
-                    keyStatCard(icon: "soccerball", label: "进球", value: "\(session.goals)", unit: "个",
-                                gradient: [Color(hex: 0x10B981), Color(hex: 0x059669)])
-                    keyStatCard(icon: "hand.point.up.fill", label: "助攻", value: "\(session.assists)", unit: "次",
-                                gradient: [Color(hex: 0x3B82F6), Color(hex: 0x2563EB)])
-                    keyStatCard(icon: "clock.fill", label: "运动时长", value: "\(durationMin)", unit: "min",
-                                gradient: [Color(hex: 0x3B82F6), Color(hex: 0x06B6D4)])
+            VStack(spacing: 8) {
+                // Row 1: Goals + Assists (2 columns)
+                HStack(spacing: 8) {
+                    keyStatCard(icon: "soccerball", label: "进球", value: "\(session.goals)", unit: "", color: Color(hex: 0x10B981))
+                    keyStatCard(icon: "hand.point.up.fill", label: "助攻", value: "\(session.assists)", unit: "", color: Color(hex: 0x3B82F6))
                 }
-            } else {
-                // No goals row, show duration in first row
-                LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 3), spacing: 10) {
-                    keyStatCard(icon: "clock.fill", label: "运动时长", value: "\(durationMin)", unit: "min",
-                                gradient: [Color(hex: 0x3B82F6), Color(hex: 0x06B6D4)])
-                    keyStatCard(icon: "figure.run", label: "总距离", value: String(format: "%.1f", session.totalDistanceMeters / 1000), unit: "km",
-                                gradient: [Color(hex: 0xA855F7), Color(hex: 0xEC4899)])
-                    keyStatCard(icon: "bolt.fill", label: "冲刺次数", value: "\(session.sprintCount)", unit: "次",
-                                gradient: [Color(hex: 0xF59E0B), Color(hex: 0xF97316)])
-                }
-            }
 
-            LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 3), spacing: 10) {
-                if session.goals > 0 || session.assists > 0 {
-                    keyStatCard(icon: "figure.run", label: "总距离", value: String(format: "%.1f", session.totalDistanceMeters / 1000), unit: "km",
-                                gradient: [Color(hex: 0xA855F7), Color(hex: 0xEC4899)])
-                    keyStatCard(icon: "bolt.fill", label: "冲刺次数", value: "\(session.sprintCount)", unit: "次",
-                                gradient: [Color(hex: 0xF59E0B), Color(hex: 0xF97316)])
+                // Row 2: Duration + Distance + Calories (3 columns)
+                HStack(spacing: 8) {
+                    keyStatCard(icon: "clock.fill", label: "时长", value: "\(durationMin)", unit: "min", color: Color(hex: 0x3B82F6))
+                    keyStatCard(icon: "location.fill", label: "距离", value: String(format: "%.1f", session.totalDistanceMeters / 1000), unit: "km", color: Color(hex: 0xA855F7))
+                    keyStatCard(icon: "flame.fill", label: "卡路里", value: "\(Int(session.caloriesBurned))", unit: "kcal", color: Color(hex: 0xEF4444))
                 }
-                keyStatCard(icon: "speedometer", label: "最高速度", value: String(format: "%.1f", session.maxSpeedKmh), unit: "km/h",
-                            gradient: [Color(hex: 0xEF4444), Color(hex: 0xF97316)])
-                if !(session.goals > 0 || session.assists > 0) {
-                    keyStatCard(icon: "gauge.with.dots.needle.33percent", label: "平均速度", value: String(format: "%.1f", session.avgSpeedKmh), unit: "km/h",
-                                gradient: [Color(hex: 0x10B981), Color(hex: 0x34D399)])
-                    keyStatCard(icon: "flame.fill", label: "卡路里", value: "\(Int(session.caloriesBurned))", unit: "kcal",
-                                gradient: [Color(hex: 0xF59E0B), Color(hex: 0xEF4444)])
-                }
-            }
 
-            if session.goals > 0 || session.assists > 0 {
-                LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 3), spacing: 10) {
-                    keyStatCard(icon: "gauge.with.dots.needle.33percent", label: "平均速度", value: String(format: "%.1f", session.avgSpeedKmh), unit: "km/h",
-                                gradient: [Color(hex: 0x10B981), Color(hex: 0x34D399)])
-                    keyStatCard(icon: "flame.fill", label: "卡路里", value: "\(Int(session.caloriesBurned))", unit: "kcal",
-                                gradient: [Color(hex: 0xF59E0B), Color(hex: 0xEF4444)])
-                    keyStatCard(icon: "circle.hexagongrid.fill", label: "覆盖率", value: String(format: "%.0f", session.coveragePercent), unit: "%",
-                                gradient: [Color(hex: 0x8B5CF6), Color(hex: 0xA855F7)])
+                // Row 3: Sprints + Max speed + Avg speed (3 columns)
+                HStack(spacing: 8) {
+                    keyStatCard(icon: "bolt.fill", label: "冲刺", value: "\(session.sprintCount)", unit: "次", color: Color(hex: 0xF59E0B))
+                    keyStatCard(icon: "speedometer", label: "最高速度", value: String(format: "%.1f", session.maxSpeedKmh), unit: "km/h", color: Color(hex: 0xEF4444))
+                    keyStatCard(icon: "gauge.with.dots.needle.33percent", label: "均速", value: String(format: "%.1f", session.avgSpeedKmh), unit: "km/h", color: Color(hex: 0x10B981))
                 }
-            }
 
-            // Heart rate row
-            LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 3), spacing: 10) {
-                keyStatCard(icon: "heart.fill", label: "平均心率", value: "\(session.avgHeartRate > 0 ? session.avgHeartRate : stats.avgHeartRate)", unit: "bpm",
-                            gradient: [Color(hex: 0xEF4444), Color(hex: 0xEC4899)])
-                keyStatCard(icon: "heart.circle.fill", label: "最高心率", value: "\(session.maxHeartRate > 0 ? session.maxHeartRate : stats.maxHeartRate)", unit: "bpm",
-                            gradient: [Color(hex: 0xDC2626), Color(hex: 0xEF4444)])
-                if !(session.goals > 0 || session.assists > 0) {
-                    keyStatCard(icon: "circle.hexagongrid.fill", label: "覆盖率", value: String(format: "%.0f", session.coveragePercent), unit: "%",
-                                gradient: [Color(hex: 0x8B5CF6), Color(hex: 0xA855F7)])
+                // Row 4: Avg HR + Max HR + Coverage (3 columns)
+                HStack(spacing: 8) {
+                    keyStatCard(icon: "heart.fill", label: "均心率", value: "\(session.avgHeartRate > 0 ? session.avgHeartRate : stats.avgHeartRate)", unit: "bpm", color: Color(hex: 0xEF4444))
+                    keyStatCard(icon: "heart.circle.fill", label: "最高心率", value: "\(session.maxHeartRate > 0 ? session.maxHeartRate : stats.maxHeartRate)", unit: "bpm", color: Color(hex: 0xDC2626))
+                    keyStatCard(icon: "circle.hexagongrid.fill", label: "覆盖率", value: String(format: "%.0f", session.coveragePercent), unit: "%", color: Color(hex: 0x8B5CF6))
                 }
             }
+            .padding(10)
+            .background(AppColors.cardBg)
+            .cornerRadius(16)
+            .overlay(
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(Color.white.opacity(0.08), lineWidth: 0.5)
+            )
         }
     }
 
-    private func keyStatCard(icon: String, label: String, value: String, unit: String, gradient: [Color]) -> some View {
+    private func keyStatCard(icon: String, label: String, value: String, unit: String, color: Color) -> some View {
         VStack(alignment: .leading, spacing: 8) {
-            RoundedRectangle(cornerRadius: 10)
-                .fill(LinearGradient(colors: gradient, startPoint: .topLeading, endPoint: .bottomTrailing))
-                .frame(width: 36, height: 36)
-                .overlay(
-                    Image(systemName: icon)
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundColor(.white)
-                )
-
-            Text(label)
-                .font(.system(size: 10))
-                .foregroundColor(AppColors.textSecondary)
+            HStack(spacing: 4) {
+                Image(systemName: icon)
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundColor(color)
+                Text(label)
+                    .font(.system(size: 12))
+                    .foregroundColor(AppColors.textSecondary)
+                    .lineLimit(1)
+            }
 
             HStack(alignment: .lastTextBaseline, spacing: 2) {
                 Text(value)
-                    .font(.system(size: 20, weight: .bold))
+                    .font(.system(size: 24, weight: .bold, design: .rounded))
                     .foregroundColor(AppColors.textPrimary)
-                Text(unit)
-                    .font(.system(size: 11))
-                    .foregroundColor(AppColors.textSecondary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+                if !unit.isEmpty {
+                    Text(unit)
+                        .font(.system(size: 11))
+                        .foregroundColor(AppColors.textSecondary)
+                }
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(12)
-        .background(AppColors.cardBg)
-        .cornerRadius(14)
-        .overlay(
-            RoundedRectangle(cornerRadius: 14)
-                .stroke(Color.white.opacity(0.08), lineWidth: 0.5)
-        )
+        .padding(.horizontal, 10)
+        .padding(.vertical, 10)
+        .background(Color.white.opacity(0.04))
+        .cornerRadius(10)
     }
 
     // MARK: - Halves Breakdown
