@@ -92,6 +92,10 @@ class WatchSync: NSObject, ObservableObject, WCSessionDelegate {
 
     /// Called when the watch sends data via transferUserInfo
     func session(_ session: WCSession, didReceiveUserInfo userInfo: [String: Any] = [:]) {
+        print("[WatchSync] didReceiveUserInfo keys=\(userInfo.keys.sorted())")
+        if let sid = userInfo["session_id"] as? String {
+            print("[WatchSync] Received session_id=\(sid), halves_count=\(userInfo["halves_count"] ?? "nil")")
+        }
         enqueuePendingUserInfo(userInfo)
 
         // Send local notification immediately (works even when app was terminated)
@@ -188,20 +192,69 @@ class WatchSync: NSObject, ObservableObject, WCSessionDelegate {
         let count = min(latitudes.count, longitudes.count, timestamps.count, speeds.count)
         guard count > 0 else { return false }
 
+        // Build track points — mirror longitude for swapped-sides halves
         var trackPoints: [TrackPointRecord] = []
-        trackPoints.reserveCapacity(count)
+        let halvesRaw = data["halves"] as? [[String: Any]] ?? []
+        let hasHalvesGPS = !halvesRaw.isEmpty && halvesRaw.allSatisfy { ($0["latitudes"] as? [Double])?.isEmpty == false }
 
-        for i in 0..<count {
-            let ts = timestamps[i]
-            let closestHr = findClosestHr(targetTs: ts, hrData: hrMap)
-            trackPoints.append(TrackPointRecord(
-                timestamp: ts,
-                latitude: latitudes[i],
-                longitude: longitudes[i],
-                speed: speeds[i],
-                heartRate: closestHr,
-                accuracy: 5.0
-            ))
+        if hasHalvesGPS {
+            // Rebuild from per-half data, mirroring swapped halves
+            // First pass: collect all lons from half 1 (non-swapped baseline) to find center
+            var baselineLons: [Double] = []
+            for h in halvesRaw {
+                let swapped = h["swapped_sides"] as? Bool ?? false
+                if !swapped, let lons = h["longitudes"] as? [Double] {
+                    baselineLons.append(contentsOf: lons)
+                }
+            }
+            // If all halves are swapped (unlikely), use all lons
+            if baselineLons.isEmpty {
+                baselineLons = longitudes
+            }
+            let centerLon = baselineLons.isEmpty ? 0 : (baselineLons.min()! + baselineLons.max()!) / 2.0
+
+            for h in halvesRaw {
+                let swapped = h["swapped_sides"] as? Bool ?? false
+                guard let hLats = h["latitudes"] as? [Double],
+                      let hLons = h["longitudes"] as? [Double],
+                      let hTimestamps = h["timestamps"] as? [TimeInterval],
+                      let hSpeeds = h["speeds"] as? [Double] else { continue }
+                let hHrs = h["heart_rates"] as? [[String: Any]] ?? []
+                var hHrMap: [(ts: TimeInterval, bpm: Int)] = []
+                for hr in hHrs {
+                    if let ts = hr["ts"] as? TimeInterval, let bpm = hr["bpm"] as? Int {
+                        hHrMap.append((ts, bpm))
+                    }
+                }
+                let hCount = min(hLats.count, hLons.count, hTimestamps.count, hSpeeds.count)
+                for i in 0..<hCount {
+                    let lon = swapped ? (2 * centerLon - hLons[i]) : hLons[i]
+                    let closestHr = findClosestHr(targetTs: hTimestamps[i], hrData: hHrMap.isEmpty ? hrMap : hHrMap)
+                    trackPoints.append(TrackPointRecord(
+                        timestamp: hTimestamps[i],
+                        latitude: hLats[i],
+                        longitude: lon,
+                        speed: hSpeeds[i],
+                        heartRate: closestHr,
+                        accuracy: 5.0
+                    ))
+                }
+            }
+        } else {
+            // Fallback: use flat arrays (no swap info)
+            trackPoints.reserveCapacity(count)
+            for i in 0..<count {
+                let ts = timestamps[i]
+                let closestHr = findClosestHr(targetTs: ts, hrData: hrMap)
+                trackPoints.append(TrackPointRecord(
+                    timestamp: ts,
+                    latitude: latitudes[i],
+                    longitude: longitudes[i],
+                    speed: speeds[i],
+                    heartRate: closestHr,
+                    accuracy: 5.0
+                ))
+            }
         }
 
         let stats = store.computeStats(from: trackPoints)
@@ -222,7 +275,10 @@ class WatchSync: NSObject, ObservableObject, WCSessionDelegate {
             slackIndex: stats.slackIndex,
             slackLabel: stats.slackLabel,
             coveragePercent: stats.coveragePercent,
-            trackPointsData: pointsData
+            trackPointsData: pointsData,
+            goals: data["goals"] as? Int ?? 0,
+            assists: data["assists"] as? Int ?? 0,
+            halvesData: parseHalvesData(from: data)
         )
         session.ownerUid = ownerUid
 
@@ -275,6 +331,26 @@ class WatchSync: NSObject, ObservableObject, WCSessionDelegate {
         return true
     }
 
+    private static func parseHalvesData(from data: [String: Any]) -> Data? {
+        guard let halves = data["halves"] as? [[String: Any]], !halves.isEmpty else { return nil }
+        let parsed: [SessionHalfData] = halves.compactMap { h in
+            guard let halfNumber = h["half_number"] as? Int,
+                  let startTime = h["start_time"] as? TimeInterval,
+                  let endTime = h["end_time"] as? TimeInterval else { return nil }
+            return SessionHalfData(
+                halfNumber: halfNumber,
+                startTime: startTime,
+                endTime: endTime,
+                goals: h["goals"] as? Int ?? 0,
+                assists: h["assists"] as? Int ?? 0,
+                distanceMeters: h["distance_meters"] as? Double ?? 0,
+                elapsedSeconds: h["elapsed_seconds"] as? Int ?? 0,
+                swappedSides: h["swapped_sides"] as? Bool
+            )
+        }
+        return try? JSONEncoder().encode(parsed)
+    }
+
     private static func findClosestHr(targetTs: TimeInterval, hrData: [(ts: TimeInterval, bpm: Int)]) -> Int {
         guard !hrData.isEmpty else { return 0 }
         var bestIdx = 0
@@ -293,7 +369,12 @@ class WatchSync: NSObject, ObservableObject, WCSessionDelegate {
 
     /// Search for nearby football/soccer fields using MKLocalSearch
     static func searchNearbyFootballField(coordinate: CLLocationCoordinate2D, radiusMeters: Double = 500) async -> String? {
-        let queries = ["足球场", "football field", "soccer field"]
+        let queries = ["足球场", "足球", "soccer field", "football field"]
+        let excludeKeywords = ["篮球", "网球", "羽毛球", "乒乓", "排球", "棒球", "高尔夫",
+                               "游泳", "健身", "瑜伽", "拳击", "台球", "保龄球",
+                               "basketball", "tennis", "badminton", "golf", "swimming", "gym"]
+        let footballKeywords = ["足球", "soccer", "football", "球场"]
+
         for query in queries {
             let request = MKLocalSearch.Request()
             request.naturalLanguageQuery = query
@@ -309,7 +390,14 @@ class WatchSync: NSObject, ObservableObject, WCSessionDelegate {
                 let nearby = response.mapItems
                     .filter { item in
                         guard let itemLoc = item.placemark.location else { return false }
-                        return location.distance(from: itemLoc) <= radiusMeters
+                        guard location.distance(from: itemLoc) <= radiusMeters else { return false }
+                        let name = (item.name ?? "").lowercased()
+                        // Exclude non-football venues
+                        for kw in excludeKeywords where name.contains(kw.lowercased()) { return false }
+                        // Must contain a football keyword
+                        let combined = name + " " + (item.placemark.title ?? "").lowercased()
+                        return footballKeywords.contains { combined.contains($0.lowercased()) }
+                            || item.pointOfInterestCategory == .stadium
                     }
                     .sorted { a, b in
                         let distA = location.distance(from: a.placemark.location!)

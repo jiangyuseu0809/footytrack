@@ -236,6 +236,10 @@ struct SessionPosterView: View {
                     .foregroundColor(.white)
 
                 LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 3), spacing: 8) {
+                    if session.goals > 0 || session.assists > 0 {
+                        posterStat("soccerball", "进球", "\(session.goals)", "个", [Color(hex: 0x10B981), Color(hex: 0x059669)])
+                        posterStat("hand.point.up.fill", "助攻", "\(session.assists)", "次", [Color(hex: 0x3B82F6), Color(hex: 0x2563EB)])
+                    }
                     posterStat("clock.fill", "运动时长", "\(durationMin)", "min", [Color(hex: 0x3B82F6), Color(hex: 0x06B6D4)])
                     posterStat("figure.run", "总距离", String(format: "%.1f", session.totalDistanceMeters / 1000), "km", [Color(hex: 0xA855F7), Color(hex: 0xEC4899)])
                     posterStat("bolt.fill", "冲刺次数", "\(session.sprintCount)", "次", [Color(hex: 0xF59E0B), Color(hex: 0xF97316)])

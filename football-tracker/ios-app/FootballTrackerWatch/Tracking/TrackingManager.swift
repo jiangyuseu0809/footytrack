@@ -12,24 +12,51 @@ struct SyncTrackPoint: Codable {
     let accuracy: Double
 }
 
-/// Manages GPS tracking, heart rate monitoring, and data sync for watchOS.
+/// Data for a single half/period of a match
+struct HalfData {
+    var startTime: Date
+    var endTime: Date?
+    var trackPoints: [(timestamp: Date, lat: Double, lon: Double, speed: Double, accuracy: Double)] = []
+    var heartRateData: [(timestamp: Date, bpm: Int)] = []
+    var goals: Int = 0
+    var assists: Int = 0
+    var distanceMeters: Double = 0
+    var elapsedSeconds: Int = 0
+    var swappedSides: Bool = false
+}
+
+enum GameState: Equatable {
+    case idle
+    case countdown(Int)  // countdown number
+    case playing
+    case paused
+    case halftime        // between halves
+    case finished
+}
+
+/// Manages GPS tracking, heart rate monitoring, multi-half match, and data sync for watchOS.
 @MainActor
 class TrackingManager: NSObject, ObservableObject {
 
     // MARK: - Published State
 
-    @Published var isTracking = false
-    @Published var showSummary = false
-    @Published var elapsedSeconds: Int = 0
+    @Published var gameState: GameState = .idle
+    @Published var elapsedSeconds: Int = 0          // current half elapsed
+    @Published var totalElapsedSeconds: Int = 0     // total across all halves
     @Published var totalDistanceMeters: Double = 0.0
     @Published var currentSpeedMs: Double = 0.0
     @Published var currentHeartRate: Int = 0
+    @Published var goals: Int = 0
+    @Published var assists: Int = 0
+    @Published var currentHalf: Int = 1
+    @Published var swappedSides: Bool = false
 
     // Summary data
     @Published var summaryDistanceMeters: Double = 0.0
     @Published var summaryDurationSeconds: Int = 0
     @Published var summaryCalories: Double = 0.0
-    @Published var summarySlackIndex: Int = 0
+    @Published var summaryGoals: Int = 0
+    @Published var summaryAssists: Int = 0
 
     // MARK: - Private
 
@@ -38,11 +65,17 @@ class TrackingManager: NSObject, ObservableObject {
     private var workoutSession: HKWorkoutSession?
     private var workoutBuilder: HKLiveWorkoutBuilder?
     private var timer: Timer?
+    private var countdownTimer: Timer?
 
-    private var trackPoints: [(timestamp: Date, lat: Double, lon: Double, speed: Double, accuracy: Double)] = []
-    private var heartRateData: [(timestamp: Date, bpm: Int)] = []
-    private var sessionStartTime: Date?
+    private var currentTrackPoints: [(timestamp: Date, lat: Double, lon: Double, speed: Double, accuracy: Double)] = []
+    private var currentHeartRateData: [(timestamp: Date, bpm: Int)] = []
+    private var matchStartTime: Date?
+    private var halfStartTime: Date?
     private var lastLocation: CLLocation?
+    private var halfDistanceMeters: Double = 0.0
+
+    /// Completed halves data
+    private var completedHalves: [HalfData] = []
 
     // MARK: - Init
 
@@ -51,46 +84,142 @@ class TrackingManager: NSObject, ObservableObject {
         super.init()
     }
 
-    // MARK: - Start / Stop
+    // MARK: - Game Flow
 
-    func startTracking() {
-        guard !isTracking else { return }
-        isTracking = true
-        showSummary = false
+    func startGame() {
+        guard gameState == .idle else { return }
+
+        // Reset everything
+        goals = 0
+        assists = 0
+        currentHalf = 1
         elapsedSeconds = 0
-        totalDistanceMeters = 0.0
-        currentSpeedMs = 0.0
+        totalElapsedSeconds = 0
+        totalDistanceMeters = 0
+        halfDistanceMeters = 0
+        currentSpeedMs = 0
         currentHeartRate = 0
-        trackPoints = []
-        heartRateData = []
+        currentTrackPoints = []
+        currentHeartRateData = []
+        completedHalves = []
         lastLocation = nil
-        sessionStartTime = Date()
+        matchStartTime = Date()
+        halfStartTime = Date()
 
-        // Request HealthKit authorization then start
-        requestHealthKitAuth { [weak self] in
+        // Start countdown 3, 2, 1
+        gameState = .countdown(3)
+        startCountdown()
+    }
+
+    private func startCountdown() {
+        var count = 3
+        gameState = .countdown(count)
+        countdownTimer?.invalidate()
+        countdownTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] timer in
             Task { @MainActor in
-                self?.setupLocationManager()
-                self?.startWorkout()
-
-                self?.timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
-                    Task { @MainActor in
-                        self?.elapsedSeconds += 1
-                    }
+                guard let self = self else { timer.invalidate(); return }
+                count -= 1
+                if count > 0 {
+                    self.gameState = .countdown(count)
+                } else {
+                    timer.invalidate()
+                    self.countdownTimer = nil
+                    self.beginPlaying()
                 }
             }
         }
     }
 
-    func stopTracking() {
-        guard isTracking else { return }
-        isTracking = false
+    private func beginPlaying() {
+        gameState = .playing
+        halfStartTime = Date()
+
+        if workoutSession == nil {
+            // First half — start tracking infrastructure
+            requestHealthKitAuth { [weak self] in
+                Task { @MainActor in
+                    self?.setupLocationManager()
+                    self?.startWorkout()
+                    self?.startTimer()
+                }
+            }
+        } else {
+            // Resuming for next half — location & workout already running
+            startTimer()
+        }
+    }
+
+    func pauseGame() {
+        guard gameState == .playing else { return }
+        gameState = .paused
+        timer?.invalidate()
+        timer = nil
+    }
+
+    func resumeGame() {
+        guard gameState == .paused else { return }
+        gameState = .playing
+        startTimer()
+    }
+
+    func endHalf() {
+        guard gameState == .playing || gameState == .paused else { return }
         timer?.invalidate()
         timer = nil
 
+        // Save current half data
+        let half = HalfData(
+            startTime: halfStartTime ?? Date(),
+            endTime: Date(),
+            trackPoints: currentTrackPoints,
+            heartRateData: currentHeartRateData,
+            goals: goals,
+            assists: assists,
+            distanceMeters: halfDistanceMeters,
+            elapsedSeconds: elapsedSeconds,
+            swappedSides: swappedSides
+        )
+        completedHalves.append(half)
+
+        // Always go to halftime — user decides to continue or end
+        gameState = .halftime
+    }
+
+    func startNextHalf(swapSides: Bool = false) {
+        guard gameState == .halftime else { return }
+        currentHalf += 1
+
+        // Reset per-half tracking including goals/assists
+        currentTrackPoints = []
+        currentHeartRateData = []
+        elapsedSeconds = 0
+        halfDistanceMeters = 0
+        lastLocation = nil
+        goals = 0
+        assists = 0
+        swappedSides = swapSides
+
+        // Start countdown for next half
+        gameState = .countdown(3)
+        startCountdown()
+    }
+
+    func endMatchFromHalftime() {
+        guard gameState == .halftime else { return }
+        endMatch()
+    }
+
+    private func endMatch() {
+        timer?.invalidate()
+        timer = nil
+
+        print("[TrackingManager] endMatch called, completedHalves=\(completedHalves.count)")
+
+        // Stop location & workout
         locationManager?.stopUpdatingLocation()
         locationManager = nil
 
-        // End workout and collect HealthKit calories
+        // Get HealthKit calories
         if let builder = workoutBuilder {
             let calorieType = HKQuantityType.quantityType(forIdentifier: .activeEnergyBurned)!
             if let stats = builder.statistics(for: calorieType),
@@ -104,20 +233,51 @@ class TrackingManager: NSObject, ObservableObject {
         }
 
         workoutSession?.end()
+        workoutSession = nil
+        workoutBuilder = nil
 
         // Compute summary
-        summaryDurationSeconds = elapsedSeconds
+        summaryDurationSeconds = totalElapsedSeconds
         summaryDistanceMeters = totalDistanceMeters
-        summarySlackIndex = computeSlackIndex()
+        summaryGoals = completedHalves.reduce(0) { $0 + $1.goals }
+        summaryAssists = completedHalves.reduce(0) { $0 + $1.assists }
 
-        // Send session data to iPhone via WatchConnectivity
+        // Sync all halves to iPhone
         syncToPhone()
 
-        showSummary = true
+        gameState = .finished
     }
 
-    func dismissSummary() {
-        showSummary = false
+    func startNewGame() {
+        gameState = .idle
+    }
+
+    func incrementGoals() {
+        goals += 1
+    }
+
+    func decrementGoals() {
+        if goals > 0 { goals -= 1 }
+    }
+
+    func incrementAssists() {
+        assists += 1
+    }
+
+    func decrementAssists() {
+        if assists > 0 { assists -= 1 }
+    }
+
+    // MARK: - Timer
+
+    private func startTimer() {
+        timer?.invalidate()
+        timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
+            Task { @MainActor in
+                self?.elapsedSeconds += 1
+                self?.totalElapsedSeconds += 1
+            }
+        }
     }
 
     // MARK: - HealthKit Authorization
@@ -132,8 +292,9 @@ class TrackingManager: NSObject, ObservableObject {
         ]
         healthStore.requestAuthorization(toShare: typesToWrite, read: typesToRead) { success, error in
             if let error = error {
-                print("HealthKit auth error: \(error)")
+                print("[TrackingManager] HealthKit auth error: \(error)")
             }
+            print("[TrackingManager] HealthKit auth result: success=\(success)")
             completion()
         }
     }
@@ -170,23 +331,29 @@ class TrackingManager: NSObject, ObservableObject {
             workoutBuilder?.delegate = self
             workoutSession?.delegate = self
 
-            workoutSession?.startActivity(with: Date())
-            workoutBuilder?.beginCollection(withStart: Date()) { _, _ in }
+            let startDate = Date()
+            workoutSession?.startActivity(with: startDate)
+            workoutBuilder?.beginCollection(withStart: startDate) { success, error in
+                if let error = error {
+                    print("[TrackingManager] Workout beginCollection error: \(error)")
+                }
+                print("[TrackingManager] Workout beginCollection success=\(success)")
+            }
         } catch {
-            print("Failed to start workout: \(error)")
+            print("[TrackingManager] Failed to start workout: \(error)")
         }
     }
 
-    // MARK: - Analysis (simplified — shared KMP via Swift bridge)
+    // MARK: - Analysis
 
     private func estimateCalories() -> Double {
-        // Simplified MET-based estimation (mirrors KMP CalorieEstimator)
         let weightKg = 70.0
         var total = 0.0
-        for i in 1..<trackPoints.count {
-            let dt = trackPoints[i].timestamp.timeIntervalSince(trackPoints[i-1].timestamp) / 60.0
+        let allPoints = completedHalves.flatMap { $0.trackPoints } + currentTrackPoints
+        for i in 1..<allPoints.count {
+            let dt = allPoints[i].timestamp.timeIntervalSince(allPoints[i-1].timestamp) / 60.0
             guard dt > 0, dt < 5 else { continue }
-            let speedKmh = trackPoints[i].speed * 3.6
+            let speedKmh = allPoints[i].speed * 3.6
             let met: Double
             switch speedKmh {
             case ..<0.5: met = 1.5
@@ -201,51 +368,30 @@ class TrackingManager: NSObject, ObservableObject {
         return total
     }
 
-    private func computeSlackIndex() -> Int {
-        guard trackPoints.count > 1 else { return 100 }
-        let totalTime = trackPoints.last!.timestamp.timeIntervalSince(trackPoints.first!.timestamp)
-        guard totalTime > 0 else { return 100 }
-
-        var standingTime = 0.0
-        for i in 1..<trackPoints.count {
-            let dt = trackPoints[i].timestamp.timeIntervalSince(trackPoints[i-1].timestamp)
-            if trackPoints[i].speed * 3.6 < 0.5 {
-                standingTime += dt
-            }
-        }
-        let standingRatio = standingTime / totalTime
-        return min(100, max(0, Int(standingRatio * 100)))
-    }
-
     // MARK: - Sync
 
     private func syncToPhone() {
         let sessionId = UUID().uuidString
-        let startTs = sessionStartTime?.timeIntervalSince1970 ?? 0
+        let startTs = matchStartTime?.timeIntervalSince1970 ?? 0
         let endTs = Date().timeIntervalSince1970
 
-        // Build track point records
-        let records = trackPoints.map { pt -> SyncTrackPoint in
-            let closestHr = heartRateData.min(by: {
-                abs($0.timestamp.timeIntervalSince(pt.timestamp)) < abs($1.timestamp.timeIntervalSince(pt.timestamp))
-            })?.bpm ?? 0
-            return SyncTrackPoint(
-                timestamp: pt.timestamp.timeIntervalSince1970,
-                latitude: pt.lat,
-                longitude: pt.lon,
-                speed: pt.speed,
-                heartRate: closestHr,
-                accuracy: pt.accuracy
-            )
+        // Build halves data for sync
+        var halvesPayload: [[String: Any]] = []
+        for (index, half) in completedHalves.enumerated() {
+            let halfPayload = buildHalfPayload(half: half, halfNumber: index + 1)
+            halvesPayload.append(halfPayload)
         }
 
-        let latitudes = records.map { $0.latitude }
-        let longitudes = records.map { $0.longitude }
-        let timestamps = records.map { $0.timestamp }
-        let speeds = records.map { $0.speed }
+        // Merge all track points and HR for the combined session
+        let allTrackPoints = completedHalves.flatMap { $0.trackPoints }
+        let allHeartRate = completedHalves.flatMap { $0.heartRateData }
 
-        // Prefer raw HealthKit HR timeline to avoid sparse/zero values after nearest-point projection.
-        let hrEntries: [[String: Any]] = heartRateData
+        let latitudes = allTrackPoints.map { $0.lat }
+        let longitudes = allTrackPoints.map { $0.lon }
+        let timestamps = allTrackPoints.map { $0.timestamp.timeIntervalSince1970 }
+        let speeds = allTrackPoints.map { $0.speed }
+
+        let hrEntries: [[String: Any]] = allHeartRate
             .filter { $0.bpm > 0 }
             .map { ["ts": $0.timestamp.timeIntervalSince1970, "bpm": $0.bpm] }
 
@@ -257,11 +403,45 @@ class TrackingManager: NSObject, ObservableObject {
             "longitudes": longitudes,
             "timestamps": timestamps,
             "speeds": speeds,
-            "heart_rates": hrEntries
+            "heart_rates": hrEntries,
+            "goals": completedHalves.reduce(0) { $0 + $1.goals },
+            "assists": completedHalves.reduce(0) { $0 + $1.assists },
+            "halves_count": completedHalves.count,
+            "halves": halvesPayload
         ]
 
         PhoneSync.shared.sendSessionData(payload)
-        print("[Sync] Session sent to iPhone via WatchConnectivity")
+        print("[TrackingManager] Session with \(completedHalves.count) halves sent to iPhone")
+    }
+
+    private func buildHalfPayload(half: HalfData, halfNumber: Int) -> [String: Any] {
+        let hrEntries: [[String: Any]] = half.heartRateData
+            .filter { $0.bpm > 0 }
+            .map { ["ts": $0.timestamp.timeIntervalSince1970, "bpm": $0.bpm] }
+
+        return [
+            "half_number": halfNumber,
+            "start_time": half.startTime.timeIntervalSince1970,
+            "end_time": (half.endTime ?? Date()).timeIntervalSince1970,
+            "goals": half.goals,
+            "assists": half.assists,
+            "distance_meters": half.distanceMeters,
+            "elapsed_seconds": half.elapsedSeconds,
+            "swapped_sides": half.swappedSides,
+            "latitudes": half.trackPoints.map { $0.lat },
+            "longitudes": half.trackPoints.map { $0.lon },
+            "timestamps": half.trackPoints.map { $0.timestamp.timeIntervalSince1970 },
+            "speeds": half.trackPoints.map { $0.speed },
+            "heart_rates": hrEntries
+        ]
+    }
+
+    // MARK: - Helpers
+
+    func formatTime(_ seconds: Int) -> String {
+        let m = seconds / 60
+        let s = seconds % 60
+        return String(format: "%02d:%02d", m, s)
     }
 }
 
@@ -280,6 +460,7 @@ extension TrackingManager: CLLocationManagerDelegate {
 
     nonisolated func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
         Task { @MainActor in
+            guard gameState == .playing else { return }
             for location in locations {
                 guard location.horizontalAccuracy < 15 else { continue }
 
@@ -292,11 +473,13 @@ extension TrackingManager: CLLocationManagerDelegate {
                 )
 
                 if let last = lastLocation {
-                    totalDistanceMeters += location.distance(from: last)
+                    let dist = location.distance(from: last)
+                    totalDistanceMeters += dist
+                    halfDistanceMeters += dist
                 }
 
                 currentSpeedMs = max(0, location.speed)
-                trackPoints.append(point)
+                currentTrackPoints.append(point)
                 lastLocation = location
             }
         }
@@ -309,11 +492,13 @@ extension TrackingManager: HKWorkoutSessionDelegate {
     nonisolated func workoutSession(_ workoutSession: HKWorkoutSession,
                                     didChangeTo toState: HKWorkoutSessionState,
                                     from fromState: HKWorkoutSessionState,
-                                    date: Date) {}
+                                    date: Date) {
+        print("[TrackingManager] Workout state: \(fromState.rawValue) → \(toState.rawValue)")
+    }
 
     nonisolated func workoutSession(_ workoutSession: HKWorkoutSession,
                                     didFailWithError error: Error) {
-        print("Workout error: \(error)")
+        print("[TrackingManager] Workout error: \(error)")
     }
 }
 
@@ -332,7 +517,8 @@ extension TrackingManager: HKLiveWorkoutBuilderDelegate {
                 guard bpm > 0 else { continue }
                 Task { @MainActor in
                     self.currentHeartRate = bpm
-                    self.heartRateData.append((timestamp: Date(), bpm: bpm))
+                    self.currentHeartRateData.append((timestamp: Date(), bpm: bpm))
+                    print("[TrackingManager] Heart rate: \(bpm) bpm")
                 }
             }
         }

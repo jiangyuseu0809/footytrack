@@ -11,6 +11,20 @@ struct LocationEditorView: View {
     @State private var editText: String = ""
     @State private var nearbyFields: [MKMapItem] = []
     @State private var isSearching = false
+    @State private var searchTask: Task<Void, Never>?
+
+    /// Keywords that identify a venue as a football/soccer field
+    private static let footballKeywords = [
+        "足球", "soccer", "football", "球场", "绿茵", "草坪球场"
+    ]
+
+    /// Keywords for venues that are NOT football fields
+    private static let excludeKeywords = [
+        "篮球", "网球", "羽毛球", "乒乓", "排球", "棒球", "高尔夫",
+        "游泳", "健身", "瑜伽", "拳击", "台球", "保龄球", "壁球",
+        "basketball", "tennis", "badminton", "golf", "swimming", "gym",
+        "baseball", "volleyball", "bowling", "squash"
+    ]
 
     private var coordinate: CLLocationCoordinate2D? {
         if session.locationLatitude != 0 || session.locationLongitude != 0 {
@@ -29,13 +43,8 @@ struct LocationEditorView: View {
 
                 ScrollView {
                     VStack(spacing: 16) {
-                        // Current location
                         currentLocationCard
-
-                        // Manual input
                         manualInputSection
-
-                        // Nearby football fields
                         nearbyFieldsSection
                     }
                     .padding(16)
@@ -51,7 +60,7 @@ struct LocationEditorView: View {
             }
             .task {
                 editText = session.locationName
-                await searchNearbyFields()
+                await searchNearbyFields(query: nil)
             }
         }
     }
@@ -87,17 +96,33 @@ struct LocationEditorView: View {
 
     private var manualInputSection: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("手动输入")
+            Text("搜索球场")
                 .font(.system(size: 13, weight: .medium))
                 .foregroundColor(AppColors.textSecondary)
 
             HStack(spacing: 10) {
-                TextField("输入球场名称", text: $editText)
-                    .font(.system(size: 15))
-                    .foregroundColor(AppColors.textPrimary)
-                    .padding(12)
-                    .background(Color.white.opacity(0.06))
-                    .cornerRadius(10)
+                HStack(spacing: 8) {
+                    Image(systemName: "magnifyingglass")
+                        .font(.system(size: 14))
+                        .foregroundColor(AppColors.textSecondary)
+                    TextField("输入足球场名称搜索", text: $editText)
+                        .font(.system(size: 15))
+                        .foregroundColor(AppColors.textPrimary)
+                        .autocorrectionDisabled()
+                    if !editText.isEmpty {
+                        Button {
+                            editText = ""
+                            triggerSearch(query: nil)
+                        } label: {
+                            Image(systemName: "xmark.circle.fill")
+                                .font(.system(size: 14))
+                                .foregroundColor(AppColors.textSecondary)
+                        }
+                    }
+                }
+                .padding(12)
+                .background(Color.white.opacity(0.06))
+                .cornerRadius(10)
 
                 Button {
                     guard !editText.trimmingCharacters(in: .whitespaces).isEmpty else { return }
@@ -122,6 +147,14 @@ struct LocationEditorView: View {
             RoundedRectangle(cornerRadius: 14)
                 .stroke(Color.white.opacity(0.08), lineWidth: 0.5)
         )
+        .onChange(of: editText) { _, newValue in
+            let trimmed = newValue.trimmingCharacters(in: .whitespaces)
+            if trimmed.isEmpty {
+                triggerSearch(query: nil)
+            } else {
+                triggerSearch(query: trimmed)
+            }
+        }
     }
 
     // MARK: - Nearby Fields
@@ -129,7 +162,7 @@ struct LocationEditorView: View {
     private var nearbyFieldsSection: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
-                Text("附近球场")
+                Text("附近足球场")
                     .font(.system(size: 13, weight: .medium))
                     .foregroundColor(AppColors.textSecondary)
                 Spacer()
@@ -215,42 +248,118 @@ struct LocationEditorView: View {
 
     // MARK: - Search
 
-    private func searchNearbyFields() async {
+    /// Debounced search trigger
+    private func triggerSearch(query: String?) {
+        searchTask?.cancel()
+        searchTask = Task {
+            try? await Task.sleep(nanoseconds: 300_000_000) // 300ms debounce
+            guard !Task.isCancelled else { return }
+            await searchNearbyFields(query: query)
+        }
+    }
+
+    private func searchNearbyFields(query: String?) async {
         guard let coord = coordinate else { return }
         isSearching = true
         defer { isSearching = false }
 
-        var allItems: [MKMapItem] = []
-        let queries = ["足球场", "football field", "soccer field", "体育场"]
         let location = CLLocation(latitude: coord.latitude, longitude: coord.longitude)
 
-        for query in queries {
+        // Base queries always search for football fields
+        var searchQueries = ["足球场", "足球", "soccer field", "football field"]
+
+        // If user typed something, add it as an additional query
+        if let query = query, !query.isEmpty {
+            searchQueries.insert(query, at: 0)
+            // Also combine user query with football keyword
+            if !query.contains("足球") && !query.lowercased().contains("football") && !query.lowercased().contains("soccer") {
+                searchQueries.insert("\(query) 足球", at: 1)
+            }
+        }
+
+        var allItems: [MKMapItem] = []
+        var seenNames = Set<String>()
+
+        for q in searchQueries {
             let request = MKLocalSearch.Request()
-            request.naturalLanguageQuery = query
+            request.naturalLanguageQuery = q
             request.region = MKCoordinateRegion(
                 center: coord,
-                latitudinalMeters: 3000,
-                longitudinalMeters: 3000
+                latitudinalMeters: 5000,
+                longitudinalMeters: 5000
             )
             do {
                 let search = MKLocalSearch(request: request)
                 let response = try await search.start()
+                guard !Task.isCancelled else { return }
                 for item in response.mapItems {
-                    // Deduplicate by name
-                    if let name = item.name, !allItems.contains(where: { $0.name == name }) {
-                        allItems.append(item)
-                    }
+                    guard let name = item.name, !seenNames.contains(name) else { continue }
+                    seenNames.insert(name)
+                    allItems.append(item)
                 }
             } catch {
                 continue
             }
         }
 
-        // Sort by distance
-        nearbyFields = allItems.sorted { a, b in
+        guard !Task.isCancelled else { return }
+
+        // Filter: only keep items that look like football/soccer venues
+        let filtered = allItems.filter { item in
+            isFootballVenue(item: item)
+        }
+
+        // Sort: keyword-matching results first, then by distance
+        let userQuery = query?.lowercased().trimmingCharacters(in: .whitespaces) ?? ""
+        let sorted = filtered.sorted { a, b in
+            let nameA = (a.name ?? "").lowercased()
+            let nameB = (b.name ?? "").lowercased()
+
+            // If user has input, prioritize name matches
+            if !userQuery.isEmpty {
+                let matchA = nameA.contains(userQuery) || userQuery.split(separator: " ").allSatisfy { nameA.contains($0) }
+                let matchB = nameB.contains(userQuery) || userQuery.split(separator: " ").allSatisfy { nameB.contains($0) }
+                if matchA && !matchB { return true }
+                if !matchA && matchB { return false }
+            }
+
+            // Then sort by distance
             let distA = a.placemark.location.map { location.distance(from: $0) } ?? .infinity
             let distB = b.placemark.location.map { location.distance(from: $0) } ?? .infinity
             return distA < distB
         }
+
+        nearbyFields = sorted
+    }
+
+    /// Check if a map item is a football/soccer venue
+    private func isFootballVenue(item: MKMapItem) -> Bool {
+        let name = (item.name ?? "").lowercased()
+        let address = (item.placemark.title ?? "").lowercased()
+        let combined = name + " " + address
+
+        // Exclude non-football sports venues
+        for keyword in Self.excludeKeywords {
+            if name.contains(keyword.lowercased()) {
+                return false
+            }
+        }
+
+        // Must contain at least one football keyword
+        for keyword in Self.footballKeywords {
+            if combined.contains(keyword.lowercased()) {
+                return true
+            }
+        }
+
+        // Check MKMapItem category if available
+        if let category = item.pointOfInterestCategory {
+            // .stadium covers football stadiums
+            if category == .stadium {
+                return true
+            }
+        }
+
+        return false
     }
 }

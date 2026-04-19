@@ -12,11 +12,7 @@ struct FootballTrackerWatchApp: App {
 
     var body: some Scene {
         WindowGroup {
-            if trackingManager.showSummary {
-                WatchSummaryView(manager: trackingManager)
-            } else {
-                WatchTrackingView(manager: trackingManager)
-            }
+            WatchTrackingView(manager: trackingManager)
         }
     }
 }

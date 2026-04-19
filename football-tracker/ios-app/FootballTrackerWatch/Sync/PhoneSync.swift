@@ -29,12 +29,17 @@ class PhoneSync: NSObject, ObservableObject, WCSessionDelegate {
     // MARK: - Send Session Data to iPhone
 
     func sendSessionData(_ data: [String: Any]) {
-        guard WCSession.default.activationState == .activated else {
-            print("[PhoneSync] WCSession not activated")
+        let session = WCSession.default
+        guard session.activationState == .activated else {
+            print("[PhoneSync] WCSession not activated, state=\(session.activationState.rawValue)")
             return
         }
 
+        print("[PhoneSync] Sending session data, keys=\(data.keys.sorted()), transferUserInfo queued")
+        print("[PhoneSync] isReachable=\(session.isReachable), outstandingUserInfoTransfers=\(session.outstandingUserInfoTransfers.count)")
+
         // transferUserInfo is queued and delivered reliably in background
-        WCSession.default.transferUserInfo(data)
+        let transfer = session.transferUserInfo(data)
+        print("[PhoneSync] Transfer queued, isTransferring=\(transfer.isTransferring)")
     }
 }

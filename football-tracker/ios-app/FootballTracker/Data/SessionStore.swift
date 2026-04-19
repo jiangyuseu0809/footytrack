@@ -31,6 +31,13 @@ final class FootballSession {
     // Raw data stored as JSON-encoded Data
     var trackPointsData: Data?
 
+    // Goals & assists
+    var goals: Int
+    var assists: Int
+
+    // Multi-half data (JSON-encoded)
+    var halvesData: Data?
+
     init(
         id: String,
         startTime: Date,
@@ -53,7 +60,10 @@ final class FootballSession {
         locationLongitude: Double = 0,
         syncedToCloud: Bool = false,
         ownerUid: String = "",
-        trackPointsData: Data? = nil
+        trackPointsData: Data? = nil,
+        goals: Int = 0,
+        assists: Int = 0,
+        halvesData: Data? = nil
     ) {
         self.id = id
         self.startTime = startTime
@@ -77,7 +87,22 @@ final class FootballSession {
         self.syncedToCloud = syncedToCloud
         self.ownerUid = ownerUid
         self.trackPointsData = trackPointsData
+        self.goals = goals
+        self.assists = assists
+        self.halvesData = halvesData
     }
+}
+
+/// Data for a single half/period, stored as JSON in FootballSession.halvesData
+struct SessionHalfData: Codable {
+    let halfNumber: Int
+    let startTime: TimeInterval
+    let endTime: TimeInterval
+    let goals: Int
+    let assists: Int
+    let distanceMeters: Double
+    let elapsedSeconds: Int
+    let swappedSides: Bool?
 }
 
 /// A single GPS track point (Codable for JSON serialization).
