@@ -176,6 +176,178 @@ private struct PosterSpeedChartView: View {
     }
 }
 
+// MARK: - Static Heart Rate Chart for Poster
+
+private struct PosterHeartRateChartView: View {
+    let points: [TrackPointRecord]
+
+    private let samples: [(t: Double, v: Double)]
+    private let rawMax: Double
+    private let rawMin: Double
+
+    init(points: [TrackPointRecord]) {
+        self.points = points
+
+        guard let start = points.first?.timestamp else {
+            samples = []; rawMax = 0; rawMin = 0; return
+        }
+
+        let raw: [(t: Double, v: Double)] = points.compactMap { p in
+            let v = Double(p.heartRate)
+            guard v > 0 else { return nil }
+            return (t: p.timestamp - start, v: v)
+        }
+
+        rawMax = raw.map(\.v).max() ?? 0
+        rawMin = raw.map(\.v).min() ?? 0
+
+        guard raw.count > 2 else { samples = raw; return }
+
+        let targetCount = min(120, max(28, raw.count / 4))
+        guard raw.count > targetCount, targetCount > 1 else { samples = raw; return }
+
+        var agg: [(t: Double, v: Double)] = []
+        agg.reserveCapacity(targetCount)
+        let bucketSpan = Double(raw.count - 1) / Double(targetCount - 1)
+        for bucket in 0..<targetCount {
+            let s = min(max(0, Int((Double(bucket) * bucketSpan).rounded(.down))), raw.count - 1)
+            let e = min(max(s + 1, Int((Double(bucket + 1) * bucketSpan).rounded(.down))), raw.count)
+            let slice = raw[s..<e]
+            let avgT = slice.map(\.t).reduce(0, +) / Double(slice.count)
+            let avgV = slice.map(\.v).reduce(0, +) / Double(slice.count)
+            let peakV = slice.map(\.v).max() ?? avgV
+            agg.append((t: avgT, v: avgV * 0.85 + peakV * 0.15))
+        }
+        agg.sort { $0.t < $1.t }
+
+        // Exponential smoothing
+        var smoothed = agg
+        var prev = agg[0].v
+        for i in 1..<smoothed.count {
+            prev = 0.30 * smoothed[i].v + 0.70 * prev
+            smoothed[i] = (t: smoothed[i].t, v: prev)
+        }
+        samples = smoothed
+    }
+
+    private var maxTime: Double { max(1, samples.last?.t ?? 1) }
+    private var yMin: Double {
+        guard !samples.isEmpty else { return 60 }
+        let minV = samples.map(\.v).min() ?? 0
+        return max(40, floor(minV * 0.9 / 10) * 10)
+    }
+    private var yMax: Double {
+        guard !samples.isEmpty else { return 180 }
+        let maxV = max(samples.map(\.v).max() ?? 1, rawMax)
+        return max(yMin + 20, ceil(maxV * 1.1 / 10) * 10)
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("心率曲线 (bpm)")
+                .font(.system(size: 13, weight: .medium))
+                .foregroundColor(.white)
+
+            if samples.count < 2 {
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(Color.white.opacity(0.02))
+                    .frame(height: 130)
+                    .overlay(
+                        Text("暂无有效心率数据")
+                            .font(.caption)
+                            .foregroundColor(Color(hex: 0x8B949E))
+                    )
+            } else {
+                Canvas { context, size in
+                    let leftPad: CGFloat = 8
+                    let topPad: CGFloat = 6
+                    let bottomPad: CGFloat = 6
+                    let plotRect = CGRect(x: leftPad, y: topPad,
+                                          width: max(1, size.width - leftPad - 2),
+                                          height: max(1, size.height - topPad - bottomPad))
+
+                    let tickCount = 4
+                    let step = (yMax - yMin) / Double(max(1, tickCount - 1))
+                    for i in 0..<tickCount {
+                        let tick = yMax - Double(i) * step
+                        let ratio = (tick - yMin) / max(0.0001, yMax - yMin)
+                        let y = plotRect.maxY - CGFloat(ratio) * plotRect.height
+                        var grid = Path()
+                        grid.move(to: CGPoint(x: leftPad, y: y))
+                        grid.addLine(to: CGPoint(x: size.width, y: y))
+                        context.stroke(grid, with: .color(Color.white.opacity(0.06)), lineWidth: 0.5)
+                        let label = context.resolve(
+                            Text("\(Int(tick.rounded()))")
+                                .font(.system(size: 9))
+                                .foregroundColor(Color(hex: 0x8B949E))
+                        )
+                        context.draw(label, at: CGPoint(x: 1, y: y), anchor: .leading)
+                    }
+
+                    var normalized = samples
+                    if let first = normalized.first, first.t > 0.0001 {
+                        normalized.insert((t: 0, v: first.v), at: 0)
+                    }
+
+                    let chartPoints = normalized.map { item in
+                        let x = plotRect.minX + CGFloat(item.t / maxTime) * plotRect.width
+                        let ratio = (item.v - yMin) / max(0.0001, yMax - yMin)
+                        let y = plotRect.maxY - CGFloat(ratio) * plotRect.height
+                        return CGPoint(
+                            x: min(max(x, plotRect.minX), plotRect.maxX),
+                            y: min(max(y, plotRect.minY), plotRect.maxY)
+                        )
+                    }
+
+                    guard chartPoints.count >= 2 else { return }
+
+                    // Smooth curve
+                    var linePath = Path()
+                    linePath.move(to: chartPoints[0])
+                    for i in 1..<chartPoints.count {
+                        let mid = CGPoint(
+                            x: (chartPoints[i - 1].x + chartPoints[i].x) / 2,
+                            y: (chartPoints[i - 1].y + chartPoints[i].y) / 2
+                        )
+                        linePath.addQuadCurve(to: mid, control: chartPoints[i - 1])
+                        if i == chartPoints.count - 1 {
+                            linePath.addQuadCurve(to: chartPoints[i], control: chartPoints[i])
+                        }
+                    }
+
+                    var areaPath = linePath
+                    areaPath.addLine(to: CGPoint(x: chartPoints.last!.x, y: plotRect.maxY))
+                    areaPath.addLine(to: CGPoint(x: chartPoints.first!.x, y: plotRect.maxY))
+                    areaPath.closeSubpath()
+                    let lineColor = Color(hex: 0xEF4444)
+                    context.fill(areaPath, with: .linearGradient(
+                        Gradient(colors: [lineColor.opacity(0.25), lineColor.opacity(0.03)]),
+                        startPoint: CGPoint(x: plotRect.midX, y: plotRect.minY),
+                        endPoint: CGPoint(x: plotRect.midX, y: plotRect.maxY)
+                    ))
+                    context.stroke(linePath, with: .color(lineColor), lineWidth: 1.5)
+                }
+                .frame(height: 130)
+                .cornerRadius(8)
+
+                HStack(spacing: 20) {
+                    HStack(spacing: 4) {
+                        Circle().fill(Color(hex: 0xEF4444).opacity(0.85)).frame(width: 6, height: 6)
+                        Text("平均 \(Int(samples.map(\.v).reduce(0, +) / Double(max(samples.count, 1))))")
+                            .font(.system(size: 10)).foregroundColor(Color(hex: 0x8B949E))
+                    }
+                    HStack(spacing: 4) {
+                        Circle().fill(Color(hex: 0xF59E0B)).frame(width: 6, height: 6)
+                        Text("峰值 \(Int(rawMax))")
+                            .font(.system(size: 10)).foregroundColor(Color(hex: 0x8B949E))
+                    }
+                }
+                .frame(maxWidth: .infinity)
+            }
+        }
+    }
+}
+
 // MARK: - Share Poster View (rendered to image)
 
 struct SessionPosterView: View {
@@ -198,6 +370,23 @@ struct SessionPosterView: View {
 
     private var durationMin: Int {
         Int(session.endTime.timeIntervalSince(session.startTime) / 60)
+    }
+
+    private var radarAxes: [(label: String, value: Double)] {
+        let speed = min(1.0, stats.maxSpeedKmh / 30.0)
+        let distance = min(1.0, session.totalDistanceMeters / 10000.0)
+        let stamina = min(1.0, session.endTime.timeIntervalSince(session.startTime) / 5400.0)
+        let sprint = min(1.0, Double(session.sprintCount) / 30.0)
+        let coverage = min(1.0, session.coveragePercent / 100.0)
+        let intensity = min(1.0, stats.highIntensityDistanceMeters / 3000.0)
+        return [
+            (label: "速度", value: speed),
+            (label: "跑量", value: distance),
+            (label: "体力", value: stamina),
+            (label: "冲刺", value: sprint),
+            (label: "覆盖", value: coverage),
+            (label: "强度", value: intensity),
+        ]
     }
 
     var body: some View {
@@ -229,59 +418,68 @@ struct SessionPosterView: View {
             .cornerRadius(16)
             .padding(.horizontal, 20)
 
-            // Key Stats
+            // Key Stats — match detail page layout
             VStack(alignment: .leading, spacing: 10) {
                 Text("核心数据")
                     .font(.system(size: 17, weight: .semibold))
                     .foregroundColor(.white)
 
-                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 3), spacing: 8) {
-                    if session.goals > 0 || session.assists > 0 {
-                        posterStat("soccerball", "进球", "\(session.goals)", "个", [Color(hex: 0x10B981), Color(hex: 0x059669)])
-                        posterStat("hand.point.up.fill", "助攻", "\(session.assists)", "次", [Color(hex: 0x3B82F6), Color(hex: 0x2563EB)])
+                VStack(spacing: 6) {
+                    // Row 1: Goals + Assists (2 columns)
+                    HStack(spacing: 6) {
+                        posterStatCard(icon: "soccerball", label: "进球", value: "\(session.goals)", unit: "", color: Color(hex: 0x10B981))
+                        posterStatCard(icon: "hand.point.up.fill", label: "助攻", value: "\(session.assists)", unit: "", color: Color(hex: 0x3B82F6))
                     }
-                    posterStat("clock.fill", "运动时长", "\(durationMin)", "min", [Color(hex: 0x3B82F6), Color(hex: 0x06B6D4)])
-                    posterStat("figure.run", "总距离", String(format: "%.1f", session.totalDistanceMeters / 1000), "km", [Color(hex: 0xA855F7), Color(hex: 0xEC4899)])
-                    posterStat("bolt.fill", "冲刺次数", "\(session.sprintCount)", "次", [Color(hex: 0xF59E0B), Color(hex: 0xF97316)])
-                    posterStat("speedometer", "最高速度", String(format: "%.1f", session.maxSpeedKmh), "km/h", [Color(hex: 0xEF4444), Color(hex: 0xF97316)])
-                    posterStat("gauge.with.dots.needle.33percent", "平均速度", String(format: "%.1f", session.avgSpeedKmh), "km/h", [Color(hex: 0x10B981), Color(hex: 0x34D399)])
-                    posterStat("flame.fill", "卡路里", "\(Int(session.caloriesBurned))", "kcal", [Color(hex: 0xF59E0B), Color(hex: 0xEF4444)])
-                    posterStat("heart.fill", "平均心率", "\(session.avgHeartRate > 0 ? session.avgHeartRate : stats.avgHeartRate)", "bpm", [Color(hex: 0xEF4444), Color(hex: 0xEC4899)])
-                    posterStat("heart.circle.fill", "最高心率", "\(session.maxHeartRate > 0 ? session.maxHeartRate : stats.maxHeartRate)", "bpm", [Color(hex: 0xDC2626), Color(hex: 0xEF4444)])
-                    posterStat("circle.hexagongrid.fill", "覆盖率", String(format: "%.0f", session.coveragePercent), "%", [Color(hex: 0x8B5CF6), Color(hex: 0xA855F7)])
+                    // Row 2: Duration + Distance + Calories (3 columns)
+                    HStack(spacing: 6) {
+                        posterStatCard(icon: "clock.fill", label: "时长", value: "\(durationMin)", unit: "min", color: Color(hex: 0x3B82F6))
+                        posterStatCard(icon: "location.fill", label: "距离", value: String(format: "%.1f", session.totalDistanceMeters / 1000), unit: "km", color: Color(hex: 0xA855F7))
+                        posterStatCard(icon: "flame.fill", label: "卡路里", value: "\(Int(session.caloriesBurned))", unit: "kcal", color: Color(hex: 0xEF4444))
+                    }
+                    // Row 3: Sprints + Max Speed + Avg Speed (3 columns)
+                    HStack(spacing: 6) {
+                        posterStatCard(icon: "bolt.fill", label: "冲刺", value: "\(session.sprintCount)", unit: "次", color: Color(hex: 0xF59E0B))
+                        posterStatCard(icon: "speedometer", label: "最高速度", value: String(format: "%.1f", session.maxSpeedKmh), unit: "km/h", color: Color(hex: 0xEF4444))
+                        posterStatCard(icon: "gauge.with.dots.needle.33percent", label: "均速", value: String(format: "%.1f", session.avgSpeedKmh), unit: "km/h", color: Color(hex: 0x10B981))
+                    }
+                    // Row 4: Avg HR + Max HR + Coverage (3 columns)
+                    HStack(spacing: 6) {
+                        posterStatCard(icon: "heart.fill", label: "均心率", value: "\(session.avgHeartRate > 0 ? session.avgHeartRate : stats.avgHeartRate)", unit: "bpm", color: Color(hex: 0xEF4444))
+                        posterStatCard(icon: "heart.circle.fill", label: "最高心率", value: "\(session.maxHeartRate > 0 ? session.maxHeartRate : stats.maxHeartRate)", unit: "bpm", color: Color(hex: 0xDC2626))
+                        posterStatCard(icon: "circle.hexagongrid.fill", label: "覆盖率", value: String(format: "%.0f", session.coveragePercent), unit: "%", color: Color(hex: 0x8B5CF6))
+                    }
+                }
+                .padding(8)
+                .background(Color(hex: 0x1C2333))
+                .cornerRadius(12)
+            }
+            .padding(.horizontal, 20)
+            .padding(.top, 16)
+
+            // Speed chart
+            if !trackPoints.isEmpty {
+                posterChartSection(icon: "bolt.fill", iconColor: Color(hex: 0x3B82F6), title: "速度") {
+                    PosterSpeedChartView(points: trackPoints)
                 }
             }
-            .padding(20)
 
-            // Speed chart (static, no .task)
+            // Heart Rate chart
             if !trackPoints.isEmpty {
-                VStack(alignment: .leading, spacing: 8) {
-                    HStack(spacing: 6) {
-                        Image(systemName: "bolt.fill")
-                            .foregroundColor(Color(hex: 0x3B82F6))
-                        Text("速度")
-                            .font(.system(size: 17, weight: .semibold))
-                            .foregroundColor(.white)
-                    }
-                    PosterSpeedChartView(points: trackPoints)
-                        .padding(12)
-                        .background(Color(hex: 0x1C2333))
-                        .cornerRadius(12)
+                posterChartSection(icon: "heart.fill", iconColor: Color(hex: 0xEF4444), title: "心率") {
+                    PosterHeartRateChartView(points: trackPoints)
                 }
-                .padding(.horizontal, 20)
-                .padding(.bottom, 16)
+            }
+
+            // Radar chart
+            posterChartSection(icon: "pentagon.fill", iconColor: Color(hex: 0xA855F7), title: "能力雷达") {
+                RadarChartView(axes: radarAxes, size: 200)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 4)
             }
 
             // Heatmap
             if let latRange = latRange, let lonRange = lonRange {
-                VStack(alignment: .leading, spacing: 8) {
-                    HStack(spacing: 6) {
-                        Image(systemName: "map.fill")
-                            .foregroundColor(Color(hex: 0x10B981))
-                        Text("活动热图")
-                            .font(.system(size: 17, weight: .semibold))
-                            .foregroundColor(.white)
-                    }
+                posterChartSection(icon: "map.fill", iconColor: Color(hex: 0x10B981), title: "活动热图") {
                     HeatmapOverlayView(
                         grid: stats.heatmapGrid,
                         minLat: latRange.min, maxLat: latRange.max,
@@ -289,12 +487,7 @@ struct SessionPosterView: View {
                         attackEndToggle: .constant(true),
                         showToggle: false
                     )
-                    .padding(12)
-                    .background(Color(hex: 0x1C2333))
-                    .cornerRadius(12)
                 }
-                .padding(.horizontal, 20)
-                .padding(.bottom, 16)
             }
 
             // Footer
@@ -312,6 +505,27 @@ struct SessionPosterView: View {
         }
         .frame(width: 390)
         .background(Color(hex: 0x0D1117))
+    }
+
+    // MARK: - Helpers
+
+    private func posterChartSection<Content: View>(icon: String, iconColor: Color, title: String, @ViewBuilder content: () -> Content) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 6) {
+                Image(systemName: icon)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(iconColor)
+                Text(title)
+                    .font(.system(size: 17, weight: .semibold))
+                    .foregroundColor(.white)
+            }
+            content()
+                .padding(12)
+                .background(Color(hex: 0x1C2333))
+                .cornerRadius(12)
+        }
+        .padding(.horizontal, 20)
+        .padding(.top, 16)
     }
 
     private var latRange: (min: Double, max: Double)? {
@@ -345,32 +559,35 @@ struct SessionPosterView: View {
         }
     }
 
-    private func posterStat(_ icon: String, _ label: String, _ value: String, _ unit: String, _ gradient: [Color]) -> some View {
+    private func posterStatCard(icon: String, label: String, value: String, unit: String, color: Color) -> some View {
         VStack(alignment: .leading, spacing: 6) {
-            RoundedRectangle(cornerRadius: 8)
-                .fill(LinearGradient(colors: gradient, startPoint: .topLeading, endPoint: .bottomTrailing))
-                .frame(width: 28, height: 28)
-                .overlay(
-                    Image(systemName: icon)
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundColor(.white)
-                )
-            Text(label)
-                .font(.system(size: 9))
-                .foregroundColor(Color(hex: 0x8B949E))
+            HStack(spacing: 3) {
+                Image(systemName: icon)
+                    .font(.system(size: 9, weight: .semibold))
+                    .foregroundColor(color)
+                Text(label)
+                    .font(.system(size: 10))
+                    .foregroundColor(Color(hex: 0x8B949E))
+                    .lineLimit(1)
+            }
             HStack(alignment: .lastTextBaseline, spacing: 1) {
                 Text(value)
-                    .font(.system(size: 17, weight: .bold))
+                    .font(.system(size: 20, weight: .bold, design: .rounded))
                     .foregroundColor(.white)
-                Text(unit)
-                    .font(.system(size: 9))
-                    .foregroundColor(Color(hex: 0x8B949E))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+                if !unit.isEmpty {
+                    Text(unit)
+                        .font(.system(size: 9))
+                        .foregroundColor(Color(hex: 0x8B949E))
+                }
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(10)
-        .background(Color(hex: 0x1C2333))
-        .cornerRadius(10)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 8)
+        .background(Color.white.opacity(0.04))
+        .cornerRadius(8)
     }
 }
 
