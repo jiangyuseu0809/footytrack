@@ -267,6 +267,10 @@ final class ApiClient {
         try await request(endpoint: "/api/sessions/analysis")
     }
 
+    func getSessionSummary(sessionId: String) async throws -> MatchSummaryResponse {
+        try await request(endpoint: "/api/sessions/\(sessionId)/summary")
+    }
+
     // MARK: - Teams
 
     func createTeam(name: String) async throws -> TeamResponse {

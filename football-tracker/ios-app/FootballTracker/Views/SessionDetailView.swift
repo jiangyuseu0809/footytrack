@@ -18,6 +18,9 @@ struct SessionDetailView: View {
     @State private var isGeneratingPoster = false
     @State private var showLocationEditor = false
     @State private var showAttackEnd = true
+    @State private var sessionSummary: String?
+    @State private var isLoadingSummary = false
+    @State private var isSummaryExpanded = false
 
     private var trackPoints: [TrackPointRecord] {
         cachedTrackPoints
@@ -103,6 +106,9 @@ struct SessionDetailView: View {
                             )
                         }
                     }
+
+                    // Match Summary (AI)
+                    matchSummarySection
                 }
                 .padding(.horizontal, 16)
                 .padding(.top, 12)
@@ -161,6 +167,22 @@ struct SessionDetailView: View {
                 cachedLonRange = nil
             }
             Self.markAsRead(sessionId: session.id)
+
+            // Load session summary from cache or fetch
+            let cacheKey = "session_summary_\(session.id)"
+            if let cached = UserDefaults.standard.string(forKey: cacheKey) {
+                sessionSummary = cached
+            } else {
+                isLoadingSummary = true
+                do {
+                    let result = try await ApiClient.shared.getSessionSummary(sessionId: session.id)
+                    sessionSummary = result.summary
+                    UserDefaults.standard.set(result.summary, forKey: cacheKey)
+                } catch {
+                    // Leave nil on failure
+                }
+                isLoadingSummary = false
+            }
         }
     }
 
@@ -179,6 +201,75 @@ struct SessionDetailView: View {
         ud.set(readIds, forKey: "read_session_ids")
 
         NotificationCenter.default.post(name: .sessionRecorded, object: nil)
+    }
+
+    // MARK: - Match Summary
+
+    private var matchSummarySection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 8) {
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(LinearGradient(colors: [Color(hex: 0x4F46E5), Color(hex: 0x7C3AED)], startPoint: .topLeading, endPoint: .bottomTrailing))
+                    .frame(width: 32, height: 32)
+                    .overlay(
+                        Image(systemName: "brain.head.profile")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundColor(.white)
+                    )
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("比赛总结")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(AppColors.textPrimary)
+                    Text("根据本场比赛数据由AI分析总结")
+                        .font(.caption2)
+                        .foregroundColor(AppColors.textSecondary)
+                }
+                Spacer()
+            }
+
+            if isLoadingSummary {
+                HStack(spacing: 8) {
+                    ProgressView()
+                        .tint(AppColors.textSecondary)
+                    Text("AI 分析中...")
+                        .font(.subheadline)
+                        .foregroundColor(AppColors.textSecondary)
+                }
+                .padding(.top, 4)
+            } else if let summary = sessionSummary {
+                Button {
+                    withAnimation(.easeInOut(duration: 0.25)) {
+                        isSummaryExpanded.toggle()
+                    }
+                } label: {
+                    HStack(alignment: .top, spacing: 8) {
+                        Text(summary)
+                            .font(.subheadline)
+                            .foregroundColor(AppColors.textPrimary)
+                            .lineLimit(isSummaryExpanded ? nil : 3)
+                            .multilineTextAlignment(.leading)
+                        Spacer(minLength: 0)
+                        Image(systemName: isSummaryExpanded ? "chevron.up" : "chevron.down")
+                            .font(.caption.weight(.semibold))
+                            .foregroundColor(AppColors.textSecondary)
+                            .padding(.top, 2)
+                    }
+                }
+                .buttonStyle(.plain)
+            } else {
+                Text("暂无分析结果")
+                    .font(.subheadline)
+                    .foregroundColor(AppColors.textSecondary)
+                    .padding(.top, 4)
+            }
+        }
+        .padding(14)
+        .background(AppColors.cardBg)
+        .cornerRadius(16)
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(Color.white.opacity(0.08), lineWidth: 0.5)
+        )
     }
 
     // MARK: - Venue & Time Card
