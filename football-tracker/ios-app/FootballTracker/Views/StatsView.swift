@@ -1087,6 +1087,11 @@ private struct StatsRadarView: View {
             let center = CGPoint(x: proxy.size.width / 2, y: proxy.size.height / 2)
             let radius = size * 0.34
 
+            // Adaptive scaling: scale up so max value fills ~80% of chart
+            let maxVal = metrics.map(\.value).max() ?? 0
+            let scaleFactor: CGFloat = maxVal > 0 ? 0.8 / CGFloat(maxVal / 100.0) : 1.0
+            let hasData = metrics.contains { $0.value > 0 }
+
             ZStack {
                 ForEach(1...4, id: \.self) { level in
                     RadarPolygon(points: points(radius: radius * CGFloat(level) / 4, center: center, count: metrics.count))
@@ -1101,26 +1106,44 @@ private struct StatsRadarView: View {
                     }
                     .stroke(AppColors.dividerColor.opacity(0.7), lineWidth: 0.8)
 
-                    Text(metrics[idx].name)
+                    let labelStr = hasData ? "\(metrics[idx].name) \(Int(metrics[idx].value))" : metrics[idx].name
+                    Text(labelStr)
                         .font(.caption2.weight(.semibold))
                         .foregroundColor(AppColors.textSecondary)
-                        .position(pointAt(index: idx, count: metrics.count, radius: radius + 18, center: center))
+                        .position(pointAt(index: idx, count: metrics.count, radius: radius + 24, center: center))
                 }
 
-                RadarPolygon(points: valuePoints(radius: radius, center: center))
-                    .fill(AppColors.neonBlue.opacity(0.22))
+                if hasData {
+                    RadarPolygon(points: valuePoints(radius: radius, scaleFactor: scaleFactor, center: center))
+                        .fill(AppColors.neonBlue.opacity(0.22))
 
-                RadarPolygon(points: valuePoints(radius: radius, center: center))
-                    .stroke(AppColors.neonBlue, lineWidth: 2)
+                    RadarPolygon(points: valuePoints(radius: radius, scaleFactor: scaleFactor, center: center))
+                        .stroke(AppColors.neonBlue, lineWidth: 2)
+
+                    // Data points
+                    ForEach(0..<metrics.count, id: \.self) { idx in
+                        let pt = scaledPoint(index: idx, radius: radius, scaleFactor: scaleFactor, center: center)
+                        Circle()
+                            .fill(AppColors.neonBlue)
+                            .frame(width: 6, height: 6)
+                            .position(pt)
+                    }
+                }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
     }
 
-    private func valuePoints(radius: CGFloat, center: CGPoint) -> [CGPoint] {
+    private func valuePoints(radius: CGFloat, scaleFactor: CGFloat, center: CGPoint) -> [CGPoint] {
         metrics.enumerated().map { idx, metric in
-            pointAt(index: idx, count: metrics.count, radius: radius * CGFloat(metric.value / 100), center: center)
+            scaledPoint(index: idx, radius: radius, scaleFactor: scaleFactor, center: center)
         }
+    }
+
+    private func scaledPoint(index: Int, radius: CGFloat, scaleFactor: CGFloat, center: CGPoint) -> CGPoint {
+        let raw = CGFloat(metrics[index].value / 100.0)
+        let scaled = min(raw * scaleFactor, 1.0)
+        return pointAt(index: index, count: metrics.count, radius: radius * scaled, center: center)
     }
 
     private func points(radius: CGFloat, center: CGPoint, count: Int) -> [CGPoint] {
