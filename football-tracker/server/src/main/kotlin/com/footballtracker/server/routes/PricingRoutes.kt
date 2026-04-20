@@ -24,17 +24,25 @@ data class PricingResponse(
 
 fun Route.pricingRoutes() {
     get("/pricing") {
-        val monthlyPrice = System.getenv("PRO_MONTHLY_PRICE")?.toDoubleOrNull() ?: 9.9
-        val yearlyPrice = System.getenv("PRO_YEARLY_PRICE")?.toDoubleOrNull() ?: 66.0
-        val lifetimePrice = System.getenv("PRO_LIFETIME_PRICE")?.toDoubleOrNull() ?: 128.0
-
-        val monthlyOriginal = System.getenv("PRO_MONTHLY_ORIGINAL")?.toDoubleOrNull()
-        val yearlyOriginal = System.getenv("PRO_YEARLY_ORIGINAL")?.toDoubleOrNull()
-        val lifetimeOriginal = System.getenv("PRO_LIFETIME_ORIGINAL")?.toDoubleOrNull()
+        val monthlyBase = System.getenv("PRO_MONTHLY_PRICE")?.toDoubleOrNull() ?: 9.9
+        val yearlyBase = System.getenv("PRO_YEARLY_PRICE")?.toDoubleOrNull() ?: 66.0
+        val lifetimeBase = System.getenv("PRO_LIFETIME_PRICE")?.toDoubleOrNull() ?: 128.0
 
         val monthlyDiscount = System.getenv("PRO_MONTHLY_DISCOUNT")?.toIntOrNull()
         val yearlyDiscount = System.getenv("PRO_YEARLY_DISCOUNT")?.toIntOrNull()
         val lifetimeDiscount = System.getenv("PRO_LIFETIME_DISCOUNT")?.toIntOrNull()
+
+        fun applyDiscount(base: Double, discount: Int?): Pair<Double, Double?> {
+            if (discount != null && discount in 1..99) {
+                val actual = Math.round(base * discount / 100.0 * 10.0) / 10.0
+                return actual to base
+            }
+            return base to null
+        }
+
+        val (lifetimePrice, lifetimeOriginal) = applyDiscount(lifetimeBase, lifetimeDiscount)
+        val (yearlyPrice, yearlyOriginal) = applyDiscount(yearlyBase, yearlyDiscount)
+        val (monthlyPrice, monthlyOriginal) = applyDiscount(monthlyBase, monthlyDiscount)
 
         val plans = listOf(
             PlanResponse(
