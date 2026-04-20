@@ -681,6 +681,10 @@ struct ProfileView: View {
             showLoginSheet = true
             return
         }
+        guard authManager.isPro else {
+            syncStatus = "云同步为 Pro 会员专属功能，请升级后使用"
+            return
+        }
         isSyncing = true
         syncStatus = "正在上传..."
         Task {
@@ -699,6 +703,10 @@ struct ProfileView: View {
     private func restoreData() {
         guard authManager.isLoggedIn else {
             showLoginSheet = true
+            return
+        }
+        guard authManager.isPro else {
+            syncStatus = "数据恢复为 Pro 会员专属功能，请升级后使用"
             return
         }
         isSyncing = true
