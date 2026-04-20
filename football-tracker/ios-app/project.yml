@@ -18,7 +18,7 @@ targets:
       path: FootballTracker/Info.plist
       properties:
         CFBundleDevelopmentRegion: zh_CN
-        CFBundleDisplayName: 野球记
+        CFBundleDisplayName: FootyTrack
         UILaunchScreen: {}
         NSAppTransportSecurity:
           NSAllowsArbitraryLoads: true
@@ -63,7 +63,7 @@ targets:
       path: FootballTrackerWatch/Info.plist
       properties:
         CFBundleDevelopmentRegion: zh_CN
-        CFBundleDisplayName: 野球记
+        CFBundleDisplayName: FootyTrack
         UILaunchScreen: {}
         WKApplication: true
         WKCompanionAppBundleIdentifier: com.footballtracker.ios

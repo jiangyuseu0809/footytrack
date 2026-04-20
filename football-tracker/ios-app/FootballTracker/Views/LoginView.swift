@@ -23,7 +23,7 @@ struct LoginView: View {
                             .font(.system(size: 60))
                             .foregroundStyle(AppColors.neonGradient)
 
-                        Text("野球记")
+                        Text("FootyTrack")
                             .font(.system(size: 32, weight: .bold))
                             .foregroundColor(AppColors.textPrimary)
 

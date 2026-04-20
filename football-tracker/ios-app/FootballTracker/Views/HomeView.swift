@@ -152,7 +152,7 @@ struct HomeView: View {
 
     var body: some View {
         contentRoot
-            .navigationTitle("野球记")
+            .navigationTitle("FootyTrack")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
@@ -165,7 +165,7 @@ struct HomeView: View {
                 }
                 Button("取消", role: .cancel) {}
             } message: {
-                Text("在 Apple Watch 上安装野球记，即可记录踢球数据并自动同步到手机。")
+                Text("在 Apple Watch 上安装 FootyTrack，即可记录踢球数据并自动同步到手机。")
             }
             .onAppear {
                 if watchSync.isWatchConnected {
@@ -713,7 +713,7 @@ struct HomeView: View {
                     .font(.title3.weight(.bold))
                     .foregroundColor(AppColors.textPrimary)
 
-                Text("Apple Watch 已连接，打开手表上的野球记开始记录比赛吧！")
+                Text("Apple Watch 已连接，打开手表上的 FootyTrack 开始记录比赛吧！")
                     .font(.subheadline)
                     .foregroundColor(AppColors.textSecondary)
                     .multilineTextAlignment(.center)
