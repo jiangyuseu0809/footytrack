@@ -18,9 +18,8 @@ struct SessionDetailView: View {
     @State private var isGeneratingPoster = false
     @State private var showLocationEditor = false
     @State private var showAttackEnd = true
-    @State private var sessionSummary: String?
+    @State private var sessionSummary: SessionSummaryResponse?
     @State private var isLoadingSummary = false
-    @State private var isSummaryExpanded = false
 
     private var trackPoints: [TrackPointRecord] {
         cachedTrackPoints
@@ -186,8 +185,9 @@ struct SessionDetailView: View {
             Self.markAsRead(sessionId: session.id)
 
             // Load session summary from cache or fetch
-            let cacheKey = "session_summary_\(session.id)"
-            if let cached = UserDefaults.standard.string(forKey: cacheKey) {
+            let cacheKey = "session_summary_v2_\(session.id)"
+            if let data = UserDefaults.standard.data(forKey: cacheKey),
+               let cached = try? JSONDecoder().decode(SessionSummaryResponse.self, from: data) {
                 sessionSummary = cached
             } else {
                 isLoadingSummary = true
@@ -205,8 +205,10 @@ struct SessionDetailView: View {
                         coveragePercent: session.coveragePercent
                     )
                     let result = try await ApiClient.shared.getSessionSummary(request: req)
-                    sessionSummary = result.summary
-                    UserDefaults.standard.set(result.summary, forKey: cacheKey)
+                    sessionSummary = result
+                    if let data = try? JSONEncoder().encode(result) {
+                        UserDefaults.standard.set(data, forKey: cacheKey)
+                    }
                 } catch {
                     print("[SessionSummary] error: \(error)")
                 }
@@ -265,26 +267,36 @@ struct SessionDetailView: View {
                         .foregroundColor(AppColors.textSecondary)
                 }
                 .padding(.top, 4)
-            } else if let summary = sessionSummary {
-                Button {
-                    withAnimation(.easeInOut(duration: 0.25)) {
-                        isSummaryExpanded.toggle()
-                    }
-                } label: {
-                    HStack(alignment: .top, spacing: 8) {
-                        Text(summary)
-                            .font(.subheadline)
-                            .foregroundColor(AppColors.textPrimary)
-                            .lineLimit(isSummaryExpanded ? nil : 3)
-                            .multilineTextAlignment(.leading)
-                        Spacer(minLength: 0)
-                        Image(systemName: isSummaryExpanded ? "chevron.up" : "chevron.down")
-                            .font(.caption.weight(.semibold))
-                            .foregroundColor(AppColors.textSecondary)
-                            .padding(.top, 2)
-                    }
+            } else if let s = sessionSummary {
+                VStack(alignment: .leading, spacing: 10) {
+                    // 总结
+                    summaryBlock(
+                        icon: "text.quote",
+                        iconColor: Color(hex: 0x6366F1),
+                        title: "总结",
+                        items: [s.summary]
+                    )
+
+                    Divider().background(Color.white.opacity(0.08))
+
+                    // 亮点
+                    summaryBlock(
+                        icon: "star.fill",
+                        iconColor: Color(hex: 0xF59E0B),
+                        title: "亮点",
+                        items: s.highlights
+                    )
+
+                    Divider().background(Color.white.opacity(0.08))
+
+                    // 改进
+                    summaryBlock(
+                        icon: "arrow.up.circle.fill",
+                        iconColor: Color(hex: 0x10B981),
+                        title: "改进",
+                        items: s.improvements
+                    )
                 }
-                .buttonStyle(.plain)
             } else {
                 Text("暂无分析结果")
                     .font(.subheadline)
@@ -299,6 +311,31 @@ struct SessionDetailView: View {
             RoundedRectangle(cornerRadius: 16)
                 .stroke(Color.white.opacity(0.08), lineWidth: 0.5)
         )
+    }
+
+    private func summaryBlock(icon: String, iconColor: Color, title: String, items: [String]) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 5) {
+                Image(systemName: icon)
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundColor(iconColor)
+                Text(title)
+                    .font(.caption.weight(.semibold))
+                    .foregroundColor(AppColors.textSecondary)
+            }
+            ForEach(items, id: \.self) { item in
+                HStack(alignment: .top, spacing: 6) {
+                    Circle()
+                        .fill(iconColor.opacity(0.7))
+                        .frame(width: 4, height: 4)
+                        .padding(.top, 6)
+                    Text(item)
+                        .font(.subheadline)
+                        .foregroundColor(AppColors.textPrimary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+        }
     }
 
     // MARK: - Venue & Time Card

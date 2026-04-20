@@ -26,33 +26,54 @@ data class SessionSummaryRequest(
     val coveragePercent: Double
 )
 
+@Serializable
+data class SessionSummaryResult(
+    val summary: String,
+    val highlights: List<String>,
+    val improvements: List<String>
+)
+
 class SessionSummaryService(private val openAiConfig: OpenAiConfig) {
     private val client = HttpClient(CIO)
     private val json = Json { ignoreUnknownKeys = true }
 
-    suspend fun getOrCreateSummary(req: SessionSummaryRequest): String {
+    suspend fun getOrCreateSummary(req: SessionSummaryRequest): SessionSummaryResult {
         val cached = transaction {
             SessionSummariesTable.selectAll()
                 .where { SessionSummariesTable.sessionId eq req.sessionId }
                 .firstOrNull()
                 ?.get(SessionSummariesTable.summary)
         }
-        if (cached != null) return cached
+        if (cached != null) {
+            return try {
+                json.decodeFromString<SessionSummaryResult>(cached)
+            } catch (e: Exception) {
+                // Legacy plain-text cache — delete and regenerate
+                transaction {
+                    SessionSummariesTable.deleteWhere { sessionId eq req.sessionId }
+                }
+                generateAndCache(req)
+            }
+        }
+        return generateAndCache(req)
+    }
 
-        val summary = generateSummary(req)
+    private suspend fun generateAndCache(req: SessionSummaryRequest): SessionSummaryResult {
+        val result = generateSummary(req)
+        val serialized = json.encodeToString(SessionSummaryResult.serializer(), result)
         transaction {
             SessionSummariesTable.insert {
                 it[sessionId] = req.sessionId
-                it[SessionSummariesTable.summary] = summary
+                it[summary] = serialized
                 it[createdAt] = System.currentTimeMillis()
             }
         }
-        return summary
+        return result
     }
 
-    private suspend fun generateSummary(req: SessionSummaryRequest): String {
+    private suspend fun generateSummary(req: SessionSummaryRequest): SessionSummaryResult {
         val prompt = """
-你是一个专业的足球数据分析师。根据以下单场比赛的运动数据，生成一段简洁的比赛总结分析。
+你是一个专业的足球数据分析师。根据以下单场比赛的运动数据，生成结构化的比赛分析。
 
 本场数据：
 - 时长：${req.durationMinutes} 分钟
@@ -64,7 +85,12 @@ class SessionSummaryService(private val openAiConfig: OpenAiConfig) {
 - 进球：${req.goals}，助攻：${req.assists}
 - 场地覆盖率：${"%.1f".format(req.coveragePercent)}%
 
-请生成150字以内的中文比赛总结，包含本场表现亮点、运动强度评价和简短建议。直接返回纯文本，不要 markdown 格式。
+请返回 JSON 格式（不要 markdown）：
+{
+  "summary": "一到两句话的整体总结",
+  "highlights": ["亮点1", "亮点2", "亮点3"],
+  "improvements": ["改进建议1", "改进建议2"]
+}
 """.trim()
 
         val apiUrl = "${openAiConfig.endpoint}/openai/deployments/${openAiConfig.deploymentName}/chat/completions?api-version=2025-04-01-preview"
@@ -89,12 +115,19 @@ class SessionSummaryService(private val openAiConfig: OpenAiConfig) {
         val responseText = response.bodyAsText()
         val responseJson = json.parseToJsonElement(responseText).jsonObject
 
-        return responseJson["choices"]
+        val content = responseJson["choices"]
             ?.jsonArray?.firstOrNull()
             ?.jsonObject?.get("message")
             ?.jsonObject?.get("content")
             ?.jsonPrimitive?.content
             ?.trim()
+            ?.removePrefix("```json")
+            ?.removePrefix("```")
+            ?.removeSuffix("```")
+            ?.trim()
             ?: throw RuntimeException("Failed to parse Azure OpenAI response")
+
+        return json.decodeFromString<SessionSummaryResult>(content)
     }
 }
+

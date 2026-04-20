@@ -249,3 +249,9 @@ struct MatchRankingsResponse: Decodable {
 struct MatchSummaryResponse: Decodable {
     let summary: String
 }
+
+struct SessionSummaryResponse: Codable {
+    let summary: String
+    let highlights: [String]
+    let improvements: [String]
+}

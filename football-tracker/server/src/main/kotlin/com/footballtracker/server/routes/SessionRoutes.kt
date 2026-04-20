@@ -145,8 +145,8 @@ fun Route.sessionRoutes(sessionService: SessionService, badgeService: BadgeServi
                 HttpStatusCode.BadRequest, mapOf("error" to "缺少 session id")
             )
             val req = call.receive<SessionSummaryRequest>()
-            val summary = sessionSummaryService.getOrCreateSummary(req.copy(sessionId = sessionId))
-            call.respond(mapOf("summary" to summary))
+            val result = sessionSummaryService.getOrCreateSummary(req.copy(sessionId = sessionId))
+            call.respond(result)
         }
     }
 }
