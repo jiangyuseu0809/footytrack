@@ -229,7 +229,6 @@ struct DaySummaryDetailView: View {
         .navigationTitle("日汇总")
         .navigationBarTitleDisplayMode(.inline)
         .toolbarTitleDisplayMode(.inline)
-        .hideTabBar()
         .task(id: sessionIdsSignature) {
             let sessions = section.sessions.sorted { $0.startTime < $1.startTime }
             let points = sessions.flatMap { store.getTrackPoints(for: $0) }
@@ -479,6 +478,7 @@ struct DaySummaryDetailView: View {
 struct StatsView: View {
     @ObservedObject var store: SessionStore
     @ObservedObject var authManager: AuthManager
+    @EnvironmentObject var router: AppRouter
     @State private var selectedAchievement: StatsAchievementItem?
     @State private var playerAnalysis: PlayerAnalysisResponse?
     @State private var isLoadingAnalysis = false
@@ -979,7 +979,9 @@ struct StatsView: View {
     }
 
     private var historySection: some View {
-        NavigationLink(destination: AllMatchesView(store: store)) {
+        Button {
+            router.push(AppRoute.allMatches)
+        } label: {
             VStack(alignment: .leading, spacing: 12) {
                 HStack {
                     sectionHeader(title: "比赛记录", icon: "clock.arrow.circlepath", showShare: false)
@@ -1634,12 +1636,11 @@ private struct EmptyPreviewCard: View {
 
 struct AllMatchesView: View {
     @ObservedObject var store: SessionStore
+    @EnvironmentObject var router: AppRouter
 
     @State private var sessionToDelete: FootballSession?
     @State private var showLocalDeleteAlert = false
     @State private var showCloudDeleteAlert = false
-    @State private var selectedSession: FootballSession?
-    @State private var navigateToDetail = false
 
     private var sortedSessions: [FootballSession] {
         store.sessions.sorted { $0.startTime > $1.startTime }
@@ -1668,8 +1669,7 @@ struct AllMatchesView: View {
                         MatchHistoryRow(session: session)
                             .contentShape(Rectangle())
                             .onTapGesture {
-                                selectedSession = session
-                                navigateToDetail = true
+                                router.push(AppRoute.sessionDetail(sessionId: session.id))
                             }
                             .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                                 Button(role: .destructive) {
@@ -1695,12 +1695,6 @@ struct AllMatchesView: View {
         .navigationTitle("全部比赛")
         .navigationBarTitleDisplayMode(.inline)
         .toolbarTitleDisplayMode(.inline)
-        .hideTabBar()
-        .navigationDestination(isPresented: $navigateToDetail) {
-            if let session = selectedSession {
-                SessionDetailView(session: session, store: store)
-            }
-        }
         .alert("确认删除", isPresented: $showLocalDeleteAlert) {
             Button("取消", role: .cancel) { sessionToDelete = nil }
             Button("删除", role: .destructive) { deleteLocal() }

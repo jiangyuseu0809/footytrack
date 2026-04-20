@@ -31,6 +31,7 @@ struct FootballTrackerApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     @StateObject private var sessionStore = SessionStore()
     @StateObject private var authManager = AuthManager()
+    @StateObject private var router = AppRouter()
 
     init() {
         // Activate WCSession early so watch state is available
@@ -40,6 +41,7 @@ struct FootballTrackerApp: App {
     var body: some Scene {
         WindowGroup {
             MainTabView(store: sessionStore, authManager: authManager)
+                .environmentObject(router)
                 .preferredColorScheme(.dark)
                 .onOpenURL { url in
                     print("[WeChat] onOpenURL: \(url)")
@@ -69,49 +71,152 @@ struct FootballTrackerApp: App {
 struct MainTabView: View {
     @ObservedObject var store: SessionStore
     @ObservedObject var authManager: AuthManager
+    @EnvironmentObject var router: AppRouter
     @State private var unreadCount = UserDefaults.standard.integer(forKey: "unread_session_count")
     @State private var selectedTab = 0
+    @ObservedObject private var watchSync = WatchSync.shared
+    @State private var showWatchAlert = false
+    @State private var isWatchPulseAnimating = false
+
+    private var tabTitle: String {
+        switch selectedTab {
+        case 0: return "FootyTrack"
+        case 1: return "球队"
+        case 2: return "统计"
+        case 3: return "我的"
+        default: return ""
+        }
+    }
 
     var body: some View {
-        TabView(selection: $selectedTab) {
-            NavigationStack {
+        NavigationStack(path: $router.path) {
+            TabView(selection: $selectedTab) {
                 HomeView(store: store, authManager: authManager)
-            }
-            .tabItem {
-                Image(systemName: "sportscourt.fill")
-                Text("首页")
-            }
-            .tag(0)
+                    .tabItem {
+                        Image(systemName: "sportscourt.fill")
+                        Text("首页")
+                    }
+                    .tag(0)
 
-            NavigationStack {
                 TeamHubView(authManager: authManager, store: store)
-            }
-            .tabItem {
-                Image(systemName: "flag.fill")
-                Text("球队")
-            }
-            .tag(1)
+                    .tabItem {
+                        Image(systemName: "flag.fill")
+                        Text("球队")
+                    }
+                    .tag(1)
 
-            NavigationStack {
                 StatsView(store: store, authManager: authManager)
-            }
-            .tabItem {
-                Image(systemName: "chart.bar.fill")
-                Text("统计")
-            }
-            .tag(2)
+                    .tabItem {
+                        Image(systemName: "chart.bar.fill")
+                        Text("统计")
+                    }
+                    .tag(2)
 
-            NavigationStack {
                 ProfileView(store: store, authManager: authManager)
+                    .tabItem {
+                        Image(systemName: "person.fill")
+                        Text("我的")
+                    }
+                    .badge(unreadCount > 0 ? unreadCount : 0)
+                    .tag(3)
             }
-            .tabItem {
-                Image(systemName: "person.fill")
-                Text("我的")
+            .tint(AppColors.neonBlue)
+            .navigationTitle(tabTitle)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbarTitleDisplayMode(.inline)
+            .toolbar {
+                if selectedTab == 0 {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button {
+                            if !watchSync.isWatchConnected {
+                                showWatchAlert = true
+                            }
+                        } label: {
+                            ZStack {
+                                if watchSync.isWatchConnected {
+                                    Circle()
+                                        .fill(AppColors.neonBlue.opacity(0.26))
+                                        .frame(width: 28, height: 28)
+                                        .scaleEffect(isWatchPulseAnimating ? 1.25 : 0.75)
+                                        .opacity(isWatchPulseAnimating ? 0 : 0.9)
+                                        .animation(
+                                            .easeOut(duration: 1.2).repeatForever(autoreverses: false),
+                                            value: isWatchPulseAnimating
+                                        )
+                                }
+                                Image(systemName: watchSync.isWatchConnected
+                                      ? "applewatch.radiowaves.left.and.right"
+                                      : "applewatch")
+                                    .font(.body.weight(.medium))
+                                    .foregroundColor(watchSync.isWatchConnected
+                                                     ? AppColors.neonBlue
+                                                     : AppColors.textSecondary)
+                            }
+                            .frame(width: 30, height: 30)
+                        }
+                    }
+                }
             }
-            .badge(unreadCount > 0 ? unreadCount : 0)
-            .tag(3)
+            .alert("安装 Apple Watch 应用", isPresented: $showWatchAlert) {
+                Button("前往安装") {
+                    if let url = URL(string: "itms-watchs://") {
+                        UIApplication.shared.open(url)
+                    }
+                }
+                Button("取消", role: .cancel) {}
+            } message: {
+                Text("在 Apple Watch 上安装 FootyTrack，即可记录踢球数据并自动同步到手机。")
+            }
+            .onAppear {
+                if watchSync.isWatchConnected {
+                    isWatchPulseAnimating = true
+                }
+            }
+            .onChange(of: watchSync.isWatchConnected) { _, connected in
+                isWatchPulseAnimating = connected
+            }
+            .navigationDestination(for: AppRoute.self) { route in
+                switch route {
+                case .sessionDetail(let sessionId):
+                    if let session = store.sessions.first(where: { $0.id == sessionId }) {
+                        SessionDetailView(session: session, store: store)
+                    }
+                case .matchDetail(let matchId):
+                    MatchDetailView(matchId: matchId, authManager: authManager)
+                case .weeklySummary:
+                    WeeklySummaryView(store: store)
+                case .todaySessionsList(let sessionIds):
+                    TodaySessionsListView(
+                        sessions: store.sessions.filter { sessionIds.contains($0.id) },
+                        store: store
+                    )
+                case .teamMemberList:
+                    if let detail = authManager.getCachedTeamDetail(teamId: authManager.teams.first?.id ?? "") {
+                        TeamMemberListView(
+                            members: detail.members,
+                            currentUserUid: authManager.currentUid,
+                            currentUserAvatarUrl: authManager.userProfile?.avatarUrl,
+                            localGoals: Int64(store.sessions.reduce(0) { $0 + $1.goals }),
+                            localAssists: Int64(store.sessions.reduce(0) { $0 + $1.assists })
+                        )
+                    }
+                case .teamList:
+                    TeamListView(authManager: authManager)
+                case .teamDetail(let teamId):
+                    TeamDetailView(teamId: teamId)
+                case .allMatches:
+                    AllMatchesView(store: store)
+                case .daySummary:
+                    EmptyView()
+                case .proSubscription:
+                    ProSubscriptionView()
+                case .settings:
+                    SettingsView(store: store, authManager: authManager)
+                case .sessionNotifications:
+                    SessionNotificationsView(store: store)
+                }
+            }
         }
-        .tint(AppColors.neonBlue)
         .task {
             if authManager.isLoggedIn {
                 // First install: pull cloud data if local is empty
@@ -136,11 +241,11 @@ struct MainTabView: View {
 struct TeamHubView: View {
     @ObservedObject var authManager: AuthManager
     @ObservedObject var store: SessionStore
+    @EnvironmentObject var router: AppRouter
     @State private var teamDetail: TeamDetailResponse?
     @State private var isLoading = true
     @State private var showLeaveAlert = false
     @State private var isLeaving = false
-    @State private var showMemberList = false
     @State private var isEditingTeamName = false
     @State private var editedTeamName = ""
 
@@ -216,15 +321,6 @@ struct TeamHubView: View {
         .navigationTitle("球队")
         .navigationBarTitleDisplayMode(.inline)
         .toolbarTitleDisplayMode(.inline)
-        .navigationDestination(isPresented: $showMemberList) {
-            TeamMemberListView(
-                members: teamMembers,
-                currentUserUid: authManager.currentUid,
-                currentUserAvatarUrl: authManager.userProfile?.avatarUrl,
-                localGoals: Int64(store.sessions.reduce(0) { $0 + $1.goals }),
-                localAssists: Int64(store.sessions.reduce(0) { $0 + $1.assists })
-            )
-        }
         .task {
             await loadTeamData()
         }
@@ -288,7 +384,7 @@ struct TeamHubView: View {
                 Spacer()
 
                 Button {
-                    showMemberList = true
+                    router.push(AppRoute.teamMemberList)
                 } label: {
                     HStack(spacing: 4) {
                         Image(systemName: "person.2.fill")
@@ -479,7 +575,9 @@ struct TeamHubView: View {
                 featureRow(icon: "trophy.fill", title: "查看排行", desc: "统计出勤和跑动数据")
                 featureRow(icon: "chart.line.uptrend.xyaxis", title: "一起进步", desc: "通过数据追踪团队表现")
 
-                NavigationLink(destination: TeamListView(authManager: authManager)) {
+                Button {
+                    router.push(AppRoute.teamList)
+                } label: {
                     Text("创建或加入球队")
                         .font(.subheadline.weight(.semibold))
                         .foregroundColor(.white)
@@ -907,7 +1005,6 @@ struct TeamMemberListView: View {
         }
         .navigationTitle("球队成员")
         .navigationBarTitleDisplayMode(.inline)
-        .hideTabBar()
     }
 }
 

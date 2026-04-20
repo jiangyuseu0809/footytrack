@@ -96,7 +96,6 @@ struct TeamDetailView: View {
         }
         .navigationTitle("球队详情")
         .navigationBarTitleDisplayMode(.inline)
-        .hideTabBar()
         .task {
             await loadDetail()
         }

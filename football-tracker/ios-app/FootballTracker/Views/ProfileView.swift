@@ -7,6 +7,7 @@ import UIKit
 struct ProfileView: View {
     @ObservedObject var store: SessionStore
     @ObservedObject var authManager: AuthManager
+    @EnvironmentObject var router: AppRouter
     @ObservedObject private var watchSync = WatchSync.shared
     @State private var isLoading = true
     @State private var showEditSheet = false
@@ -188,7 +189,7 @@ struct ProfileView: View {
     }
 
     private var proUpgradeBanner: some View {
-        NavigationLink(destination: ProSubscriptionView()) {
+        Button { router.push(AppRoute.proSubscription) } label: {
             ZStack {
                 // Gradient background
                 LinearGradient(
@@ -378,8 +379,8 @@ struct ProfileView: View {
     @ViewBuilder
     private func menuRow(item: ProfileMenuItem) -> some View {
         if item.action == .settings {
-            NavigationLink {
-                SettingsView(store: store, authManager: authManager)
+            Button {
+                router.push(AppRoute.settings)
             } label: {
                 menuRowContent(item: item)
                     .padding(.horizontal, 12)
@@ -388,8 +389,8 @@ struct ProfileView: View {
             }
             .buttonStyle(.plain)
         } else if item.action == .notifications {
-            NavigationLink {
-                SessionNotificationsView(store: store)
+            Button {
+                router.push(AppRoute.sessionNotifications)
             } label: {
                 menuRowContent(item: item)
                     .padding(.horizontal, 12)

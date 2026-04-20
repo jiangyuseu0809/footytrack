@@ -42,7 +42,6 @@ struct SettingsView: View {
         }
         .navigationTitle("设置")
         .navigationBarTitleDisplayMode(.inline)
-        .hideTabBar()
         .task { await authManager.loadProfileIfNeeded() }
         .sheet(isPresented: $showEditSheet) {
             EditProfileSheet(profile: authManager.userProfile) { updated in

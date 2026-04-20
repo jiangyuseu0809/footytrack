@@ -7,7 +7,7 @@ struct RadarChartView: View {
     var body: some View {
         Canvas { context, canvasSize in
             let center = CGPoint(x: canvasSize.width / 2, y: canvasSize.height / 2)
-            let radius = min(canvasSize.width, canvasSize.height) / 2 - 30
+            let radius = min(canvasSize.width, canvasSize.height) / 2 - 40
             let count = axes.count
             guard count >= 3 else { return }
 
@@ -91,7 +91,7 @@ struct RadarChartView: View {
             // Draw axis labels with score
             for i in 0..<count {
                 let angle = startAngle + angleStep * Double(i)
-                let labelRadius = radius + 20
+                let labelRadius = radius + 28
                 let labelPoint = CGPoint(
                     x: center.x + CGFloat(cos(angle)) * labelRadius,
                     y: center.y + CGFloat(sin(angle)) * labelRadius
@@ -105,6 +105,6 @@ struct RadarChartView: View {
                 context.draw(resolved, at: labelPoint, anchor: .center)
             }
         }
-        .frame(width: size, height: size)
+        .frame(width: size + 40, height: size + 40)
     }
 }

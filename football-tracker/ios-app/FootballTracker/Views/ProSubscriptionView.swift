@@ -80,14 +80,13 @@ struct ProSubscriptionView: View {
                 }
                 .padding(.horizontal, 16)
                 .padding(.top, 16)
-                .padding(.bottom, 120)
+                .padding(.bottom, 100)
             }
 
             bottomCTA
         }
         .navigationTitle("FootyTrack Pro")
         .navigationBarTitleDisplayMode(.inline)
-        .hideTabBar()
         .task {
             await loadPricing()
         }
@@ -484,12 +483,14 @@ struct ProSubscriptionView: View {
                 .foregroundColor(AppColors.textSecondary)
         }
         .padding(.horizontal, 16)
-        .padding(.vertical, 12)
+        .padding(.top, 12)
+        .padding(.bottom, 8)
         .background(
             AppColors.darkBg
                 .overlay(
                     LinearGradient(colors: [AppColors.darkBg.opacity(0), AppColors.darkBg], startPoint: .top, endPoint: .center)
                 )
+                .ignoresSafeArea(.container, edges: .bottom)
         )
     }
 }

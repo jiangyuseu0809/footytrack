@@ -2,8 +2,7 @@ import SwiftUI
 
 struct SessionNotificationsView: View {
     @ObservedObject var store: SessionStore
-    @State private var selectedSession: FootballSession?
-    @State private var navigateToDetail = false
+    @EnvironmentObject var router: AppRouter
     @State private var unreadIds: Set<String> = []
     @State private var readIds: Set<String> = []
 
@@ -39,8 +38,7 @@ struct SessionNotificationsView: View {
                         ForEach(notificationSessions) { session in
                             notificationCard(session: session, isUnread: unreadIds.contains(session.id))
                                 .onTapGesture {
-                                    selectedSession = session
-                                    navigateToDetail = true
+                                    router.push(AppRoute.sessionDetail(sessionId: session.id))
                                 }
                         }
                     }
@@ -53,12 +51,6 @@ struct SessionNotificationsView: View {
         .navigationTitle("通知")
         .navigationBarTitleDisplayMode(.inline)
         .toolbarTitleDisplayMode(.inline)
-        .hideTabBar()
-        .navigationDestination(isPresented: $navigateToDetail) {
-            if let session = selectedSession {
-                SessionDetailView(session: session, store: store)
-            }
-        }
         .onAppear {
             let currentUnread = Set(UserDefaults.standard.stringArray(forKey: "unread_session_ids") ?? [])
             let currentRead = Set(UserDefaults.standard.stringArray(forKey: "read_session_ids") ?? [])

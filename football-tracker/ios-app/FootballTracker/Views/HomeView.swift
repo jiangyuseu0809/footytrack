@@ -6,14 +6,11 @@ import UIKit
 struct HomeView: View {
     @ObservedObject var store: SessionStore
     @ObservedObject var authManager: AuthManager
+    @EnvironmentObject var router: AppRouter
     @ObservedObject private var watchSync = WatchSync.shared
     @State private var showWatchAlert = false
     @State private var isWeeklyCardFlipped = true
-    @State private var navigateToTodayDetail = false
-    @State private var navigateToTodayList = false
-    @State private var navigateToWeeklyAnalysis = false
     @State private var isWatchPulseAnimating = false
-    @State private var navigateToMatchDetail = false
     @State private var annualAttendanceRank: Int?
     @State private var radarScale: CGFloat = 1.0
 
@@ -310,7 +307,7 @@ struct HomeView: View {
         let status = matchStatusInfo(matchDate: matchDate)
 
         return Button {
-            navigateToMatchDetail = true
+            router.push(AppRoute.matchDetail(matchId: match.id))
         } label: {
             VStack(alignment: .leading, spacing: 10) {
                 HStack {
@@ -373,9 +370,6 @@ struct HomeView: View {
             .clipShape(RoundedRectangle(cornerRadius: 16))
         }
         .buttonStyle(.plain)
-        .navigationDestination(isPresented: $navigateToMatchDetail) {
-            MatchDetailView(matchId: match.id, authManager: authManager)
-        }
     }
 
     private func teamColorFromName(_ name: String) -> Color {
@@ -414,14 +408,18 @@ struct HomeView: View {
                 RoundedRectangle(cornerRadius: 16)
                     .fill(AppColors.cardBg)
 
-                RadarChartView(axes: radarAxes(for: sessions), size: 140)
+                RadarChartView(axes: radarAxes(for: sessions), size: 110)
                     .scaleEffect(radarScale)
             }
-            .frame(maxWidth: .infinity, minHeight: 150, maxHeight: 150)
-            .onChange(of: isWeeklyCardFlipped) { _ in
-                radarScale = 0.82
-                withAnimation(.spring(response: 0.38, dampingFraction: 0.6)) {
-                    radarScale = 1.0
+            .frame(maxWidth: .infinity)
+            .onChange(of: isWeeklyCardFlipped) { _, _ in
+                withAnimation(.easeOut(duration: 0.1)) {
+                    radarScale = 0.82
+                }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                    withAnimation(.spring(response: 0.38, dampingFraction: 0.6)) {
+                        radarScale = 1.0
+                    }
                 }
             }
         }
@@ -614,26 +612,15 @@ struct HomeView: View {
         .onTapGesture {
             if isWeeklyCardFlipped {
                 guard !todaySessions.isEmpty else { return }
-                if todaySessions.count == 1 {
-                    navigateToTodayDetail = true
+                if todaySessions.count == 1, let session = todaySessions.first {
+                    router.push(AppRoute.sessionDetail(sessionId: session.id))
                 } else {
-                    navigateToTodayList = true
+                    router.push(AppRoute.todaySessionsList(sessionIds: todaySessions.map(\.id)))
                 }
             } else {
                 guard !thisWeekSessions.isEmpty else { return }
-                navigateToWeeklyAnalysis = true
+                router.push(AppRoute.weeklySummary)
             }
-        }
-        .navigationDestination(isPresented: $navigateToWeeklyAnalysis) {
-            WeeklySummaryView(store: store)
-        }
-        .navigationDestination(isPresented: $navigateToTodayDetail) {
-            if let session = todaySessions.first {
-                SessionDetailView(session: session, store: store)
-            }
-        }
-        .navigationDestination(isPresented: $navigateToTodayList) {
-            TodaySessionsListView(sessions: todaySessions, store: store)
         }
     }
 
@@ -1375,8 +1362,7 @@ struct SlackBadge: View {
 struct TodaySessionsListView: View {
     let sessions: [FootballSession]
     @ObservedObject var store: SessionStore
-    @State private var selectedSession: FootballSession?
-    @State private var navigateToDetail = false
+    @EnvironmentObject var router: AppRouter
 
     var body: some View {
         ZStack {
@@ -1388,8 +1374,7 @@ struct TodaySessionsListView: View {
                         MatchHistoryRow(session: session)
                             .contentShape(Rectangle())
                             .onTapGesture {
-                                selectedSession = session
-                                navigateToDetail = true
+                                router.push(AppRoute.sessionDetail(sessionId: session.id))
                             }
                     }
                 }
@@ -1401,10 +1386,5 @@ struct TodaySessionsListView: View {
         .navigationTitle("今日比赛")
         .navigationBarTitleDisplayMode(.inline)
         .toolbarTitleDisplayMode(.inline)
-        .navigationDestination(isPresented: $navigateToDetail) {
-            if let session = selectedSession {
-                SessionDetailView(session: session, store: store)
-            }
-        }
     }
 }

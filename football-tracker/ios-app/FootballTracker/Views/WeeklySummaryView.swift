@@ -4,6 +4,7 @@ import Charts
 /// Weekly summary page showing aggregated stats, trends, comparisons, highlights, and radar chart.
 struct WeeklySummaryView: View {
     @ObservedObject var store: SessionStore
+    @EnvironmentObject var router: AppRouter
     @State private var selectedTrend: TrendTab = .distance
     /// 0 = real data, 2 = mock 2 weeks, 5 = mock 5 weeks
     @State private var previewWeekCount: Int = 0
@@ -182,7 +183,6 @@ struct WeeklySummaryView: View {
         }
         .navigationTitle("本周总结")
         .navigationBarTitleDisplayMode(.inline)
-        .hideTabBar()
     }
 
     // MARK: - Week Summary Cards (2x2)
@@ -665,7 +665,7 @@ struct WeeklySummaryView: View {
                 .foregroundColor(AppColors.textPrimary)
 
             if let best = bestMatch {
-                NavigationLink(destination: SessionDetailView(session: best, store: store)) {
+                Button { router.push(AppRoute.sessionDetail(sessionId: best.id)) } label: {
                     highlightCard(
                         session: best,
                         badge: "最远距离",
@@ -679,7 +679,7 @@ struct WeeklySummaryView: View {
             }
 
             if let worst = worstMatch, worst.id != bestMatch?.id {
-                NavigationLink(destination: SessionDetailView(session: worst, store: store)) {
+                Button { router.push(AppRoute.sessionDetail(sessionId: worst.id)) } label: {
                     highlightCard(
                         session: worst,
                         badge: "待提升",

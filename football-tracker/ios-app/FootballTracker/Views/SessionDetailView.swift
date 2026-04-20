@@ -121,7 +121,6 @@ struct SessionDetailView: View {
         .navigationTitle("比赛详情")
         .navigationBarTitleDisplayMode(.inline)
         .toolbarTitleDisplayMode(.inline)
-        .hideTabBar()
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
