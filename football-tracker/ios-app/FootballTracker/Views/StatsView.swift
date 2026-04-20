@@ -586,9 +586,11 @@ struct StatsView: View {
                     if sessions.isEmpty {
                         emptySection
                     } else {
-                        styleSection
+                        if authManager.isPro {
+                            styleSection
+                        }
                         overviewSection
-                        abilitiesSection
+                        proAbilitiesSection
                         trendSection
                         achievementsSection
                         historySection
@@ -813,6 +815,27 @@ struct StatsView: View {
         .padding(14)
         .background(AppColors.cardBg)
         .cornerRadius(16)
+    }
+
+    private var proAbilitiesSection: some View {
+        ZStack {
+            abilitiesSection
+
+            if !authManager.isPro {
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(AppColors.darkBg.opacity(0.75))
+                    .overlay(
+                        VStack(spacing: 8) {
+                            Image(systemName: "lock.fill")
+                                .font(.title2)
+                                .foregroundColor(AppColors.textSecondary)
+                            Text("升级 Pro 解锁")
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundColor(AppColors.textSecondary)
+                        }
+                    )
+            }
+        }
     }
 
     private var trendSection: some View {
