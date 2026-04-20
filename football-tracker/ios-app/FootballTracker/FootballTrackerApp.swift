@@ -681,9 +681,14 @@ private struct TeamLeaderboardSection: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("排行榜")
-                .font(.title3.weight(.semibold))
-                .foregroundColor(AppColors.textPrimary)
+            VStack(alignment: .leading, spacing: 4) {
+                Text("排行榜")
+                    .font(.title3.weight(.semibold))
+                    .foregroundColor(AppColors.textPrimary)
+                Text("仅统计 Pro 会员的训练数据")
+                    .font(.caption)
+                    .foregroundColor(AppColors.textSecondary)
+            }
 
             // Tab buttons
             HStack(spacing: 0) {
