@@ -459,7 +459,7 @@ struct HomeView: View {
             }
             // Row 2: Duration + Distance + Sprints (3 columns)
             HStack(spacing: 8) {
-                homeStatCard(icon: "clock.fill", label: "时长", value: formatDuration(totalMinutes), unit: "", color: Color(hex: 0x3B82F6))
+                homeStatCard(icon: "clock.fill", label: "时长", value: "\(totalMinutes)", unit: "mins", color: Color(hex: 0x3B82F6))
                 homeStatCard(icon: "location.fill", label: "距离", value: String(format: "%.1f", totalDistanceKm), unit: "km", color: Color(hex: 0xA855F7))
                 homeStatCard(icon: "bolt.fill", label: "冲刺", value: "\(totalSprints)", unit: "次", color: Color(hex: 0xF59E0B))
             }
@@ -467,7 +467,7 @@ struct HomeView: View {
             HStack(spacing: 8) {
                 homeStatCard(icon: "flame.fill", label: "卡路里", value: "\(Int(totalCalories))", unit: "kcal", color: Color(hex: 0xEF4444))
                 homeStatCard(icon: "circle.hexagongrid.fill", label: "覆盖率", value: String(format: "%.0f", avgCoverage), unit: "%", color: Color(hex: 0x8B5CF6))
-                homeStatCard(icon: "heart.fill", label: "均心率", value: "\(avgHR)", unit: "bpm", color: Color(hex: 0xEF4444))
+                homeStatCard(icon: "heart.fill", label: "平均心率", value: "\(avgHR)", unit: "bpm", color: Color(hex: 0xEF4444))
             }
         }
         .padding(10)
