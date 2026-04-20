@@ -1,51 +1,45 @@
 import SwiftUI
 import UIKit
 
-/// View modifier that hides the tab bar instantly (no animation) when a view is pushed.
-/// Uses UIKit's native hidesBottomBarWhenPushed which handles the transition without animation.
+/// Hides the tab bar without animation when this view appears,
+/// and restores it without animation when this view disappears.
 struct HideTabBarModifier: ViewModifier {
     func body(content: Content) -> some View {
         content
-            .background(TabBarHider())
-    }
-}
-
-private struct TabBarHider: UIViewControllerRepresentable {
-    func makeUIViewController(context: Context) -> UIViewController {
-        TabBarHiderVC()
-    }
-    func updateUIViewController(_ uiViewController: UIViewController, context: Context) {}
-}
-
-private class TabBarHiderVC: UIViewController {
-    override func viewWillAppear(_ animated: Bool) {
-        super.viewWillAppear(animated)
-        // Find the hosting controller that's actually pushed in the navigation stack
-        // and set hidesBottomBarWhenPushed on it
-        if let hosting = findHostingController() {
-            hosting.hidesBottomBarWhenPushed = true
-            // Force tab bar to hide immediately
-            hosting.tabBarController?.tabBar.isHidden = true
-        }
-    }
-
-    override func viewWillDisappear(_ animated: Bool) {
-        super.viewWillDisappear(animated)
-        // Restore tab bar when popping back
-        if isMovingFromParent, let hosting = findHostingController() {
-            hosting.tabBarController?.tabBar.isHidden = false
-        }
-    }
-
-    private func findHostingController() -> UIViewController? {
-        var vc: UIViewController? = self
-        while let current = vc?.parent {
-            if current.navigationController != nil {
-                return current
+            .onAppear {
+                setTabBarHidden(true)
             }
-            vc = current
+            .onDisappear {
+                setTabBarHidden(false)
+            }
+    }
+
+    private func setTabBarHidden(_ hidden: Bool) {
+        guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+              let window = windowScene.windows.first,
+              let tabBar = window.rootViewController?.findTabBarController()?.tabBar else {
+            return
         }
-        return parent
+        // Set without animation
+        UIView.performWithoutAnimation {
+            tabBar.isHidden = hidden
+            tabBar.superview?.setNeedsLayout()
+            tabBar.superview?.layoutIfNeeded()
+        }
+    }
+}
+
+private extension UIViewController {
+    func findTabBarController() -> UITabBarController? {
+        if let tabBar = self as? UITabBarController {
+            return tabBar
+        }
+        for child in children {
+            if let found = child.findTabBarController() {
+                return found
+            }
+        }
+        return nil
     }
 }
 
