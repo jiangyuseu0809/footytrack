@@ -851,13 +851,12 @@ struct StatsView: View {
         StatsTrendSectionView(sessions: sessions)
     }
 
+    @ViewBuilder
     private var proTrendSection: some View {
-        ZStack(alignment: .top) {
+        if authManager.isPro {
             trendSection
-                .blur(radius: authManager.isPro ? 0 : 6)
-
-            if !authManager.isPro {
-                // Title stays visible
+        } else {
+            VStack(alignment: .leading, spacing: 12) {
                 HStack(spacing: 9) {
                     RoundedRectangle(cornerRadius: 8)
                         .fill(AppColors.neonBlue.opacity(0.16))
@@ -872,21 +871,28 @@ struct StatsView: View {
                         .foregroundColor(AppColors.textPrimary)
                     Spacer()
                 }
-                .padding(.top, 14)
-                .padding(.horizontal, 14)
 
-                // Lock overlay offset below title
-                VStack(spacing: 8) {
-                    Image(systemName: "lock.fill")
-                        .font(.title2)
-                        .foregroundColor(AppColors.textSecondary)
-                    Text("升级 Pro 解锁")
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundColor(AppColors.textSecondary)
+                ZStack {
+                    trendSection
+                        .blur(radius: 6)
+
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(AppColors.darkBg.opacity(0.6))
+                        .overlay(
+                            VStack(spacing: 8) {
+                                Image(systemName: "lock.fill")
+                                    .font(.title2)
+                                    .foregroundColor(AppColors.textSecondary)
+                                Text("升级 Pro 解锁")
+                                    .font(.subheadline.weight(.semibold))
+                                    .foregroundColor(AppColors.textSecondary)
+                            }
+                        )
                 }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .padding(.top, 40)
             }
+            .padding(14)
+            .background(AppColors.cardBg)
+            .cornerRadius(16)
         }
     }
 
