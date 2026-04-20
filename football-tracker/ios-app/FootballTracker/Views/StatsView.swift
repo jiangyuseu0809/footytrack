@@ -591,7 +591,7 @@ struct StatsView: View {
                         }
                         overviewSection
                         proAbilitiesSection
-                        trendSection
+                        proTrendSection
                         achievementsSection
                         historySection
                     }
@@ -820,10 +820,11 @@ struct StatsView: View {
     private var proAbilitiesSection: some View {
         ZStack {
             abilitiesSection
+                .blur(radius: authManager.isPro ? 0 : 6)
 
             if !authManager.isPro {
                 RoundedRectangle(cornerRadius: 16)
-                    .fill(AppColors.darkBg.opacity(0.75))
+                    .fill(AppColors.darkBg.opacity(0.6))
                     .overlay(
                         VStack(spacing: 8) {
                             Image(systemName: "lock.fill")
@@ -840,6 +841,28 @@ struct StatsView: View {
 
     private var trendSection: some View {
         StatsTrendSectionView(sessions: sessions)
+    }
+
+    private var proTrendSection: some View {
+        ZStack {
+            trendSection
+                .blur(radius: authManager.isPro ? 0 : 6)
+
+            if !authManager.isPro {
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(AppColors.darkBg.opacity(0.6))
+                    .overlay(
+                        VStack(spacing: 8) {
+                            Image(systemName: "lock.fill")
+                                .font(.title2)
+                                .foregroundColor(AppColors.textSecondary)
+                            Text("升级 Pro 解锁")
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundColor(AppColors.textSecondary)
+                        }
+                    )
+            }
+        }
     }
 
     private var achievementsSection: some View {
