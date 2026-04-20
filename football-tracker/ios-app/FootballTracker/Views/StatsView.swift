@@ -481,6 +481,7 @@ struct StatsView: View {
     @State private var selectedAchievement: StatsAchievementItem?
     @State private var playerAnalysis: PlayerAnalysisResponse?
     @State private var isLoadingAnalysis = false
+    @State private var isAnalysisExpanded = false
 
     private static let analysisCacheKey = "cached_player_analysis"
     private static let analysisCacheCountKey = "cached_player_analysis_session_count"
@@ -628,65 +629,97 @@ struct StatsView: View {
 
     private var styleSection: some View {
         VStack(alignment: .leading, spacing: 10) {
-            HStack(alignment: .top) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("AI 类型")
-                        .font(.caption)
-                        .foregroundColor(Color.white.opacity(0.75))
-                    if isLoadingAnalysis {
-                        HStack(spacing: 6) {
-                            ProgressView()
-                                .tint(.white)
-                            Text("分析中...")
-                                .font(.title2.weight(.bold))
-                                .foregroundColor(.white)
-                        }
-                    } else if let analysis = playerAnalysis {
-                        Text(analysis.type)
-                            .font(.title2.weight(.bold))
-                            .foregroundColor(.white)
+            // Header row: avatar + title + subtitle
+            HStack(alignment: .center, spacing: 10) {
+                Group {
+                    if let avatar = authManager.userProfile?.avatarUrl,
+                       let url = URL(string: avatar) {
+                        AvatarCircleView(url: url)
                     } else {
-                        Text("待分析")
-                            .font(.title2.weight(.bold))
-                            .foregroundColor(.white.opacity(0.6))
+                        Color.white.opacity(0.18)
+                            .overlay(Text("⚽️").font(.system(size: 16)))
                     }
                 }
+                .frame(width: 36, height: 36)
+                .clipShape(Circle())
 
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("球员类型")
+                        .font(.headline.weight(.semibold))
+                        .foregroundColor(.white)
+                    Text("基于每场比赛的运动数据的AI分析")
+                        .font(.caption2)
+                        .foregroundColor(Color.white.opacity(0.6))
+                }
                 Spacer()
             }
 
-            if let analysis = playerAnalysis {
-                Text(analysis.description)
-                    .font(.subheadline)
-                    .foregroundColor(Color.white.opacity(0.92))
-                    .fixedSize(horizontal: false, vertical: true)
-
-                if !analysis.strengths.isEmpty {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("优势")
+            // Type row
+            if isLoadingAnalysis {
+                HStack(spacing: 6) {
+                    ProgressView()
+                        .tint(.white)
+                    Text("分析中...")
+                        .font(.subheadline)
+                        .foregroundColor(Color.white.opacity(0.8))
+                }
+            } else if let analysis = playerAnalysis {
+                Button {
+                    withAnimation(.easeInOut(duration: 0.25)) {
+                        isAnalysisExpanded.toggle()
+                    }
+                } label: {
+                    HStack(spacing: 6) {
+                        Text(analysis.type)
+                            .font(.title2.weight(.bold))
+                            .foregroundColor(.white)
+                        Spacer()
+                        Image(systemName: isAnalysisExpanded ? "chevron.up" : "chevron.down")
                             .font(.caption.weight(.semibold))
-                            .foregroundColor(Color.white.opacity(0.75))
-                        ForEach(analysis.strengths, id: \.self) { strength in
-                            HStack(spacing: 4) {
-                                Image(systemName: "checkmark.circle.fill")
-                                    .font(.caption2)
-                                Text(strength)
-                                    .font(.caption)
-                            }
+                            .foregroundColor(Color.white.opacity(0.7))
+                    }
+                }
+                .buttonStyle(.plain)
+
+                if isAnalysisExpanded {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text(analysis.description)
+                            .font(.subheadline)
                             .foregroundColor(Color.white.opacity(0.92))
+                            .fixedSize(horizontal: false, vertical: true)
+
+                        if !analysis.strengths.isEmpty {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("优势")
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundColor(Color.white.opacity(0.75))
+                                ForEach(analysis.strengths, id: \.self) { strength in
+                                    HStack(spacing: 4) {
+                                        Image(systemName: "checkmark.circle.fill")
+                                            .font(.caption2)
+                                        Text(strength)
+                                            .font(.caption)
+                                    }
+                                    .foregroundColor(Color.white.opacity(0.92))
+                                }
+                            }
+                        }
+
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("建议")
+                                .font(.caption.weight(.semibold))
+                                .foregroundColor(Color.white.opacity(0.75))
+                            Text(analysis.advice)
+                                .font(.caption)
+                                .foregroundColor(Color.white.opacity(0.92))
+                                .fixedSize(horizontal: false, vertical: true)
                         }
                     }
                 }
-
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("建议")
-                        .font(.caption.weight(.semibold))
-                        .foregroundColor(Color.white.opacity(0.75))
-                    Text(analysis.advice)
-                        .font(.caption)
-                        .foregroundColor(Color.white.opacity(0.92))
-                        .fixedSize(horizontal: false, vertical: true)
-                }
+            } else {
+                Text("目前的数据不足以分析")
+                    .font(.subheadline)
+                    .foregroundColor(Color.white.opacity(0.55))
             }
         }
         .padding(16)
@@ -730,14 +763,14 @@ struct StatsView: View {
                     overviewStatCard(icon: "zzz", label: "平均摸鱼", value: String(format: "%.0f", avgSlack), unit: "%", color: Color(hex: 0xA855F7))
                 }
             }
-            .padding(10)
-            .background(AppColors.cardBg)
-            .cornerRadius(16)
-            .overlay(
-                RoundedRectangle(cornerRadius: 16)
-                    .stroke(Color.white.opacity(0.08), lineWidth: 0.5)
-            )
         }
+        .padding(14)
+        .background(AppColors.cardBg)
+        .cornerRadius(16)
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(Color.white.opacity(0.08), lineWidth: 0.5)
+        )
     }
 
     private func overviewStatCard(icon: String, label: String, value: String, unit: String, color: Color) -> some View {
