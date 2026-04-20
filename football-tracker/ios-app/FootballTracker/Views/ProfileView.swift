@@ -47,9 +47,11 @@ struct ProfileView: View {
                 VStack(alignment: .leading, spacing: 18) {
                     if authManager.isLoggedIn {
                         profileCard
+                        proUpgradeBanner
                         syncSection
                     } else {
                         loginPromptCard
+                        proUpgradeBanner
                     }
                     menuSection(title: "外观", items: appearanceItems)
                     menuSection(title: "账号", items: accountItems)
@@ -167,6 +169,53 @@ struct ProfileView: View {
             )
         )
         .cornerRadius(18)
+    }
+
+    private var proUpgradeBanner: some View {
+        NavigationLink(destination: ProSubscriptionView()) {
+            ZStack {
+                // Gradient background
+                LinearGradient(
+                    colors: [
+                        Color(red: 1.0, green: 0.8, blue: 0.2),
+                        Color(red: 1.0, green: 0.5, blue: 0.2),
+                        Color(red: 0.9, green: 0.3, blue: 0.5)
+                    ],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+
+                HStack {
+                    HStack(spacing: 10) {
+                        ZStack {
+                            Circle()
+                                .fill(Color.white.opacity(0.2))
+                                .frame(width: 40, height: 40)
+                            Image(systemName: "crown.fill")
+                                .font(.system(size: 18))
+                                .foregroundColor(.white)
+                        }
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("升级到 Pro")
+                                .font(.headline.weight(.bold))
+                                .foregroundColor(.white)
+                            Text("解锁全部专业功能")
+                                .font(.caption)
+                                .foregroundColor(.white.opacity(0.8))
+                        }
+                    }
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundColor(.white)
+                }
+                .padding(16)
+            }
+            .frame(maxWidth: .infinity)
+            .frame(height: 72)
+            .cornerRadius(16)
+        }
+        .buttonStyle(.plain)
     }
 
     private var syncSection: some View {

@@ -41,6 +41,7 @@
 		C589AA2AE507252613CF8E4E /* WeeklySummaryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB4F55A8ECDAED6B4ADB8F71 /* WeeklySummaryView.swift */; };
 		CA60D4570D15FDFDCC75AA1C /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 9ACD73F03A1F387CB2D398BE /* Assets.xcassets */; };
 		CE774E22735FC3A1D7455257 /* ProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 754C6ACB7B9D970C8F07EE85 /* ProfileView.swift */; };
+		CF11AA33BEEF1234ABCD5678 /* ProSubscriptionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CF11AA33BEEF1234ABCD9999 /* ProSubscriptionView.swift */; };
 		D1E46F5187DE62AA43DE3921 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 36E61BCEB61187EC52C9B0A7 /* Assets.xcassets */; };
 		D80555D855E9816377F1558D /* SessionDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C33629BCDCE91E205E4B5BA0 /* SessionDetailView.swift */; };
 		DE3F876A06775F463F7EA6C4 /* FootballTrackerApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B9B26AA77BCEEE349400CD5 /* FootballTrackerApp.swift */; };
@@ -101,6 +102,7 @@
 		65A416238FFA973BB961135C /* FootballTrackerWatchApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FootballTrackerWatchApp.swift; sourceTree = "<group>"; };
 		6FDCB6010E2CDCEF85F43A02 /* PhoneSync.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhoneSync.swift; sourceTree = "<group>"; };
 		754C6ACB7B9D970C8F07EE85 /* ProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileView.swift; sourceTree = "<group>"; };
+		CF11AA33BEEF1234ABCD9999 /* ProSubscriptionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProSubscriptionView.swift; sourceTree = "<group>"; };
 		7BFC12AFE3EB83DBD7BEE626 /* BadgeWallView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BadgeWallView.swift; sourceTree = "<group>"; };
 		7DE1B079D2C12ED4B16F31EE /* SessionNotificationsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionNotificationsView.swift; sourceTree = "<group>"; };
 		80B33E38BCB2D01074CF7D98 /* SessionStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionStore.swift; sourceTree = "<group>"; };
@@ -221,6 +223,7 @@
 				562001D94BCA45C82BA31989 /* MatchDetailView.swift */,
 				FCDCFF943267F00D39A478EA /* OnboardingView.swift */,
 				754C6ACB7B9D970C8F07EE85 /* ProfileView.swift */,
+				CF11AA33BEEF1234ABCD9999 /* ProSubscriptionView.swift */,
 				0121AC136016B27CD7DC492C /* RegisterView.swift */,
 				C33629BCDCE91E205E4B5BA0 /* SessionDetailView.swift */,
 				7DE1B079D2C12ED4B16F31EE /* SessionNotificationsView.swift */,
@@ -414,6 +417,7 @@
 				0C0B0EF455B68F15D7791F2A /* MatchDetailView.swift in Sources */,
 				5DAE4A9F895D11577ECFE8D8 /* OnboardingView.swift in Sources */,
 				CE774E22735FC3A1D7455257 /* ProfileView.swift in Sources */,
+				CF11AA33BEEF1234ABCD5678 /* ProSubscriptionView.swift in Sources */,
 				9BDC8EA0E869B316E2B395C1 /* RadarChartView.swift in Sources */,
 				83627E21819162E4E2C18AC4 /* RegisterView.swift in Sources */,
 				D80555D855E9816377F1558D /* SessionDetailView.swift in Sources */,
