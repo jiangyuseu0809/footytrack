@@ -21,6 +21,10 @@ struct SessionDetailView: View {
     @State private var sessionSummary: SessionSummaryResponse?
     @State private var isLoadingSummary = false
 
+    private var isPro: Bool {
+        UserDefaults.standard.bool(forKey: "is_pro_member")
+    }
+
     private var trackPoints: [TrackPointRecord] {
         cachedTrackPoints
     }
@@ -65,13 +69,13 @@ struct SessionDetailView: View {
 
                     // Speed Chart
                     if !cachedContinuousPoints.isEmpty {
-                        chartSection(title: "速度", icon: "bolt.fill", iconColor: Color(hex: 0x3B82F6)) {
+                        proLockedChartSection(title: "速度", icon: "bolt.fill", iconColor: Color(hex: 0x3B82F6)) {
                             SpeedChartView(points: cachedContinuousPoints, showHeartRate: false)
                         }
                     }
 
                     // Heart Rate Chart
-                    chartSection(title: "心率", icon: "heart.fill", iconColor: Color(hex: 0xEF4444)) {
+                    proLockedChartSection(title: "心率", icon: "heart.fill", iconColor: Color(hex: 0xEF4444)) {
                         SpeedChartView(
                             points: cachedContinuousPoints.isEmpty ? trackPoints : cachedContinuousPoints,
                             showHeartRate: true
@@ -80,13 +84,13 @@ struct SessionDetailView: View {
 
                     // Fatigue Chart
                     if !stats.fatigueSegments.isEmpty {
-                        chartSection(title: "体力曲线", icon: "flame.fill", iconColor: Color(hex: 0xF59E0B)) {
+                        proLockedChartSection(title: "体力曲线", icon: "flame.fill", iconColor: Color(hex: 0xF59E0B)) {
                             FatigueChartView(segments: stats.fatigueSegments)
                         }
                     }
 
                     // Radar Chart
-                    chartSection(title: "能力雷达", icon: "pentagon.fill", iconColor: Color(hex: 0xA855F7)) {
+                    proLockedChartSection(title: "能力雷达", icon: "pentagon.fill", iconColor: Color(hex: 0xA855F7)) {
                         RadarChartView(axes: radarAxes, size: 240)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 8)
@@ -94,24 +98,7 @@ struct SessionDetailView: View {
 
                     // Heatmap
                     if let latRange = cachedLatRange, let lonRange = cachedLonRange {
-                        chartSection(title: "活动热图", icon: "map.fill", iconColor: Color(hex: 0x10B981), trailing: {
-                            HStack(spacing: 6) {
-                                Text("进攻方向")
-                                    .font(.system(size: 12))
-                                    .foregroundColor(AppColors.textSecondary)
-                                Button {
-                                    showAttackEnd.toggle()
-                                } label: {
-                                    Image(systemName: "arrow.left.arrow.right")
-                                        .font(.system(size: 13, weight: .medium))
-                                        .foregroundColor(.white)
-                                        .padding(6)
-                                        .background(Color.white.opacity(0.10))
-                                        .cornerRadius(8)
-                                }
-                                .buttonStyle(.plain)
-                            }
-                        }) {
+                        proLockedChartSection(title: "活动热图", icon: "map.fill", iconColor: Color(hex: 0x10B981)) {
                             HeatmapOverlayView(
                                 grid: showAttackEnd ? stats.heatmapGrid : flipGridHorizontally(stats.heatmapGrid),
                                 minLat: latRange.min,
@@ -124,7 +111,7 @@ struct SessionDetailView: View {
                     }
 
                     // Match Summary (AI)
-                    matchSummarySection
+                    proLockedMatchSummary
                 }
                 .padding(.horizontal, 16)
                 .padding(.top, 12)
@@ -575,6 +562,128 @@ struct SessionDetailView: View {
                     RoundedRectangle(cornerRadius: 16)
                         .stroke(Color.white.opacity(0.08), lineWidth: 0.5)
                 )
+        }
+    }
+
+    private func proLockedChartSection<Content: View>(title: String, icon: String, iconColor: Color, @ViewBuilder content: () -> Content) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 8) {
+                Image(systemName: icon)
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundColor(iconColor)
+                Text(title)
+                    .font(.system(size: 20, weight: .semibold))
+                    .foregroundColor(AppColors.textPrimary)
+                Spacer()
+            }
+
+            ZStack {
+                content()
+                    .padding(16)
+                    .background(AppColors.cardBg)
+                    .cornerRadius(16)
+                    .blur(radius: isPro ? 0 : 6)
+
+                if !isPro {
+                    RoundedRectangle(cornerRadius: 16)
+                        .fill(AppColors.darkBg.opacity(0.6))
+                        .overlay(
+                            VStack(spacing: 8) {
+                                Image(systemName: "lock.fill")
+                                    .font(.title2)
+                                    .foregroundColor(AppColors.textSecondary)
+                                Text("升级 Pro 解锁")
+                                    .font(.subheadline.weight(.semibold))
+                                    .foregroundColor(AppColors.textSecondary)
+                            }
+                        )
+                }
+            }
+        }
+    }
+
+    private var proLockedMatchSummary: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 8) {
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(LinearGradient(colors: [Color(hex: 0x4F46E5), Color(hex: 0x7C3AED)], startPoint: .topLeading, endPoint: .bottomTrailing))
+                    .frame(width: 32, height: 32)
+                    .overlay(
+                        Image(systemName: "brain.head.profile")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundColor(.white)
+                    )
+                Text("比赛总结")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundColor(AppColors.textPrimary)
+                Spacer()
+            }
+
+            ZStack {
+                matchSummaryContent
+                    .blur(radius: isPro ? 0 : 6)
+
+                if !isPro {
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(AppColors.darkBg.opacity(0.6))
+                        .frame(minHeight: 100)
+                        .overlay(
+                            VStack(spacing: 8) {
+                                Image(systemName: "lock.fill")
+                                    .font(.title2)
+                                    .foregroundColor(AppColors.textSecondary)
+                                Text("升级 Pro 解锁")
+                                    .font(.subheadline.weight(.semibold))
+                                    .foregroundColor(AppColors.textSecondary)
+                            }
+                        )
+                }
+            }
+        }
+        .padding(16)
+        .background(AppColors.cardBg)
+        .cornerRadius(16)
+    }
+
+    @ViewBuilder
+    private var matchSummaryContent: some View {
+        if isLoadingSummary {
+            HStack(spacing: 8) {
+                ProgressView()
+                    .tint(AppColors.textSecondary)
+                Text("AI 分析中...")
+                    .font(.subheadline)
+                    .foregroundColor(AppColors.textSecondary)
+            }
+            .padding(.top, 4)
+        } else if let s = sessionSummary {
+            VStack(alignment: .leading, spacing: 10) {
+                summaryBlock(
+                    icon: "text.quote",
+                    iconColor: Color(hex: 0x6366F1),
+                    title: "总结",
+                    items: [s.summary]
+                )
+                Divider().background(Color.white.opacity(0.08))
+                summaryBlock(
+                    icon: "star.fill",
+                    iconColor: Color(hex: 0xF59E0B),
+                    title: "亮点",
+                    items: s.highlights
+                )
+                Divider().background(Color.white.opacity(0.08))
+                summaryBlock(
+                    icon: "arrow.up.circle.fill",
+                    iconColor: Color(hex: 0x10B981),
+                    title: "改进",
+                    items: s.improvements
+                )
+            }
+        } else {
+            Text("暂无分析结果")
+                .font(.subheadline)
+                .foregroundColor(AppColors.textSecondary)
+                .padding(.top, 4)
         }
     }
 
