@@ -818,24 +818,34 @@ struct StatsView: View {
     }
 
     private var proAbilitiesSection: some View {
-        ZStack {
-            abilitiesSection
-                .blur(radius: authManager.isPro ? 0 : 6)
+        VStack(alignment: .leading, spacing: 12) {
+            sectionHeader(title: "球员能力", icon: "scope", showShare: false)
 
-            if !authManager.isPro {
-                RoundedRectangle(cornerRadius: 16)
-                    .fill(AppColors.darkBg.opacity(0.6))
-                    .overlay(
-                        VStack(spacing: 8) {
-                            Image(systemName: "lock.fill")
-                                .font(.title2)
-                                .foregroundColor(AppColors.textSecondary)
-                            Text("升级 Pro 解锁")
-                                .font(.subheadline.weight(.semibold))
-                                .foregroundColor(AppColors.textSecondary)
-                        }
-                    )
+            ZStack {
+                StatsRadarView(metrics: abilityMetrics)
+                    .frame(height: 260)
+                    .blur(radius: authManager.isPro ? 0 : 6)
+
+                if !authManager.isPro {
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(AppColors.darkBg.opacity(0.6))
+                        .overlay(
+                            VStack(spacing: 8) {
+                                Image(systemName: "lock.fill")
+                                    .font(.title2)
+                                    .foregroundColor(AppColors.textSecondary)
+                                Text("升级 Pro 解锁")
+                                    .font(.subheadline.weight(.semibold))
+                                    .foregroundColor(AppColors.textSecondary)
+                            }
+                        )
+                }
             }
+        }
+        .padding(14)
+        .background(AppColors.cardBg)
+        .cornerRadius(16)
+    }
         }
     }
 
@@ -844,23 +854,40 @@ struct StatsView: View {
     }
 
     private var proTrendSection: some View {
-        ZStack {
+        ZStack(alignment: .top) {
             trendSection
                 .blur(radius: authManager.isPro ? 0 : 6)
 
             if !authManager.isPro {
-                RoundedRectangle(cornerRadius: 16)
-                    .fill(AppColors.darkBg.opacity(0.6))
-                    .overlay(
-                        VStack(spacing: 8) {
-                            Image(systemName: "lock.fill")
-                                .font(.title2)
-                                .foregroundColor(AppColors.textSecondary)
-                            Text("升级 Pro 解锁")
-                                .font(.subheadline.weight(.semibold))
-                                .foregroundColor(AppColors.textSecondary)
-                        }
-                    )
+                // Title stays visible
+                HStack(spacing: 9) {
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(AppColors.neonBlue.opacity(0.16))
+                        .frame(width: 26, height: 26)
+                        .overlay(
+                            Image(systemName: "chart.line.uptrend.xyaxis")
+                                .font(.caption.weight(.semibold))
+                                .foregroundColor(AppColors.neonBlue)
+                        )
+                    Text("表现趋势")
+                        .font(.headline.weight(.semibold))
+                        .foregroundColor(AppColors.textPrimary)
+                    Spacer()
+                }
+                .padding(.top, 14)
+                .padding(.horizontal, 14)
+
+                // Lock overlay offset below title
+                VStack(spacing: 8) {
+                    Image(systemName: "lock.fill")
+                        .font(.title2)
+                        .foregroundColor(AppColors.textSecondary)
+                    Text("升级 Pro 解锁")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundColor(AppColors.textSecondary)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .padding(.top, 40)
             }
         }
     }
