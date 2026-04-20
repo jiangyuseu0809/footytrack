@@ -671,7 +671,7 @@ struct StatsView: View {
                 } label: {
                     HStack(spacing: 6) {
                         Text(analysis.type)
-                            .font(.title2.weight(.bold))
+                            .font(.headline.weight(.semibold))
                             .foregroundColor(.white)
                         Spacer()
                         Image(systemName: isAnalysisExpanded ? "chevron.up" : "chevron.down")

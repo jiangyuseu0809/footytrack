@@ -77,12 +77,14 @@ struct RadarChartView: View {
                     let raw = min(max(axes[i].value, 0), 1) * scaleFactor
                     let val = axes[i].value > 0 ? max(raw, minDisplay) : 0
                     let pt = point(index: i, scale: min(val, 1.0))
-                    let dotRect = CGRect(x: pt.x - 3, y: pt.y - 3, width: 6, height: 6)
+                    let dotSize = size * 0.025
+                    let dotRect = CGRect(x: pt.x - dotSize / 2, y: pt.y - dotSize / 2, width: dotSize, height: dotSize)
                     context.fill(Path(ellipseIn: dotRect), with: .color(AppColors.neonBlue))
                 }
             } else {
                 // Show single center dot when no meaningful data
-                let dotRect = CGRect(x: center.x - 4, y: center.y - 4, width: 8, height: 8)
+                let dotSize = size * 0.035
+                let dotRect = CGRect(x: center.x - dotSize / 2, y: center.y - dotSize / 2, width: dotSize, height: dotSize)
                 context.fill(Path(ellipseIn: dotRect), with: .color(AppColors.neonBlue))
             }
 
