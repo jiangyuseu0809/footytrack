@@ -48,27 +48,30 @@ struct RadarChartView: View {
                 context.stroke(axisPath, with: .color(.white.opacity(0.2)), lineWidth: 1)
             }
 
-            // Draw filled data polygon
-            var dataPath = Path()
-            for i in 0..<count {
-                let val = min(max(axes[i].value, 0), 1)
-                let pt = point(index: i, scale: val)
-                if i == 0 {
-                    dataPath.move(to: pt)
-                } else {
-                    dataPath.addLine(to: pt)
+            // Draw filled data polygon (skip when all values are zero)
+            let hasData = axes.contains { $0.value > 0 }
+            if hasData {
+                var dataPath = Path()
+                for i in 0..<count {
+                    let val = min(max(axes[i].value, 0), 1)
+                    let pt = point(index: i, scale: val)
+                    if i == 0 {
+                        dataPath.move(to: pt)
+                    } else {
+                        dataPath.addLine(to: pt)
+                    }
                 }
-            }
-            dataPath.closeSubpath()
-            context.fill(dataPath, with: .color(AppColors.neonBlue.opacity(0.3)))
-            context.stroke(dataPath, with: .color(AppColors.neonBlue), lineWidth: 2)
+                dataPath.closeSubpath()
+                context.fill(dataPath, with: .color(AppColors.neonBlue.opacity(0.3)))
+                context.stroke(dataPath, with: .color(AppColors.neonBlue), lineWidth: 2)
 
-            // Draw data points
-            for i in 0..<count {
-                let val = min(max(axes[i].value, 0), 1)
-                let pt = point(index: i, scale: val)
-                let dotRect = CGRect(x: pt.x - 3, y: pt.y - 3, width: 6, height: 6)
-                context.fill(Path(ellipseIn: dotRect), with: .color(AppColors.neonBlue))
+                // Draw data points
+                for i in 0..<count {
+                    let val = min(max(axes[i].value, 0), 1)
+                    let pt = point(index: i, scale: val)
+                    let dotRect = CGRect(x: pt.x - 3, y: pt.y - 3, width: 6, height: 6)
+                    context.fill(Path(ellipseIn: dotRect), with: .color(AppColors.neonBlue))
+                }
             }
 
             // Draw axis labels
