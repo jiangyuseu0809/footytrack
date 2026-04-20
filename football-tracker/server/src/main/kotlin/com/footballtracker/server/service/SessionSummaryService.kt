@@ -10,6 +10,7 @@ import io.ktor.http.*
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.*
 import org.jetbrains.exposed.sql.*
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.transactions.transaction
 
 @Serializable
@@ -48,10 +49,7 @@ class SessionSummaryService(private val openAiConfig: OpenAiConfig) {
             return try {
                 json.decodeFromString<SessionSummaryResult>(cached)
             } catch (e: Exception) {
-                // Legacy plain-text cache — delete and regenerate
-                transaction {
-                    SessionSummariesTable.deleteWhere { SessionSummariesTable.sessionId eq req.sessionId }
-                }
+                // Legacy plain-text cache — regenerate (old entry will be overwritten via upsert)
                 generateAndCache(req)
             }
         }
@@ -62,6 +60,7 @@ class SessionSummaryService(private val openAiConfig: OpenAiConfig) {
         val result = generateSummary(req)
         val serialized = json.encodeToString(SessionSummaryResult.serializer(), result)
         transaction {
+            SessionSummariesTable.deleteWhere { SessionSummariesTable.sessionId eq req.sessionId }
             SessionSummariesTable.insert {
                 it[sessionId] = req.sessionId
                 it[summary] = serialized
