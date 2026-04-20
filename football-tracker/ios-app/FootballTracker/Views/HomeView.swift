@@ -411,7 +411,6 @@ struct HomeView: View {
 
             // Radar chart card showing ability metrics for today / this week
             let sessions = isWeeklyCardFlipped ? todaySessions : thisWeekSessions
-            let label = isWeeklyCardFlipped ? "今日能力" : "本周能力"
             ZStack {
                 RoundedRectangle(cornerRadius: 16)
                     .fill(AppColors.cardBg)
@@ -420,22 +419,15 @@ struct HomeView: View {
                             .stroke(AppColors.neonBlue.opacity(0.2), lineWidth: 1)
                     )
 
-                VStack(spacing: 4) {
-                    Text(label)
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundColor(.white.opacity(0.7))
-
+                ZStack {
+                    RadarChartView(axes: radarAxes(for: sessions), size: 140)
+                        .scaleEffect(radarScale)
                     if sessions.isEmpty {
-                        Text("暂无数据")
-                            .font(.system(size: 13))
-                            .foregroundColor(.white.opacity(0.35))
-                            .frame(maxHeight: .infinity)
-                    } else {
-                        RadarChartView(axes: radarAxes(for: sessions), size: 110)
-                            .scaleEffect(radarScale)
+                        Circle()
+                            .fill(AppColors.neonBlue)
+                            .frame(width: 8, height: 8)
                     }
                 }
-                .padding(.vertical, 10)
             }
             .frame(maxWidth: .infinity, minHeight: 150, maxHeight: 150)
             .onChange(of: isWeeklyCardFlipped) { _ in
