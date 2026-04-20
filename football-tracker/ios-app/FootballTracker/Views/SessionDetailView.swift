@@ -192,7 +192,19 @@ struct SessionDetailView: View {
             } else {
                 isLoadingSummary = true
                 do {
-                    let result = try await ApiClient.shared.getSessionSummary(sessionId: session.id)
+                    let req = SessionSummaryRequest(
+                        sessionId: session.id,
+                        durationMinutes: durationMin,
+                        distanceKm: session.totalDistanceMeters / 1000,
+                        maxSpeedKmh: session.maxSpeedKmh,
+                        sprintCount: session.sprintCount,
+                        caloriesBurned: session.caloriesBurned,
+                        avgHeartRate: session.avgHeartRate,
+                        goals: session.goals,
+                        assists: session.assists,
+                        coveragePercent: session.coveragePercent
+                    )
+                    let result = try await ApiClient.shared.getSessionSummary(request: req)
                     sessionSummary = result.summary
                     UserDefaults.standard.set(result.summary, forKey: cacheKey)
                 } catch {

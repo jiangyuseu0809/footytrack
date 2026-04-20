@@ -267,8 +267,8 @@ final class ApiClient {
         try await request(endpoint: "/api/sessions/analysis")
     }
 
-    func getSessionSummary(sessionId: String) async throws -> MatchSummaryResponse {
-        try await request(endpoint: "/api/sessions/\(sessionId)/summary")
+    func getSessionSummary(request: SessionSummaryRequest) async throws -> MatchSummaryResponse {
+        try await self.request(endpoint: "/api/sessions/\(request.sessionId)/summary", method: "POST", body: request)
     }
 
     // MARK: - Teams

@@ -107,6 +107,19 @@ struct PlayerAnalysisResponse: Codable {
     let advice: String
 }
 
+struct SessionSummaryRequest: Encodable {
+    let sessionId: String
+    let durationMinutes: Int
+    let distanceKm: Double
+    let maxSpeedKmh: Double
+    let sprintCount: Int
+    let caloriesBurned: Double
+    let avgHeartRate: Int
+    let goals: Int
+    let assists: Int
+    let coveragePercent: Double
+}
+
 // MARK: - Teams
 
 struct CreateTeamRequest: Encodable {
