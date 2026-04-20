@@ -7,6 +7,7 @@ private let kDeviceUuidKey = "device_anonymous_uuid"
 private let kMatchesCacheKey = "cached_upcoming_matches"
 private let kTeamsCacheKey = "cached_teams"
 private let kTeamDetailCacheKey = "cached_team_detail"
+private let kProfileCacheKey = "cached_user_profile"
 
 @MainActor
 class AuthManager: ObservableObject {
@@ -58,6 +59,11 @@ class AuthManager: ObservableObject {
         if let data = UserDefaults.standard.data(forKey: kMatchesCacheKey),
            let cached = try? JSONDecoder().decode([MatchResponse].self, from: data) {
             upcomingMatches = cached
+        }
+        // Restore cached profile so ProfileView renders instantly
+        if let data = UserDefaults.standard.data(forKey: kProfileCacheKey),
+           let cached = try? JSONDecoder().decode(UserProfileResponse.self, from: data) {
+            userProfile = cached
         }
         // Restore cached teams so TeamHubView renders instantly
         if let data = UserDefaults.standard.data(forKey: kTeamsCacheKey),
@@ -194,6 +200,7 @@ class AuthManager: ObservableObject {
     func logout() {
         UserDefaults.standard.removeObject(forKey: kTokenKey)
         UserDefaults.standard.removeObject(forKey: kUidKey)
+        UserDefaults.standard.removeObject(forKey: kProfileCacheKey)
         ApiClient.shared.token = nil
         currentUid = nil
         userProfile = nil
@@ -216,8 +223,12 @@ class AuthManager: ObservableObject {
 
     func loadProfile() async {
         do {
-            userProfile = try await ApiClient.shared.getProfile()
+            let profile = try await ApiClient.shared.getProfile()
+            userProfile = profile
             profileLoadedAt = Date()
+            if let data = try? JSONEncoder().encode(profile) {
+                UserDefaults.standard.set(data, forKey: kProfileCacheKey)
+            }
         } catch {
             // Silently handle — views show placeholder
         }

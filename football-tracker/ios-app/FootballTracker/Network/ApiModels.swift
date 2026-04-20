@@ -31,7 +31,7 @@ struct AuthResponse: Decodable {
 
 // MARK: - User
 
-struct UserProfileResponse: Decodable {
+struct UserProfileResponse: Codable {
     let uid: String
     let phone: String?
     let wechatOpenId: String?
