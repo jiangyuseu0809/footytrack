@@ -16,6 +16,9 @@ data class CreateTeamRequest(val name: String)
 data class JoinTeamRequest(val inviteCode: String)
 
 @Serializable
+data class UpdateTeamRequest(val name: String)
+
+@Serializable
 data class TeamResponse(
     val id: String,
     val name: String,
@@ -113,6 +116,23 @@ fun Route.teamRoutes(teamService: TeamService) {
             } else {
                 call.respond(HttpStatusCode.NotFound, mapOf("error" to "未在该球队中"))
             }
+        }
+
+        put("/{teamId}") {
+            val uid = UUID.fromString(call.jwtUid())
+            val teamId = UUID.fromString(call.parameters["teamId"])
+            val req = call.receive<UpdateTeamRequest>()
+
+            val team = teamService.getTeamById(teamId)
+                ?: return@put call.respond(HttpStatusCode.NotFound, mapOf("error" to "球队不存在"))
+
+            if (team.createdBy != uid) {
+                return@put call.respond(HttpStatusCode.Forbidden, mapOf("error" to "只有队长可以修改球队名称"))
+            }
+
+            teamService.updateTeamName(teamId, req.name)
+            val updated = teamService.getTeamById(teamId)!!
+            call.respond(updated.toResponse())
         }
     }
 }

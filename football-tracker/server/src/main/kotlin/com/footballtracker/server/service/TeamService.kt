@@ -119,6 +119,13 @@ class TeamService {
         deleted > 0
     }
 
+    fun updateTeamName(teamId: UUID, name: String): Boolean = transaction {
+        val updated = TeamsTable.update({ TeamsTable.id eq teamId }) {
+            it[TeamsTable.name] = name
+        }
+        updated > 0
+    }
+
     private fun generateInviteCode(): String {
         val chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
         return (1..6).map { chars.random() }.joinToString("")

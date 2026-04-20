@@ -130,6 +130,10 @@ struct JoinTeamRequest: Encodable {
     let inviteCode: String
 }
 
+struct UpdateTeamRequest: Encodable {
+    let name: String
+}
+
 struct TeamResponse: Codable {
     let id: String
     let name: String

@@ -304,6 +304,14 @@ final class ApiClient {
         )
     }
 
+    func updateTeamName(teamId: String, name: String) async throws -> TeamResponse {
+        try await requestWithFallback(
+            endpoints: ["/api/teams/\(teamId)", "/teams/\(teamId)"],
+            method: "PUT",
+            body: UpdateTeamRequest(name: name)
+        )
+    }
+
     // MARK: - Badges
 
     func getEarnedBadges() async throws -> EarnedBadgesResponse {

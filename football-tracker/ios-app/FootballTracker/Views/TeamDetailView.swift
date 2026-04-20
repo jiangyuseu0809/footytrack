@@ -4,6 +4,8 @@ struct TeamDetailView: View {
     let teamId: String
     @State private var detail: TeamDetailResponse?
     @State private var isLoading = true
+    @State private var isEditingName = false
+    @State private var editedName = ""
 
     var body: some View {
         ZStack {
@@ -14,9 +16,41 @@ struct TeamDetailView: View {
                     VStack(spacing: 16) {
                         // Team info card
                         VStack(spacing: 8) {
-                            Text(detail.team.name)
-                                .font(.title2.bold())
-                                .foregroundColor(AppColors.textPrimary)
+                            if isEditingName {
+                                HStack(spacing: 8) {
+                                    TextField("球队名称", text: $editedName)
+                                        .font(.title2.bold())
+                                        .foregroundColor(AppColors.textPrimary)
+                                        .textFieldStyle(.plain)
+                                        .multilineTextAlignment(.center)
+                                    Button {
+                                        Task { await saveName() }
+                                    } label: {
+                                        Image(systemName: "checkmark.circle.fill")
+                                            .foregroundColor(AppColors.neonBlue)
+                                    }
+                                    Button {
+                                        isEditingName = false
+                                    } label: {
+                                        Image(systemName: "xmark.circle.fill")
+                                            .foregroundColor(AppColors.textSecondary)
+                                    }
+                                }
+                            } else {
+                                HStack(spacing: 6) {
+                                    Text(detail.team.name)
+                                        .font(.title2.bold())
+                                        .foregroundColor(AppColors.textPrimary)
+                                    Button {
+                                        editedName = detail.team.name
+                                        isEditingName = true
+                                    } label: {
+                                        Image(systemName: "pencil")
+                                            .font(.caption)
+                                            .foregroundColor(AppColors.textSecondary)
+                                    }
+                                }
+                            }
                             HStack {
                                 Text("邀请码:")
                                     .foregroundColor(AppColors.textSecondary)
@@ -139,6 +173,19 @@ struct TeamDetailView: View {
             detail = try await ApiClient.shared.getTeamDetail(teamId: teamId)
         } catch {}
         isLoading = false
+    }
+
+    private func saveName() async {
+        let name = editedName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !name.isEmpty else { return }
+        do {
+            let updated = try await ApiClient.shared.updateTeamName(teamId: teamId, name: name)
+            if var d = detail {
+                d = TeamDetailResponse(team: updated, members: d.members)
+                detail = d
+            }
+            isEditingName = false
+        } catch {}
     }
 }
 
