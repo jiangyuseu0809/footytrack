@@ -134,7 +134,7 @@ struct HomeView: View {
         let avgDistKm = sessions.reduce(0.0) { $0 + $1.totalDistanceMeters } / 1000.0 / count
         let staminaScore = min(1.0, avgDistKm / 10.0)
         let avgSlack = sessions.isEmpty ? 0.0 : sessions.map { Double($0.slackIndex) }.reduce(0, +) / count
-        let disciplineScore = max(0.0, min(1.0, (100.0 - avgSlack) / 100.0))
+        let disciplineScore = sessions.isEmpty ? 0.0 : max(0.0, min(1.0, (100.0 - avgSlack) / 100.0))
         let avgCoverage = sessions.isEmpty ? 0.0 : sessions.map(\.coveragePercent).reduce(0, +) / count
         let coverageScore = min(1.0, avgCoverage / 100.0)
         return [
@@ -414,20 +414,9 @@ struct HomeView: View {
             ZStack {
                 RoundedRectangle(cornerRadius: 16)
                     .fill(AppColors.cardBg)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 16)
-                            .stroke(AppColors.neonBlue.opacity(0.2), lineWidth: 1)
-                    )
 
-                ZStack {
-                    RadarChartView(axes: radarAxes(for: sessions), size: 140)
-                        .scaleEffect(radarScale)
-                    if sessions.isEmpty {
-                        Circle()
-                            .fill(AppColors.neonBlue)
-                            .frame(width: 8, height: 8)
-                    }
-                }
+                RadarChartView(axes: radarAxes(for: sessions), size: 140)
+                    .scaleEffect(radarScale)
             }
             .frame(maxWidth: .infinity, minHeight: 150, maxHeight: 150)
             .onChange(of: isWeeklyCardFlipped) { _ in
