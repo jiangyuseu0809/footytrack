@@ -8,6 +8,7 @@ class CloudSync {
     /// Upload all unsynced sessions to the cloud.
     /// Returns number of sessions synced.
     static func uploadPendingSessions(store: SessionStore, authManager: AuthManager) async throws -> Int {
+        guard authManager.isPro else { return 0 }
         guard authManager.isLoggedIn, let uid = authManager.currentUid else { return 0 }
 
         // One-time: force re-sync all sessions to upload goals/assists fields
@@ -46,6 +47,7 @@ class CloudSync {
     /// Pull sessions from the cloud that don't exist locally.
     /// Returns number of sessions restored.
     static func pullFromCloud(store: SessionStore, authManager: AuthManager) async throws -> Int {
+        guard authManager.isPro else { return 0 }
         guard authManager.isLoggedIn, let uid = authManager.currentUid else { return 0 }
 
         let response = try await ApiClient.shared.getSessions(forceRefresh: true)
