@@ -141,6 +141,8 @@ struct TeamHubView: View {
     @State private var showLeaveAlert = false
     @State private var isLeaving = false
     @State private var showMemberList = false
+    @State private var isEditingTeamName = false
+    @State private var editedTeamName = ""
 
     private var team: TeamResponse? {
         teamDetail?.team ?? authManager.teams.first
@@ -242,9 +244,42 @@ struct TeamHubView: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(team?.name ?? "我的球队")
-                        .font(.title3.weight(.bold))
-                        .foregroundColor(.white)
+                    if isEditingTeamName {
+                        HStack(spacing: 6) {
+                            TextField("球队名称", text: $editedTeamName)
+                                .font(.title3.weight(.bold))
+                                .foregroundColor(.white)
+                                .textFieldStyle(.plain)
+                            Button {
+                                Task { await saveTeamName() }
+                            } label: {
+                                Image(systemName: "checkmark.circle.fill")
+                                    .foregroundColor(AppColors.neonBlue)
+                            }
+                            Button {
+                                isEditingTeamName = false
+                            } label: {
+                                Image(systemName: "xmark.circle.fill")
+                                    .foregroundColor(Color.white.opacity(0.5))
+                            }
+                        }
+                    } else {
+                        HStack(spacing: 6) {
+                            Text(team?.name ?? "我的球队")
+                                .font(.title3.weight(.bold))
+                                .foregroundColor(.white)
+                            if isOwner {
+                                Button {
+                                    editedTeamName = team?.name ?? ""
+                                    isEditingTeamName = true
+                                } label: {
+                                    Image(systemName: "pencil")
+                                        .font(.caption)
+                                        .foregroundColor(Color.white.opacity(0.6))
+                                }
+                            }
+                        }
+                    }
                     Text("成立于 \(teamCreatedDateText)")
                         .font(.caption)
                         .foregroundColor(Color.white.opacity(0.85))
@@ -506,6 +541,18 @@ struct TeamHubView: View {
                 .foregroundColor(Color.white.opacity(0.8))
         }
         .frame(maxWidth: .infinity)
+    }
+
+    private func saveTeamName() async {
+        let name = editedTeamName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !name.isEmpty, let teamId = team?.id else { return }
+        do {
+            let updated = try await ApiClient.shared.updateTeamName(teamId: teamId, name: name)
+            if let detail = teamDetail {
+                teamDetail = TeamDetailResponse(team: updated, members: detail.members)
+            }
+            isEditingTeamName = false
+        } catch {}
     }
 
     private func loadTeamData() async {
