@@ -259,3 +259,20 @@ struct SessionSummaryResponse: Codable {
     let highlights: [String]
     let improvements: [String]
 }
+
+// MARK: - Pricing
+
+struct PlanResponse: Decodable {
+    let id: String
+    let name: String
+    let price: Double
+    let originalPrice: Double?
+    let period: String
+    let discount: Int?
+    let popular: Bool
+}
+
+struct PricingResponse: Decodable {
+    let plans: [PlanResponse]
+    let trialDays: Int
+}

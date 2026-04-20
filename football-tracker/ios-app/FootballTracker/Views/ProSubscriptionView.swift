@@ -1,12 +1,11 @@
 import SwiftUI
 
 struct ProSubscriptionView: View {
-    @State private var selectedPlan: PlanType = .yearly
+    @State private var selectedPlanId: String = "lifetime"
+    @State private var plans: [PlanResponse] = []
+    @State private var trialDays: Int = 7
+    @State private var isLoading = true
     @Environment(\.dismiss) private var dismiss
-
-    private enum PlanType: String {
-        case monthly, yearly
-    }
 
     private struct Feature {
         let icon: String
@@ -73,6 +72,7 @@ struct ProSubscriptionView: View {
             ScrollView {
                 VStack(spacing: 24) {
                     heroSection
+                    trialBanner
                     featureCards
                     comparisonTable
                     planSelection
@@ -87,6 +87,30 @@ struct ProSubscriptionView: View {
         }
         .navigationTitle("FootyTrack Pro")
         .navigationBarTitleDisplayMode(.inline)
+        .task {
+            await loadPricing()
+        }
+    }
+
+    // MARK: - Load Pricing
+
+    private func loadPricing() async {
+        do {
+            let response = try await ApiClient.shared.getPricing()
+            plans = response.plans
+            trialDays = response.trialDays
+            if let first = plans.first(where: { $0.popular }) ?? plans.first {
+                selectedPlanId = first.id
+            }
+        } catch {
+            // Fallback defaults
+            plans = [
+                PlanResponse(id: "lifetime", name: "永久订阅", price: 128, originalPrice: nil, period: "永久", discount: nil, popular: true),
+                PlanResponse(id: "yearly", name: "年度订阅", price: 66, originalPrice: nil, period: "/年", discount: nil, popular: false),
+                PlanResponse(id: "monthly", name: "月度订阅", price: 9.9, originalPrice: nil, period: "/月", discount: nil, popular: false),
+            ]
+        }
+        isLoading = false
     }
 
     // MARK: - Hero
@@ -128,6 +152,36 @@ struct ProSubscriptionView: View {
             }
         }
         .padding(.top, 16)
+    }
+
+    // MARK: - Trial Banner
+
+    private var trialBanner: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "gift.fill")
+                .font(.title2)
+                .foregroundColor(.yellow)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text("所有计划包含 \(trialDays) 天免费试用")
+                    .font(.subheadline.weight(.bold))
+                    .foregroundColor(.white)
+                Text("试用期内随时取消，不收取任何费用")
+                    .font(.caption)
+                    .foregroundColor(AppColors.textSecondary)
+            }
+
+            Spacer()
+        }
+        .padding(14)
+        .background(
+            RoundedRectangle(cornerRadius: 14)
+                .fill(LinearGradient(colors: [Color.orange.opacity(0.2), Color.yellow.opacity(0.1)], startPoint: .leading, endPoint: .trailing))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 14)
+                        .stroke(Color.orange.opacity(0.4), lineWidth: 1)
+                )
+        )
     }
 
     private func tagPill(icon: String, text: String, colors: [Color]) -> some View {
@@ -264,37 +318,41 @@ struct ProSubscriptionView: View {
                 .font(.title3.weight(.bold))
                 .foregroundColor(.white)
 
-            planCard(
-                type: .yearly,
-                name: "年度订阅",
-                price: "¥198",
-                period: "/年",
-                savings: "省 ¥138",
-                popular: true
-            )
+            if isLoading {
+                ProgressView()
+                    .tint(AppColors.textSecondary)
+                    .frame(maxWidth: .infinity, minHeight: 100)
+            } else {
+                ForEach(plans, id: \.id) { plan in
+                    planCard(plan)
+                }
+            }
 
-            planCard(
-                type: .monthly,
-                name: "月度订阅",
-                price: "¥28",
-                period: "/月",
-                savings: nil,
-                popular: false
-            )
+            // Trial reminder under plans
+            HStack(spacing: 6) {
+                Image(systemName: "clock.fill")
+                    .font(.caption2)
+                    .foregroundColor(.orange)
+                Text("所有计划均含 \(trialDays) 天免费试用，随时可取消")
+                    .font(.caption)
+                    .foregroundColor(AppColors.textSecondary)
+            }
+            .padding(.top, 4)
         }
     }
 
-    private func planCard(type: PlanType, name: String, price: String, period: String, savings: String?, popular: Bool) -> some View {
-        Button {
-            selectedPlan = type
+    private func planCard(_ plan: PlanResponse) -> some View {
+        let isSelected = selectedPlanId == plan.id
+        return Button {
+            selectedPlanId = plan.id
         } label: {
             HStack {
                 HStack(spacing: 10) {
                     ZStack {
                         Circle()
-                            .stroke(selectedPlan == type ? Color.blue : Color.white.opacity(0.3), lineWidth: 2)
+                            .stroke(isSelected ? Color.blue : Color.white.opacity(0.3), lineWidth: 2)
                             .frame(width: 22, height: 22)
-                        if selectedPlan == type {
+                        if isSelected {
                             Circle()
                                 .fill(Color.blue)
                                 .frame(width: 14, height: 14)
@@ -303,10 +361,10 @@ struct ProSubscriptionView: View {
 
                     VStack(alignment: .leading, spacing: 2) {
                         HStack(spacing: 6) {
-                            Text(name)
+                            Text(plan.name)
                                 .font(.subheadline.weight(.bold))
                                 .foregroundColor(.white)
-                            if popular {
+                            if plan.popular {
                                 Text("推荐")
                                     .font(.system(size: 10, weight: .bold))
                                     .foregroundColor(.white)
@@ -315,22 +373,35 @@ struct ProSubscriptionView: View {
                                     .background(LinearGradient(colors: [.orange, .red], startPoint: .leading, endPoint: .trailing))
                                     .cornerRadius(6)
                             }
+                            if let discount = plan.discount {
+                                Text("\(discount)折")
+                                    .font(.system(size: 10, weight: .bold))
+                                    .foregroundColor(.white)
+                                    .padding(.horizontal, 6)
+                                    .padding(.vertical, 2)
+                                    .background(Color.red)
+                                    .cornerRadius(6)
+                            }
                         }
-                        if let savings = savings {
-                            Text(savings)
-                                .font(.caption2.weight(.semibold))
-                                .foregroundColor(.green)
-                        }
+                        Text("含 \(trialDays) 天免费试用")
+                            .font(.caption2)
+                            .foregroundColor(.orange)
                     }
                 }
 
                 Spacer()
 
                 VStack(alignment: .trailing, spacing: 0) {
-                    Text(price)
+                    if let original = plan.originalPrice {
+                        Text(formatPrice(original))
+                            .font(.caption2)
+                            .strikethrough()
+                            .foregroundColor(AppColors.textSecondary)
+                    }
+                    Text(formatPrice(plan.price))
                         .font(.title2.weight(.bold))
                         .foregroundColor(.white)
-                    Text(period)
+                    Text(plan.period)
                         .font(.caption2)
                         .foregroundColor(AppColors.textSecondary)
                 }
@@ -338,14 +409,21 @@ struct ProSubscriptionView: View {
             .padding(16)
             .background(
                 RoundedRectangle(cornerRadius: 14)
-                    .stroke(selectedPlan == type ? Color.blue : Color.white.opacity(0.15), lineWidth: 2)
+                    .stroke(isSelected ? Color.blue : Color.white.opacity(0.15), lineWidth: 2)
                     .background(
                         RoundedRectangle(cornerRadius: 14)
-                            .fill(selectedPlan == type ? Color.blue.opacity(0.1) : AppColors.cardBg)
+                            .fill(isSelected ? Color.blue.opacity(0.1) : AppColors.cardBg)
                     )
             )
         }
         .buttonStyle(.plain)
+    }
+
+    private func formatPrice(_ price: Double) -> String {
+        if price == price.rounded() {
+            return "¥\(Int(price))"
+        }
+        return "¥\(String(format: "%.1f", price))"
     }
 
     // MARK: - Trust Badges
@@ -383,7 +461,7 @@ struct ProSubscriptionView: View {
                 HStack(spacing: 8) {
                     Image(systemName: "crown.fill")
                         .font(.subheadline)
-                    Text("开始\(selectedPlan == .yearly ? "年度" : "月度")订阅")
+                    Text("免费试用 \(trialDays) 天，立即开始")
                         .font(.headline.weight(.bold))
                 }
                 .foregroundColor(.white)
@@ -400,7 +478,7 @@ struct ProSubscriptionView: View {
                 .shadow(color: .purple.opacity(0.3), radius: 10, y: 5)
             }
 
-            Text("订阅后可随时在设置中取消自动续费")
+            Text("试用期内随时取消，不收取任何费用")
                 .font(.caption2)
                 .foregroundColor(AppColors.textSecondary)
         }

@@ -146,6 +146,12 @@ final class ApiClient {
         )
     }
 
+    // MARK: - Pricing
+
+    func getPricing() async throws -> PricingResponse {
+        try await request(endpoint: "/api/pricing")
+    }
+
     // MARK: - User Profile
 
     func getProfile() async throws -> UserProfileResponse {

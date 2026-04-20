@@ -34,6 +34,9 @@ fun Application.configureRouting(
         route("/api") {
             authRoutes(jwtService, smsCodeStore, bindCodeStore, tencentSmsService, weChatService, userService)
 
+            // Public endpoints (no auth)
+            pricingRoutes()
+
             // WeChat Pay notify — no JWT required
             donationNotifyRoute(wxPayService)
 
