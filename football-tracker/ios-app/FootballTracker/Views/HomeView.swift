@@ -16,6 +16,7 @@ struct HomeView: View {
     @State private var navigateToTeamEntry = false
     @State private var navigateToMatchDetail = false
     @State private var annualAttendanceRank: Int?
+    @State private var radarScale: CGFloat = 1.0
 
     private struct MonthSection: Identifiable {
         let id: String
@@ -122,6 +123,27 @@ struct HomeView: View {
 
     private var activeMaxSpeed: Double {
         activeSessions.map(\.maxSpeedKmh).max() ?? 0
+    }
+
+    private func radarAxes(for sessions: [FootballSession]) -> [(label: String, value: Double)] {
+        let count = Double(max(sessions.count, 1))
+        let maxSpeed = sessions.map(\.maxSpeedKmh).max() ?? 0
+        let speedScore = min(1.0, maxSpeed / 35.0)
+        let avgSprints = sessions.map { Double($0.sprintCount) }.reduce(0, +) / count
+        let sprintScore = min(1.0, avgSprints / 50.0)
+        let avgDistKm = sessions.reduce(0.0) { $0 + $1.totalDistanceMeters } / 1000.0 / count
+        let staminaScore = min(1.0, avgDistKm / 10.0)
+        let avgSlack = sessions.isEmpty ? 0.0 : sessions.map { Double($0.slackIndex) }.reduce(0, +) / count
+        let disciplineScore = max(0.0, min(1.0, (100.0 - avgSlack) / 100.0))
+        let avgCoverage = sessions.isEmpty ? 0.0 : sessions.map(\.coveragePercent).reduce(0, +) / count
+        let coverageScore = min(1.0, avgCoverage / 100.0)
+        return [
+            (label: "速度", value: speedScore),
+            (label: "冲刺", value: sprintScore),
+            (label: "体能", value: staminaScore),
+            (label: "专注", value: disciplineScore),
+            (label: "覆盖", value: coverageScore)
+        ]
     }
 
     private var nextUpcomingMatch: MatchResponse? {
@@ -387,34 +409,40 @@ struct HomeView: View {
             )
             .frame(maxWidth: .infinity, minHeight: 150, maxHeight: 150)
 
-            Button {
-                navigateToTeamEntry = true
-            } label: {
-                if authManager.teams.isEmpty {
-                    TopActionCard(
-                        title: teamEntryTitle,
-                        subtitle: teamEntrySubtitle,
-                        icon: teamEntryIcon,
-                        iconBg: AppColors.neonBlue.opacity(0.16),
-                        iconColor: AppColors.neonBlue
+            // Radar chart card showing ability metrics for today / this week
+            let sessions = isWeeklyCardFlipped ? todaySessions : thisWeekSessions
+            let label = isWeeklyCardFlipped ? "今日能力" : "本周能力"
+            ZStack {
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(AppColors.cardBg)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 16)
+                            .stroke(AppColors.neonBlue.opacity(0.2), lineWidth: 1)
                     )
-                } else {
-                    AttendanceTopActionCard(
-                        title: "年度出勤",
-                        value: annualAttendanceRank.map(String.init) ?? "-",
-                        unit: "名",
-                        icon: "trophy.fill",
-                        iconBg: AppColors.neonBlue.opacity(0.16),
-                        iconColor: AppColors.neonBlue,
-                        cardBg: AppColors.cardBg,
-                        borderColor: AppColors.neonBlue.opacity(0.2)
-                    )
+
+                VStack(spacing: 4) {
+                    Text(label)
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundColor(.white.opacity(0.7))
+
+                    if sessions.isEmpty {
+                        Text("暂无数据")
+                            .font(.system(size: 13))
+                            .foregroundColor(.white.opacity(0.35))
+                            .frame(maxHeight: .infinity)
+                    } else {
+                        RadarChartView(axes: radarAxes(for: sessions), size: 110)
+                            .scaleEffect(radarScale)
+                    }
                 }
+                .padding(.vertical, 10)
             }
-            .buttonStyle(.plain)
             .frame(maxWidth: .infinity, minHeight: 150, maxHeight: 150)
-            .navigationDestination(isPresented: $navigateToTeamEntry) {
-                TeamListView(authManager: authManager)
+            .onChange(of: isWeeklyCardFlipped) { _ in
+                radarScale = 0.82
+                withAnimation(.spring(response: 0.38, dampingFraction: 0.6)) {
+                    radarScale = 1.0
+                }
             }
         }
     }
