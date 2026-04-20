@@ -360,21 +360,9 @@ struct TeamHubView: View {
                             }
                         }
                     } else {
-                        HStack(spacing: 6) {
-                            Text(team?.name ?? "我的球队")
-                                .font(.title3.weight(.bold))
-                                .foregroundColor(.white)
-                            if isOwner {
-                                Button {
-                                    editedTeamName = team?.name ?? ""
-                                    isEditingTeamName = true
-                                } label: {
-                                    Image(systemName: "pencil")
-                                        .font(.caption)
-                                        .foregroundColor(Color.white.opacity(0.6))
-                                }
-                            }
-                        }
+                        Text(team?.name ?? "我的球队")
+                            .font(.title3.weight(.bold))
+                            .foregroundColor(.white)
                     }
                     Text("成立于 \(teamCreatedDateText)")
                         .font(.caption)
@@ -779,7 +767,7 @@ private struct TeamLeaderboardSection: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            VStack(alignment: .leading, spacing: 4) {
+            HStack(alignment: .lastTextBaseline, spacing: 6) {
                 Text("排行榜")
                     .font(.title3.weight(.semibold))
                     .foregroundColor(AppColors.textPrimary)
