@@ -846,8 +846,6 @@ struct StatsView: View {
         .background(AppColors.cardBg)
         .cornerRadius(16)
     }
-        }
-    }
 
     private var trendSection: some View {
         StatsTrendSectionView(sessions: sessions)
