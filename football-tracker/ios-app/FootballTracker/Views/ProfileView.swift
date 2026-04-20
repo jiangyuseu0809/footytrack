@@ -113,7 +113,7 @@ struct ProfileView: View {
         let nickname = authManager.userProfile?.nickname ?? "球员"
 
         return VStack(spacing: 14) {
-            HStack(alignment: .top, spacing: 12) {
+            HStack(alignment: .center, spacing: 12) {
                 PhotosPicker(selection: $pickerItem, matching: .images) {
                     ZStack(alignment: .bottomTrailing) {
                         Group {
