@@ -47,11 +47,15 @@ struct ProfileView: View {
                 VStack(alignment: .leading, spacing: 18) {
                     if authManager.isLoggedIn {
                         profileCard
-                        proUpgradeBanner
+                        if !authManager.isPro {
+                            proUpgradeBanner
+                        }
                         syncSection
                     } else {
                         loginPromptCard
-                        proUpgradeBanner
+                        if !authManager.isPro {
+                            proUpgradeBanner
+                        }
                     }
                     menuSection(title: "外观", items: appearanceItems)
                     menuSection(title: "账号", items: accountItems)
@@ -132,17 +136,26 @@ struct ProfileView: View {
                 .disabled(isUploadingAvatar)
 
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(nickname)
-                        .font(.title3.weight(.bold))
-                        .foregroundColor(.white)
-
-                    Text("高级会员")
-                        .font(.caption.weight(.semibold))
-                        .foregroundColor(.white)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 5)
-                        .background(Color.white.opacity(0.2))
-                        .cornerRadius(999)
+                    HStack(spacing: 6) {
+                        Text(nickname)
+                            .font(.title3.weight(.bold))
+                            .foregroundColor(.white)
+                        if authManager.isPro {
+                            HStack(spacing: 3) {
+                                Image(systemName: "crown.fill")
+                                    .font(.system(size: 10))
+                                Text("Pro")
+                                    .font(.caption2.weight(.bold))
+                            }
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(
+                                LinearGradient(colors: [Color.orange, Color.pink], startPoint: .leading, endPoint: .trailing)
+                            )
+                            .cornerRadius(999)
+                        }
+                    }
                 }
 
                 Spacer()

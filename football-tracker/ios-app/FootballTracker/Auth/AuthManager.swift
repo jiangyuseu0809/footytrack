@@ -18,6 +18,7 @@ class AuthManager: ObservableObject {
     @Published var teams: [TeamResponse] = []
     @Published var earnedBadges: EarnedBadgesResponse?
     @Published var upcomingMatches: [MatchResponse] = []
+    @Published var isPro: Bool = UserDefaults.standard.bool(forKey: "is_pro_member")
 
     /// Anonymous device UUID for local session ownership when not logged in.
     /// Persisted across app launches. Replaced by real uid after login.
