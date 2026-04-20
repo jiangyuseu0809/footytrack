@@ -95,7 +95,24 @@ struct SessionDetailView: View {
 
                     // Heatmap
                     if let latRange = cachedLatRange, let lonRange = cachedLonRange {
-                        chartSection(title: "活动热图", icon: "map.fill", iconColor: Color(hex: 0x10B981)) {
+                        chartSection(title: "活动热图", icon: "map.fill", iconColor: Color(hex: 0x10B981), trailing: {
+                            HStack(spacing: 6) {
+                                Text("进攻方向")
+                                    .font(.system(size: 12))
+                                    .foregroundColor(AppColors.textSecondary)
+                                Button {
+                                    showAttackEnd.toggle()
+                                } label: {
+                                    Image(systemName: "arrow.left.arrow.right")
+                                        .font(.system(size: 13, weight: .medium))
+                                        .foregroundColor(.white)
+                                        .padding(6)
+                                        .background(Color.white.opacity(0.10))
+                                        .cornerRadius(8)
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }) {
                             HeatmapOverlayView(
                                 grid: showAttackEnd ? stats.heatmapGrid : flipGridHorizontally(stats.heatmapGrid),
                                 minLat: latRange.min,
@@ -485,6 +502,10 @@ struct SessionDetailView: View {
     // MARK: - Chart Section
 
     private func chartSection<Content: View>(title: String, icon: String, iconColor: Color, @ViewBuilder content: () -> Content) -> some View {
+        chartSection(title: title, icon: icon, iconColor: iconColor, trailing: { EmptyView() }, content: content)
+    }
+
+    private func chartSection<Content: View, Trailing: View>(title: String, icon: String, iconColor: Color, @ViewBuilder trailing: () -> Trailing, @ViewBuilder content: () -> Content) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 8) {
                 Image(systemName: icon)
@@ -493,6 +514,8 @@ struct SessionDetailView: View {
                 Text(title)
                     .font(.system(size: 20, weight: .semibold))
                     .foregroundColor(AppColors.textPrimary)
+                Spacer()
+                trailing()
             }
 
             content()
