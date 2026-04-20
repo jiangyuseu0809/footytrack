@@ -34,6 +34,7 @@
 		9F8B5740DA85CA1157C9BBB9 /* AuthManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D2752D80E323CB4D978D060B /* AuthManager.swift */; };
 		A4CF37667E3CF10F116E13C3 /* HeatmapOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA6F44E157B2DA43DA6A12FC /* HeatmapOverlay.swift */; };
 		AC255495176844D056814B6C /* SpeedChart.swift in Sources */ = {isa = PBXBuildFile; fileRef = 22A0F1C7E56CE7F698E02541 /* SpeedChart.swift */; };
+		AB12CD34EF56AB78CD90EF13 /* HideTabBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB12CD34EF56AB78CD90EF12 /* HideTabBar.swift */; };
 		B1A2C3D4E5F60718293A4B5C /* SessionShareSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4D5E6F708192A3B4C5D6E7F /* SessionShareSheet.swift */; };
 		B2A3C4D5E6F70819293A4B5D /* LocationEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5E6F708192A3B4C5D6E7F80 /* LocationEditorView.swift */; };
 		BE8487577C6EC8D651FDFC92 /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D25D605E8EF09E6663AD799E /* LoginView.swift */; };
@@ -91,6 +92,7 @@
 		16174BC065AFC1C9C5C51525 /* HeatmapView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HeatmapView.swift; sourceTree = "<group>"; };
 		1F265F7DD0BE6099A998F644 /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
 		22A0F1C7E56CE7F698E02541 /* SpeedChart.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeedChart.swift; sourceTree = "<group>"; };
+		AB12CD34EF56AB78CD90EF12 /* HideTabBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HideTabBar.swift; sourceTree = "<group>"; };
 		2ED27ECF7699FFFB237B72A3 /* WatchTrackingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchTrackingView.swift; sourceTree = "<group>"; };
 		36E61BCEB61187EC52C9B0A7 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		38D7B5959FC0CC4C5C5CA45C /* FootballTrackerWatch.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = FootballTrackerWatch.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -152,6 +154,7 @@
 				C4D5E6F708192A3B4C5D6E7F /* SessionShareSheet.swift */,
 				D5E6F708192A3B4C5D6E7F80 /* LocationEditorView.swift */,
 				22A0F1C7E56CE7F698E02541 /* SpeedChart.swift */,
+				AB12CD34EF56AB78CD90EF12 /* HideTabBar.swift */,
 			);
 			path = Components;
 			sourceTree = "<group>";
@@ -427,6 +430,7 @@
 				1CCF85B16D0E6E506314C23F /* SessionStore.swift in Sources */,
 				1501FB6DD67A8FD84F4C18E1 /* SettingsView.swift in Sources */,
 				AC255495176844D056814B6C /* SpeedChart.swift in Sources */,
+				AB12CD34EF56AB78CD90EF13 /* HideTabBar.swift in Sources */,
 				584BAA5B65257195268DECD2 /* StatsView.swift in Sources */,
 				648E6726E868A18C272FEA75 /* TeamDetailView.swift in Sources */,
 				2D7D7A92C0F2B702B4151E12 /* TeamListView.swift in Sources */,

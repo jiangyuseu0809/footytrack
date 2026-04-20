@@ -80,7 +80,7 @@ struct MatchDetailView: View {
         }
         .navigationTitle("比赛详情")
         .navigationBarTitleDisplayMode(.inline)
-        .toolbar(.hidden, for: .tabBar)
+        .hideTabBar()
         .task {
             await loadDetail()
         }
