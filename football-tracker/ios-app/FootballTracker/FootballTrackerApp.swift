@@ -76,7 +76,6 @@ struct MainTabView: View {
         TabView(selection: $selectedTab) {
             NavigationStack {
                 HomeView(store: store, authManager: authManager)
-                    .toolbar(.visible, for: .tabBar)
             }
             .tabItem {
                 Image(systemName: "sportscourt.fill")
@@ -86,7 +85,6 @@ struct MainTabView: View {
 
             NavigationStack {
                 TeamHubView(authManager: authManager, store: store)
-                    .toolbar(.visible, for: .tabBar)
             }
             .tabItem {
                 Image(systemName: "flag.fill")
@@ -96,7 +94,6 @@ struct MainTabView: View {
 
             NavigationStack {
                 StatsView(store: store, authManager: authManager)
-                    .toolbar(.visible, for: .tabBar)
             }
             .tabItem {
                 Image(systemName: "chart.bar.fill")
@@ -106,7 +103,6 @@ struct MainTabView: View {
 
             NavigationStack {
                 ProfileView(store: store, authManager: authManager)
-                    .toolbar(.visible, for: .tabBar)
             }
             .tabItem {
                 Image(systemName: "person.fill")

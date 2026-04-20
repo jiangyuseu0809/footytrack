@@ -1,36 +1,49 @@
 import SwiftUI
 import UIKit
 
-/// Hides the tab bar on detail pages. The tab bar visibility is controlled
-/// via SwiftUI's toolbar API, while a UIKit hook disables the animation
-/// on the tab bar layer so it appears/disappears instantly.
+/// Hides the tab bar when the view appears and restores it when disappearing.
+/// Uses direct UITabBar manipulation with performWithoutAnimation for instant transitions.
 struct HideTabBarModifier: ViewModifier {
+    @State private var tabBar: UITabBar?
+
     func body(content: Content) -> some View {
         content
-            .toolbar(.hidden, for: .tabBar)
             .onAppear {
-                disableTabBarAnimations()
+                if let tb = findTabBar() {
+                    tabBar = tb
+                    UIView.performWithoutAnimation {
+                        tb.isHidden = true
+                        // Also move it off screen to prevent layout gaps
+                        tb.frame.origin.y = UIScreen.main.bounds.height
+                    }
+                }
+            }
+            .onDisappear {
+                if let tb = tabBar {
+                    UIView.performWithoutAnimation {
+                        tb.isHidden = false
+                        // Restore position
+                        tb.superview?.setNeedsLayout()
+                        tb.superview?.layoutIfNeeded()
+                    }
+                }
             }
     }
 
-    private func disableTabBarAnimations() {
+    private func findTabBar() -> UITabBar? {
         guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-              let window = windowScene.windows.first,
-              let tabBar = window.rootViewController?.findTabBarController()?.tabBar else {
-            return
+              let window = windowScene.windows.first else {
+            return nil
         }
-        // Disable all CoreAnimation on the tab bar so show/hide is instant
-        tabBar.layer.speed = Float.greatestFiniteMagnitude
+        return findTabBar(in: window)
     }
-}
 
-private extension UIViewController {
-    func findTabBarController() -> UITabBarController? {
-        if let tabBar = self as? UITabBarController {
+    private func findTabBar(in view: UIView) -> UITabBar? {
+        if let tabBar = view as? UITabBar {
             return tabBar
         }
-        for child in children {
-            if let found = child.findTabBarController() {
+        for subview in view.subviews {
+            if let found = findTabBar(in: subview) {
                 return found
             }
         }
