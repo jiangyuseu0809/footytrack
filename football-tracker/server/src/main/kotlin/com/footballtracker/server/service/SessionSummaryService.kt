@@ -50,7 +50,7 @@ class SessionSummaryService(private val openAiConfig: OpenAiConfig) {
             } catch (e: Exception) {
                 // Legacy plain-text cache — delete and regenerate
                 transaction {
-                    SessionSummariesTable.deleteWhere { sessionId eq req.sessionId }
+                    SessionSummariesTable.deleteWhere { SessionSummariesTable.sessionId eq req.sessionId }
                 }
                 generateAndCache(req)
             }
