@@ -229,6 +229,7 @@ struct DaySummaryDetailView: View {
         .navigationTitle("日汇总")
         .navigationBarTitleDisplayMode(.inline)
         .toolbarTitleDisplayMode(.inline)
+        .hideTabBar()
         .task(id: sessionIdsSignature) {
             let sessions = section.sessions.sorted { $0.startTime < $1.startTime }
             let points = sessions.flatMap { store.getTrackPoints(for: $0) }

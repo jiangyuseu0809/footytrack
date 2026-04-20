@@ -13,7 +13,6 @@ struct HomeView: View {
     @State private var navigateToTodayList = false
     @State private var navigateToWeeklyAnalysis = false
     @State private var isWatchPulseAnimating = false
-    @State private var navigateToTeamEntry = false
     @State private var navigateToMatchDetail = false
     @State private var annualAttendanceRank: Int?
     @State private var radarScale: CGFloat = 1.0

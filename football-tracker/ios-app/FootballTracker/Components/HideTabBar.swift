@@ -1,58 +1,48 @@
 import SwiftUI
 import UIKit
 
-/// Hides the tab bar when the view appears and restores it when disappearing.
-/// Uses direct UITabBar manipulation with performWithoutAnimation for instant transitions.
+/// Hides the tab bar instantly (no animation) when this view appears,
+/// and restores it instantly when this view disappears.
+/// Uses a UIKit lifecycle hook to avoid SwiftUI's animated toolbar transitions.
 struct HideTabBarModifier: ViewModifier {
-    @State private var tabBar: UITabBar?
-
     func body(content: Content) -> some View {
         content
-            .onAppear {
-                if let tb = findTabBar() {
-                    tabBar = tb
-                    UIView.performWithoutAnimation {
-                        tb.isHidden = true
-                        // Also move it off screen to prevent layout gaps
-                        tb.frame.origin.y = UIScreen.main.bounds.height
-                    }
-                }
-            }
-            .onDisappear {
-                if let tb = tabBar {
-                    UIView.performWithoutAnimation {
-                        tb.isHidden = false
-                        // Restore position
-                        tb.superview?.setNeedsLayout()
-                        tb.superview?.layoutIfNeeded()
-                    }
-                }
-            }
-    }
-
-    private func findTabBar() -> UITabBar? {
-        guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-              let window = windowScene.windows.first else {
-            return nil
-        }
-        return findTabBar(in: window)
-    }
-
-    private func findTabBar(in view: UIView) -> UITabBar? {
-        if let tabBar = view as? UITabBar {
-            return tabBar
-        }
-        for subview in view.subviews {
-            if let found = findTabBar(in: subview) {
-                return found
-            }
-        }
-        return nil
+            .background(TabBarHider())
     }
 }
 
 extension View {
     func hideTabBar() -> some View {
         modifier(HideTabBarModifier())
+    }
+}
+
+private struct TabBarHider: UIViewControllerRepresentable {
+    func makeUIViewController(context: Context) -> TabBarHiderController {
+        TabBarHiderController()
+    }
+
+    func updateUIViewController(_ uiViewController: TabBarHiderController, context: Context) {}
+}
+
+private class TabBarHiderController: UIViewController {
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        setTabBarHidden(true)
+    }
+
+    override func viewWillDisappear(_ animated: Bool) {
+        super.viewWillDisappear(animated)
+        setTabBarHidden(false)
+    }
+
+    private func setTabBarHidden(_ hidden: Bool) {
+        guard let tabBar = tabBarController?.tabBar else { return }
+        guard tabBar.isHidden != hidden else { return }
+        UIView.performWithoutAnimation {
+            tabBar.isHidden = hidden
+            tabBar.superview?.setNeedsLayout()
+            tabBar.superview?.layoutIfNeeded()
+        }
     }
 }
