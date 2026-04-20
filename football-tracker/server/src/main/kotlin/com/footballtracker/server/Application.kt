@@ -15,6 +15,7 @@ import com.footballtracker.server.service.BadgeService
 import com.footballtracker.server.service.MatchService
 import com.footballtracker.server.service.MatchSummaryService
 import com.footballtracker.server.service.PlayerAnalysisService
+import com.footballtracker.server.service.SessionSummaryService
 import com.footballtracker.server.service.CircleService
 import com.footballtracker.server.service.FeedbackService
 import com.footballtracker.server.service.WxPayService
@@ -44,6 +45,7 @@ fun Application.module() {
     val matchService = MatchService()
     val playerAnalysisService = PlayerAnalysisService(config.openai, sessionService)
     val matchSummaryService = MatchSummaryService(config.openai, sessionService, matchService)
+    val sessionSummaryService = SessionSummaryService(config.openai)
     val circleService = CircleService()
     val feedbackService = FeedbackService()
     val wxPayService = WxPayService(config.wxPay)
@@ -61,5 +63,5 @@ fun Application.module() {
     configureSerialization()
     configureStatusPages()
     configureAuthentication(config.jwt)
-    configureRouting(jwtService, smsCodeStore, bindCodeStore, tencentSmsService, weChatService, userService, sessionService, teamService, badgeService, matchService, playerAnalysisService, matchSummaryService, circleService, feedbackService, wxPayService, config.avatar)
+    configureRouting(jwtService, smsCodeStore, bindCodeStore, tencentSmsService, weChatService, userService, sessionService, teamService, badgeService, matchService, playerAnalysisService, matchSummaryService, sessionSummaryService, circleService, feedbackService, wxPayService, config.avatar)
 }

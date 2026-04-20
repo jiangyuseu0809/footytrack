@@ -4,6 +4,8 @@ import com.footballtracker.server.service.BadgeService
 import com.footballtracker.server.service.PlayerAnalysisService
 import com.footballtracker.server.service.SessionRow
 import com.footballtracker.server.service.SessionService
+import com.footballtracker.server.service.SessionSummaryRequest
+import com.footballtracker.server.service.SessionSummaryService
 import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.request.*
@@ -50,7 +52,7 @@ data class PlayerAnalysisResponse(
     val advice: String
 )
 
-fun Route.sessionRoutes(sessionService: SessionService, badgeService: BadgeService, playerAnalysisService: PlayerAnalysisService) {
+fun Route.sessionRoutes(sessionService: SessionService, badgeService: BadgeService, playerAnalysisService: PlayerAnalysisService, sessionSummaryService: SessionSummaryService) {
     route("/sessions") {
         post("/sync") {
             val uid = UUID.fromString(call.jwtUid())
@@ -136,6 +138,15 @@ fun Route.sessionRoutes(sessionService: SessionService, badgeService: BadgeServi
                 strengths = result.strengths,
                 advice = result.advice
             ))
+        }
+
+        post("/{id}/summary") {
+            val sessionId = call.parameters["id"] ?: return@post call.respond(
+                HttpStatusCode.BadRequest, mapOf("error" to "缺少 session id")
+            )
+            val req = call.receive<SessionSummaryRequest>()
+            val summary = sessionSummaryService.getOrCreateSummary(req.copy(sessionId = sessionId))
+            call.respond(mapOf("summary" to summary))
         }
     }
 }

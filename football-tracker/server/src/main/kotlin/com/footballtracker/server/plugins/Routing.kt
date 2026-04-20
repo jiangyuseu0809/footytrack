@@ -24,6 +24,7 @@ fun Application.configureRouting(
     matchService: MatchService,
     playerAnalysisService: PlayerAnalysisService,
     matchSummaryService: MatchSummaryService,
+    sessionSummaryService: SessionSummaryService,
     circleService: CircleService,
     feedbackService: com.footballtracker.server.service.FeedbackService,
     wxPayService: com.footballtracker.server.service.WxPayService,
@@ -38,7 +39,7 @@ fun Application.configureRouting(
 
             authenticate("auth-jwt") {
                 userRoutes(userService, avatarConfig)
-                sessionRoutes(sessionService, badgeService, playerAnalysisService)
+                sessionRoutes(sessionService, badgeService, playerAnalysisService, sessionSummaryService)
                 teamRoutes(teamService)
                 badgeRoutes(badgeService)
                 matchRoutes(matchService, sessionService, matchSummaryService)

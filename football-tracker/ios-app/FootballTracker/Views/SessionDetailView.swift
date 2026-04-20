@@ -208,7 +208,7 @@ struct SessionDetailView: View {
                     sessionSummary = result.summary
                     UserDefaults.standard.set(result.summary, forKey: cacheKey)
                 } catch {
-                    // Leave nil on failure
+                    print("[SessionSummary] error: \(error)")
                 }
                 isLoadingSummary = false
             }
