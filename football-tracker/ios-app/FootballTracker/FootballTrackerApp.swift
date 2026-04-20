@@ -907,6 +907,7 @@ struct TeamMemberListView: View {
         }
         .navigationTitle("球队成员")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar(.hidden, for: .tabBar)
     }
 }
 

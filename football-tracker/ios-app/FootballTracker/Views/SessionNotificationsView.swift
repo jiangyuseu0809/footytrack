@@ -53,6 +53,7 @@ struct SessionNotificationsView: View {
         .navigationTitle("通知")
         .navigationBarTitleDisplayMode(.inline)
         .toolbarTitleDisplayMode(.inline)
+        .toolbar(.hidden, for: .tabBar)
         .navigationDestination(isPresented: $navigateToDetail) {
             if let session = selectedSession {
                 SessionDetailView(session: session, store: store)

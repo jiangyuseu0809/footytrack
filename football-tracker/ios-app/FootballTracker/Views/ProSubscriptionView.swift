@@ -87,6 +87,7 @@ struct ProSubscriptionView: View {
         }
         .navigationTitle("FootyTrack Pro")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar(.hidden, for: .tabBar)
         .task {
             await loadPricing()
         }

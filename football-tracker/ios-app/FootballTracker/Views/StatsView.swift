@@ -1694,6 +1694,7 @@ struct AllMatchesView: View {
         .navigationTitle("全部比赛")
         .navigationBarTitleDisplayMode(.inline)
         .toolbarTitleDisplayMode(.inline)
+        .toolbar(.hidden, for: .tabBar)
         .navigationDestination(isPresented: $navigateToDetail) {
             if let session = selectedSession {
                 SessionDetailView(session: session, store: store)

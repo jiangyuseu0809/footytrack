@@ -182,6 +182,7 @@ struct WeeklySummaryView: View {
         }
         .navigationTitle("本周总结")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar(.hidden, for: .tabBar)
     }
 
     // MARK: - Week Summary Cards (2x2)
