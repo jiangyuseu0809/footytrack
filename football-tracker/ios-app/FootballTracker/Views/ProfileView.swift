@@ -60,6 +60,9 @@ struct ProfileView: View {
                     menuSection(title: "外观", items: appearanceItems)
                     menuSection(title: "账号", items: accountItems)
                     menuSection(title: "设备", items: deviceItems)
+                    #if DEBUG
+                    debugProToggle
+                    #endif
                     if authManager.isLoggedIn {
                         signOutButton
                     }
@@ -526,6 +529,31 @@ struct ProfileView: View {
                 .padding(.vertical, 14)
         }
     }
+
+    #if DEBUG
+    private var debugProToggle: some View {
+        HStack {
+            Image(systemName: "ladybug.fill")
+                .foregroundColor(.orange)
+            Text("Pro 会员测试")
+                .font(.subheadline)
+                .foregroundColor(.white)
+            Spacer()
+            Toggle("", isOn: Binding(
+                get: { authManager.isPro },
+                set: { newValue in
+                    authManager.isPro = newValue
+                    UserDefaults.standard.set(newValue, forKey: "is_pro_member")
+                }
+            ))
+            .labelsHidden()
+            .tint(AppColors.neonBlue)
+        }
+        .padding(14)
+        .background(AppColors.cardBg)
+        .cornerRadius(14)
+    }
+    #endif
 
     private var versionText: some View {
         Text("版本 \(appVersion)")
