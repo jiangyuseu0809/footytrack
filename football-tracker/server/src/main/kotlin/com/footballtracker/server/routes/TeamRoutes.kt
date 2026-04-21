@@ -46,6 +46,13 @@ data class TeamDetailResponse(
     val members: List<TeamMemberResponse>
 )
 
+@Serializable
+data class TeamPreviewResponse(
+    val teamName: String,
+    val memberCount: Int,
+    val ownerNickname: String
+)
+
 fun Route.teamRoutes(teamService: TeamService) {
     route("/teams") {
         post {
@@ -144,3 +151,24 @@ private fun com.footballtracker.server.service.TeamRow.toResponse() = TeamRespon
     createdBy = createdBy.toString(),
     createdAt = createdAt
 )
+
+fun Route.teamPreviewRoute(teamService: TeamService) {
+    route("/teams") {
+        get("/preview") {
+            val code = call.request.queryParameters["inviteCode"]
+                ?: return@get call.respond(HttpStatusCode.BadRequest, mapOf("error" to "缺少邀请码"))
+
+            val team = teamService.getTeamByInviteCode(code)
+                ?: return@get call.respond(HttpStatusCode.NotFound, mapOf("error" to "邀请码无效"))
+
+            val members = teamService.getTeamMembers(team.id)
+            val owner = members.firstOrNull { it.role == "owner" }
+
+            call.respond(TeamPreviewResponse(
+                teamName = team.name,
+                memberCount = members.size,
+                ownerNickname = owner?.nickname ?: "队长"
+            ))
+        }
+    }
+}

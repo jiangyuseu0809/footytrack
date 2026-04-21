@@ -36,6 +36,7 @@ fun Application.configureRouting(
 
             // Public endpoints (no auth)
             pricingRoutes()
+            teamPreviewRoute(teamService)
 
             // WeChat Pay notify — no JWT required
             donationNotifyRoute(wxPayService)
