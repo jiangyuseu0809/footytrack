@@ -318,6 +318,10 @@ final class ApiClient {
         )
     }
 
+    func getTeamPreview(inviteCode: String) async throws -> TeamPreviewResponse {
+        try await request(endpoint: "/api/teams/preview?inviteCode=\(inviteCode)")
+    }
+
     // MARK: - Badges
 
     func getEarnedBadges() async throws -> EarnedBadgesResponse {

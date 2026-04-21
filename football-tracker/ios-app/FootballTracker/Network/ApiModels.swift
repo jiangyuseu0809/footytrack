@@ -134,6 +134,12 @@ struct UpdateTeamRequest: Encodable {
     let name: String
 }
 
+struct TeamPreviewResponse: Decodable {
+    let teamName: String
+    let memberCount: Int
+    let ownerNickname: String
+}
+
 struct TeamResponse: Codable {
     let id: String
     let name: String

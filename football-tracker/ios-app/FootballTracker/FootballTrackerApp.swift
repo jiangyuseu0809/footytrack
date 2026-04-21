@@ -44,8 +44,29 @@ struct FootballTrackerApp: App {
                 .environmentObject(router)
                 .preferredColorScheme(.dark)
                 .onOpenURL { url in
-                    print("[WeChat] onOpenURL: \(url)")
+                    print("[DeepLink] onOpenURL: \(url)")
+                    // footytrack://join?code=xxx
+                    if url.scheme == "footytrack", url.host == "join",
+                       let code = URLComponents(url: url, resolvingAgainstBaseURL: false)?
+                        .queryItems?.first(where: { $0.name == "code" })?.value,
+                       !code.isEmpty {
+                        router.pendingInviteCode = code
+                        return
+                    }
                     _ = WeChatManager.shared.handleOpenURL(url)
+                }
+                .onContinueUserActivity(NSUserActivityTypeBrowsingWeb) { activity in
+                    guard let url = activity.webpageURL else { return }
+                    print("[DeepLink] Universal Link: \(url)")
+                    // https://footytrack.cn/invite?code=xxx
+                    if url.path == "/invite" || url.path.hasPrefix("/invite"),
+                       let code = URLComponents(url: url, resolvingAgainstBaseURL: false)?
+                        .queryItems?.first(where: { $0.name == "code" })?.value,
+                       !code.isEmpty {
+                        router.pendingInviteCode = code
+                        return
+                    }
+                    _ = WeChatManager.shared.handleOpenUniversalLink(activity)
                 }
                 .onReceive(NotificationCenter.default.publisher(for: WatchSync.didReceiveDataNotification)) { notification in
                     if let data = notification.userInfo as? [String: Any] {
@@ -121,6 +142,16 @@ struct MainTabView: View {
                     .tag(3)
             }
             .tint(AppColors.neonBlue)
+            .sheet(isPresented: Binding(
+                get: { router.pendingInviteCode != nil },
+                set: { if !$0 { router.pendingInviteCode = nil } }
+            )) {
+                if let code = router.pendingInviteCode {
+                    JoinTeamSheet(inviteCode: code, authManager: authManager) {
+                        router.pendingInviteCode = nil
+                    }
+                }
+            }
             .navigationTitle(tabTitle)
             .navigationBarTitleDisplayMode(.inline)
             .toolbarTitleDisplayMode(.inline)
@@ -387,7 +418,9 @@ struct TeamHubView: View {
                 }
                 .buttonStyle(.plain)
 
-                ShareLink(item: "来加入我的球队「\(team?.name ?? "")」！\n在 FootyTrack App 中输入邀请码：\(team?.inviteCode ?? "")") {
+                Button {
+                    shareTeamInviteToWeChat()
+                } label: {
                     HStack(spacing: 4) {
                         Image(systemName: "person.badge.plus")
                         Text("邀请")
@@ -399,6 +432,7 @@ struct TeamHubView: View {
                     .background(Color.white.opacity(0.2))
                     .cornerRadius(8)
                 }
+                .buttonStyle(.plain)
             }
 
             HStack(spacing: 0) {
@@ -639,6 +673,26 @@ struct TeamHubView: View {
             }
             isEditingTeamName = false
         } catch {}
+    }
+
+    private func shareTeamInviteToWeChat() {
+        guard let code = team?.inviteCode, let name = team?.name else { return }
+        guard WXApi.isWXAppInstalled() else { return }
+
+        let webpage = WXWebpageObject()
+        webpage.webpageUrl = "https://footytrack.cn/invite?code=\(code)"
+
+        let message = WXMediaMessage()
+        message.title = "邀请你加入球队「\(name)」"
+        message.description = "点击加入球队，一起踢球！"
+        message.mediaObject = webpage
+
+        let req = SendMessageToWXReq()
+        req.bText = false
+        req.message = message
+        req.scene = Int32(WXSceneSession.rawValue)
+
+        WXApi.send(req)
     }
 
     private func loadTeamData() async {

@@ -4,6 +4,7 @@ import SwiftUI
 /// NavigationStack that wraps the TabView, so they naturally cover the tab bar.
 final class AppRouter: ObservableObject {
     @Published var path = NavigationPath()
+    @Published var pendingInviteCode: String? = nil
 
     func push<V: Hashable>(_ route: V) {
         path.append(route)
